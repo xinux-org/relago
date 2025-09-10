@@ -6,14 +6,14 @@ members = ["crates/cli", "crates/database", "crates/http", "crates/utils"]
 [workspace.package]
 # Don't remove `name` regardless of warnings
 # Lots of nix things depend on this value alone
-name = "#name#"
-version = "#version#"
+name = "relago"
+version = "0.0.1"
 edition = "2021"
 license = "MIT OR Apache-2.0"
-description = "#description#"
-homepage = "#website#"
-repository = "#repository#"
-authors = ["#author#"]
+description = "Artifact manager for Xinux release cycles"
+homepage = "https://artifact.xinux.uz"
+repository = "https://github.com/xinux-org/relago"
+authors = ["Xinux Developers <support@oss.uzinfocom.uz>"]
 
 # Shared dependencies across crates
 [workspace.dependencies]
