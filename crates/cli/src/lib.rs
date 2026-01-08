@@ -1,25 +1,10 @@
-use clap::{command, Arg, ArgAction, Parser, Subcommand};
+use clap::{arg, command, Arg, ArgAction, Command, Parser, Subcommand};
 
+use core::error;
 use std::io::BufRead;
 use subprocess::Exec;
 
-
-/// CLI interface for server infrastructure
-#[derive(Debug, Parser)]
-#[command(name = "relago", version)]
-#[command(about = "CLI interface for relago", long_about = None)]
-#[command(about = "crash reporting tool")]
-pub struct Cli {
-    #[command(subcommand)]
-    pub command: Commands,
-}
-
-#[derive(Debug, Subcommand)]
-pub enum Commands {
-    Exec,
-}
-
-pub fn init() -> anyhow::Result<()> {
+pub fn run() -> anyhow::Result<()> {
     tracing_subscriber::fmt()
         .with_env_filter(
             tracing_subscriber::EnvFilter::from_default_env()
@@ -28,19 +13,33 @@ pub fn init() -> anyhow::Result<()> {
         .init();
 
     let matches = command!() // requires `cargo` feature
-        .arg(Arg::new("exec").action(ArgAction::Append))
+        .subcommand(
+            Command::new("exec")
+                .about("Run daemon")
+                .arg(Arg::new("exec").action(ArgAction::Append)),
+        )
+        .subcommand(Command::new("daemon").about("Run daemon").arg(arg!([NAME])))
         .get_matches();
 
-    let args = matches
-        .get_many::<String>("exec")
-        .unwrap_or_default()
-        .map(|v| v.as_str())
-        .collect::<Vec<_>>();
+    match matches.subcommand() {
+        Some(("exec", sub_matches)) => {
+            let r = sub_matches
+                .get_many::<String>("exec")
+                .unwrap_or_default()
+                .map(|v| v.as_str())
+                .collect::<Vec<_>>();
+            match cmd_exec(&r[0]) {
+                Err(_) => println!("Cooked"),
+                Ok(_) => println!("exec"),
+            }
+        }
+        Some(("daemon", sub_matches)) => {
+            // Daemon started
+            // println!("daemon");
 
-    let sbcmd = args[1];
-    let _ = cmd_exec(sbcmd.clone());
-
-    let owned_words: Vec<&str> = sbcmd.split_whitespace().map(|x| x).collect();
+        }
+        _ => println!("`None`"),
+    }
 
     Ok(())
 }
@@ -49,11 +48,9 @@ fn cmd_exec(cmd: &str) -> anyhow::Result<()> {
     let cm = Exec::shell(cmd);
 
     match cm.clone().capture() {
-        Ok(x) => {
-            //   print!("FOWARDED COMMAND: {}", x.stderr_str());
-            // let v = cm.stream_stdout()?;
+        Ok(_) => {
             let v = cm.stream_stderr()?;
-            let mut reader = std::io::BufReader::new(v);
+            let reader = std::io::BufReader::new(v);
             for line in reader.lines() {
                 match line {
                     Ok(l) => {
