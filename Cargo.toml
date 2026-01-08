@@ -14,7 +14,7 @@ version = "0.0.1"
 edition = "2021"
 
 license = "MIT OR Apache-2.0"
-description = "Automatic bug reporting system for xinux"
+description = "Automatic bug reporting app for xinux"
 homepage = "https://artifact.xinux.uz"
 repository = "https://github.com/xinux-org/relago"
 authors = ["Xinux Developers <support@oss.uzinfocom.uz>"]
