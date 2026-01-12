@@ -4,7 +4,7 @@
 
 resolver = "2"
 default-members = ["crates/cli"]
-members = ["crates/cli", "crates/daemon", "crates/utils"]
+members = ["crates/cli", "crates/daemon", "crates/utils", "crates/nixlog"]
 
 [workspace.package]
 # Don't remove `name` regardless of warnings
@@ -33,6 +33,7 @@ sha2 = "0.10"
 hex = "0.4"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+nom = "8.0.0"
 
 
 

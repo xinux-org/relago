@@ -1,5 +1,5 @@
 [package]
-name = "cli"
+name = "nixlog"
 authors.workspace = true
 edition.workspace = true
 version.workspace = true
@@ -7,19 +7,16 @@ license.workspace = true
 homepage.workspace = true
 repository.workspace = true
 
-[[bin]]
-name = "relago"
-path = "src/main.rs"
-
 [dependencies]
-# Relative Dependencies
-# http = { path = "../http" }
-utils = { path = "../utils" }
-nixlog ={ path = "../nixlog"}
-
-# Third party dependencies
-clap = { version = "4.5.28", features = ["derive", "cargo"] }
+serde = { workspace = true }
+quote = "1.0"
+proc-macro2 = "1.0"
 anyhow = { workspace = true }
 tracing-subscriber = { workspace = true }
 tracing = { workspace = true }
+serde_json = "1"
+libsystemd-sys = "0.9.4"
+systemd = "0.10.1"
+chrono = "0.4.42"
 subprocess = { workspace = true }
+nom = { workspace = true }
