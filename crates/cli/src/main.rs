@@ -4,7 +4,6 @@ use std::process::exit;
 
 use clap::Parser;
 use cli::{run};
-// use utils::config::{Config, Field};
 
 fn main() -> anyhow::Result<()> {
 

@@ -1,7 +1,8 @@
 use clap::{arg, command, Arg, ArgAction, Command, Parser, Subcommand};
 
 use core::error;
-use std::io::BufRead;
+use nixlog::error as NixErr;
+use std::io::{BufRead, Read};
 use subprocess::Exec;
 
 pub fn run() -> anyhow::Result<()> {
@@ -36,7 +37,6 @@ pub fn run() -> anyhow::Result<()> {
         Some(("daemon", sub_matches)) => {
             // Daemon started
             // println!("daemon");
-
         }
         _ => println!("`None`"),
     }
@@ -48,16 +48,23 @@ fn cmd_exec(cmd: &str) -> anyhow::Result<()> {
     let cm = Exec::shell(cmd);
 
     match cm.clone().capture() {
-        Ok(_) => {
-            let v = cm.stream_stderr()?;
-            let reader = std::io::BufReader::new(v);
-            for line in reader.lines() {
-                match line {
-                    Ok(l) => {
-                        println!("Line :{}", l);
+        Ok(capture) => {
+            if !capture.success() {
+                let mut collected_output = String::new();
+
+                let v = cm.stream_stderr()?;
+                let reader = std::io::BufReader::new(v);
+                for line in reader.lines() {
+                    match line {
+                        Ok(l) => {
+                            // println!("Line :{}", l);
+                            collected_output.push_str(&l);
+                        }
+                        Err(e) => print!("Error:{}", e),
                     }
-                    Err(e) => print!("Error:{}", e),
                 }
+
+                let _ = NixErr::process_nix_error(&collected_output);
             }
         }
         Err(e) => {
