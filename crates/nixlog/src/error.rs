@@ -16,6 +16,7 @@ pub struct NixBuildError {
     pub short_log: String,
     pub full_log: Option<String>,
     pub log_file: Option<PathBuf>,
+    // pub nix_command: String,
 }
 
 impl NixBuildError {
@@ -28,6 +29,7 @@ impl NixBuildError {
             short_log: output.to_string(),
             full_log: None,
             log_file: None,
+
         })
     }
 

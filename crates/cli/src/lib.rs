@@ -1,9 +1,10 @@
 use clap::{arg, command, Arg, ArgAction, Command, Parser, Subcommand};
 
-use core::error;
+use daemon::core;
 use nixlog::error as NixErr;
 use std::io::{BufRead, Read};
 use subprocess::Exec;
+
 
 pub fn run() -> anyhow::Result<()> {
     tracing_subscriber::fmt()
@@ -37,6 +38,9 @@ pub fn run() -> anyhow::Result<()> {
         Some(("daemon", sub_matches)) => {
             // Daemon started
             // println!("daemon");
+            // dbus-send --system --type=signal /com/example com.example.signal_name string:"hello world"
+
+            let _ = daemon::core::run();
         }
         _ => println!("`None`"),
     }
