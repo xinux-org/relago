@@ -16,6 +16,7 @@ path = "src/main.rs"
 # http = { path = "../http" }
 utils = { path = "../utils" }
 nixlog ={ path = "../nixlog"}
+daemon ={ path = "../daemon"}
 
 # Third party dependencies
 clap = { version = "4.5.28", features = ["derive", "cargo"] }

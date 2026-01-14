@@ -12,6 +12,8 @@ repository.workspace = true
 toml = { workspace = true }
 get_fields = "0.1.0"
 serde = { workspace = true }
+dbus = { workspace = true }
+dbus-crossroads = { workspace = true }
 syn = { version = "2.0", features = ["derive", "full"] }
 quote = "1.0"
 proc-macro2 = "1.0"
