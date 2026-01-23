@@ -55,6 +55,7 @@ in
       # Other compile time dependencies
       pkg-config
 
+      dbus
       zlib
       # libssl
     ];
@@ -67,8 +68,12 @@ in
       # libressl
 
       zlib
+      pkg-configUpstream
     ];
 
+    # dbus = pkgs.dbus;
+    DBUS_PATH = "${pkgs.dbus}";
+    
     # fixupPhase = ''
     #   mkdir -p $out/mgrs
     #   cp -R ./crates/database/* $out/mgrs
@@ -79,11 +84,11 @@ in
     RUST_SRC_PATH = "${pkgs.rust.packages.stable.rustPlatform.rustLibSrc}";
 
     # Compiler LD variables
-    NIX_LDFLAGS = "-L${(getLibFolder pkgs.libiconv)} -L${(getLibFolder pkgs.postgresql)}";
+    NIX_LDFLAGS = "-L${(getLibFolder pkgs.libiconv)} -L${(getLibFolder pkgs.pkg-config)} -L${(getLibFolder pkgs.dbus)}";
     LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath [
       pkgs.gcc
       pkgs.libiconv
-      pkgs.postgresql
+      # pkgs.postgresql
       pkgs.llvmPackages.llvm
     ];
 

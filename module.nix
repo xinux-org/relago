@@ -28,7 +28,6 @@ flake: {
   };
 
 
-
   # Systemd services
   service = mkIf cfg.enable {
     ## User for our services
@@ -48,63 +47,9 @@ flake: {
     };
 
 
-    # Configurator service (before actual server)
-    systemd.services."${manifest.name}-config" = {
-      wantedBy = ["${manifest.name}.target"];
-      partOf = ["${manifest.name}.target"];
-      path = with pkgs; [
-        jq
-        openssl
-        replace-secret
-      ];
-
-      serviceConfig = {
-        Type = "oneshot";
-        User = cfg.user;
-        Group = cfg.group;
-        TimeoutSec = "infinity";
-        Restart = "on-failure";
-        WorkingDirectory = "${cfg.dataDir}";
-        RemainAfterExit = true;
-
-        ExecStartPre = let
-          preStartFullPrivileges = ''
-            set -o errexit -o pipefail -o nounset
-            shopt -s dotglob nullglob inherit_errexit
-
-            chown -R --no-dereference '${cfg.user}':'${cfg.group}' '${cfg.dataDir}'
-            chmod -R u+rwX,g+rX,o-rwx '${cfg.dataDir}'
-          '';
-        in "+${pkgs.writeShellScript "${manifest.name}-pre-start-full-privileges" preStartFullPrivileges}";
-
-        ExecStart = pkgs.writeShellScript "${manifest.name}-config" ''
-          set -o errexit -o pipefail -o nounset
-          shopt -s inherit_errexit
-
-          umask u=rwx,g=rx,o=
-
-          # Write configuration file for server
-          cp -f ${toml-config} ${cfg.dataDir}/config.toml
-
-          ${lib.optionalString cfg.database.socketAuth ''
-            echo "DATABASE_URL=postgres://${cfg.database.user}@/${cfg.database.name}?host=${cfg.database.socket}" > "${cfg.dataDir}/.env"
-            sed -i "s|#databaseUrl#|postgres://${cfg.database.user}@/${cfg.database.name}?host=${cfg.database.socket}|g" "${cfg.dataDir}/config.toml"
-          ''}
-
-          ${lib.optionalString (!cfg.database.socketAuth) ''
-            echo "DATABASE_URL=postgres://${cfg.database.user}:#password#@${cfg.database.host}/${cfg.database.name}" > "${cfg.dataDir}/.env"
-            replace-secret '#password#' '${cfg.database.passwordFile}' '${cfg.dataDir}/.env'
-            source "${cfg.dataDir}/.env"
-            sed -i "s|#databaseUrl#|$DATABASE_URL|g" "${cfg.dataDir}/config.toml"
-          ''}
-        '';
-      };
-    };
-
-
     ## Main server service
     systemd.services."${manifest.name}" = {
-      description = "${manifest.name} Rust Actix server";
+      description = "${manifest.name} Relago daemonr";
       documentation = [manifest.homepage];
 
       # after = ["network.target" "${manifest.name}-config.service" "${manifest.name}-migration.service"] ++ lib.optional local-database "postgresql.service";
@@ -117,12 +62,13 @@ flake: {
         User = cfg.user;
         Group = cfg.group;
         Restart = "always";
-        ExecStart = "${lib.getBin cfg.package}/bin/server server run ${cfg.dataDir}/config.toml";
+        ExecStart = "${lib.getBin cfg.package}/bin/relago daemon";
         ExecReload = "${pkgs.coreutils}/bin/kill -s HUP $MAINPID";
         StateDirectory = cfg.user;
         StateDirectoryMode = "0750";
+        type = "dbus";
         # Access write directories
-        ReadWritePaths = [cfg.dataDir "/run/postgresql"];
+        # ReadWritePaths = [cfg.dataDir "/run/postgresql"];
         CapabilityBoundingSet = [
           "AF_NETLINK"
           "AF_INET"

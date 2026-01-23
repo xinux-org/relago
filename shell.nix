@@ -57,21 +57,24 @@ in
       openssl
       dbus
       systemd
-      pkg-config
+      # pkg-config
     ];
 
     # Set Environment Variables
     RUST_BACKTRACE = "full";
     RUST_SRC_PATH = "${pkgs.rust.packages.stable.rustPlatform.rustLibSrc}";
 
+    DBUS_PATH = "${pkgs.dbus}";
+
     # Compiler LD variables
     # > Make sure packages have /lib or /include path'es
-    NIX_LDFLAGS = "-L${(getLibFolder pkgs.libiconv)} -L${getLibFolder pkgs.postgresql}";
+    NIX_LDFLAGS = "-L${(getLibFolder pkgs.libiconv)} -L${getLibFolder pkgs.postgresql} -L${(getLibFolder pkgs.dbus)}";
+    
     LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath [
       pkgs.gcc
       pkgs.libiconv
-      pkgs.postgresql
       pkgs.llvmPackages.llvm
+      pkgs.dbus
     ];
 
     shellHook = ''
