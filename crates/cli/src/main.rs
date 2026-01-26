@@ -3,14 +3,12 @@
 use std::process::exit;
 
 use clap::Parser;
-use cli::{run};
+use cli::run;
 
 fn main() -> anyhow::Result<()> {
+    print!("hellooo");
 
-    print!("hello");
-    
     run();
 
-    
     Ok(())
 }

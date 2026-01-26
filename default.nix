@@ -1,12 +1,6 @@
 {
-  pkgs ? let
-    lock = (builtins.fromJSON (builtins.readFile ./flake.lock)).nodes.nixpkgs.locked;
-    nixpkgs = fetchTarball {
-      url = "https://github.com/nixos/nixpkgs/archive/${lock.rev}.tar.gz";
-      sha256 = lock.narHash;
-    };
-  in
-    import nixpkgs {overlays = [];},
+  pkgs,
+  craneLib,
   ...
 }: let
   # Helpful nix function
@@ -15,65 +9,52 @@
 
   # Manifest via Cargo.toml
   manifest = (pkgs.lib.importTOML ./Cargo.toml).workspace.package;
-in
-  pkgs.rustPlatform.buildRustPackage {
-    # Package related things automatically
-    # obtained from Cargo.toml, so you don't
-    # have to do everything manually
-    pname = manifest.name;
-    version = manifest.version;
 
-    src = pkgs.lib.cleanSource ./.;
+  # Compile time dependencies
+  commonNativeBuildInputs = with pkgs; [
+    # GCC toolchain
+    gcc
+    gnumake
+    pkg-config
 
-    cargoLock = {
-      lockFile = ./Cargo.lock;
-      # Use this if you have dependencies from git instead
-      # of crates.io in your Cargo.toml
-      # outputHashes = {
-      #   # Sha256 of the git repository, doesn't matter if it's monorepo
-      #   "example-0.1.0" = "sha256-80EwvwMPY+rYyti8DMG4hGEpz/8Pya5TGjsbOBF0P0c=";
-      # };
-    };
+    # LLVM toolchain
+    cmake
+    llvmPackages.llvm
+    llvmPackages.clang
 
-    # Compile time dependencies
-    nativeBuildInputs = with pkgs; [
-      # GCC toolchain
-      gcc
-      gnumake
-      pkg-config
+    # Rust
+    rustc
+    cargo
+    clippy
 
-      # LLVM toolchain
-      cmake
-      llvmPackages.llvm
-      llvmPackages.clang
+    # Other compile time dependencies
+    pkg-config
 
-      # Rust
-      rustc
-      cargo
-      clippy
+    dbus.dev
+    zlib
+    # libssl
+  ];
 
-      # Other compile time dependencies
-      pkg-config
+  # Runtime dependencies which will be shipped
+  # with nix package
+  commonBuildInputs = with pkgs; [
+    openssl
+    pkg-config
+    # libressl
 
-      dbus
-      zlib
-      # libssl
-    ];
+    dbus.dev
+    systemd.dev
 
-    # Runtime dependencies which will be shipped
-    # with nix package
-    buildInputs = with pkgs; [
-      openssl
-      pkg-config
-      # libressl
+    zlib
+    pkg-configUpstream
+  ];
 
-      zlib
-      pkg-configUpstream
-    ];
+  src = craneLib.cleanCargoSource ./.;
 
+  common = {
     # dbus = pkgs.dbus;
     DBUS_PATH = "${pkgs.dbus}";
-    
+
     # fixupPhase = ''
     #   mkdir -p $out/mgrs
     #   cp -R ./crates/database/* $out/mgrs
@@ -83,22 +64,36 @@ in
     RUST_BACKTRACE = 1;
     RUST_SRC_PATH = "${pkgs.rust.packages.stable.rustPlatform.rustLibSrc}";
 
-    # Compiler LD variables
-    NIX_LDFLAGS = "-L${(getLibFolder pkgs.libiconv)} -L${(getLibFolder pkgs.pkg-config)} -L${(getLibFolder pkgs.dbus)}";
-    LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath [
-      pkgs.gcc
-      pkgs.libiconv
-      # pkgs.postgresql
-      pkgs.llvmPackages.llvm
-    ];
+    # # Compiler LD variables
+    NIX_LDFLAGS = "-L${(getLibFolder pkgs.libiconv)} -L${(getLibFolder pkgs.pkg-config)} -L${(getLibFolder pkgs.dbus.dev)}";
+    LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath (with pkgs; [
+      gcc
+      libiconv
+      # postgresql
+      llvmPackages.llvm
+      dbus.dev
+    ]);
 
-    # meta = with lib; {
-      # homepage = manifest.homepage;
-      # description = manifest.description;
-    #   #https://github.com/NixOS/nixpkgs/blob/master/lib/licenses.nix
-      # license = with lib.licenses; [asl20 mit];
-      # platforms = with platforms; linux ++ darwin;
-      # mainProgram = "server";
-      # maintainers = [lib.maintainers.orzklv];
-    # };
-  }
+    # PKG_CONFIG_PATH = "${pkgs.dbus.dev}/lib/pkgconfig";
+  };
+
+  cargoArtifacts =
+    craneLib.buildDepsOnly {
+      inherit src;
+      strictDeps = true;
+
+      nativeBuildInputs = commonNativeBuildInputs;
+      buildInputs = commonBuildInputs;
+    }
+    // common;
+in
+  craneLib.buildPackage ({
+      pname = manifest.name;
+      version = manifest.version;
+
+      inherit src cargoArtifacts;
+
+      nativeBuildInputs = commonNativeBuildInputs;
+      buildInputs = commonBuildInputs;
+    }
+    // common)
