@@ -1,5 +1,5 @@
 NIX_SHELL_DIR := source_dir() + "/.nix-shell"
-PGDATA := NIX_SHELL_DIR + "/db"
+
 
 set dotenv-filename := ".env"
 set dotenv-load
@@ -39,18 +39,3 @@ clean: db-stop
 db-stop:
   pkill postgres
 
-[doc('Start postgresql instance with data')]
-db-start:
-  pg_ctl                                                  \
-    -D "$PWD/.nix-shell/db"                               \
-    -l $PGDATA/postgres.log                               \
-    -o "-c unix_socket_directories='$PGDATA'"             \
-    -o "-c listen_addresses='*'"                          \
-    -o "-c log_destination='stderr'"                      \
-    -o "-c logging_collector=on"                          \
-    -o "-c log_directory='log'"                           \
-    -o "-c log_filename='postgresql-%Y-%m-%d_%H%M%S.log'" \
-    -o "-c log_min_messages=info"                         \
-    -o "-c log_min_error_statement=info"                  \
-    -o "-c log_connections=on"                            \
-    start

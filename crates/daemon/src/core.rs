@@ -1,0 +1,19 @@
+use dbus::blocking::Connection;
+use dbus::Message;
+use dbus_crossroads as crossroads;
+use std::error::Error;
+use std::time::Duration;
+use utils::notify as Notify;
+
+pub fn run() -> anyhow::Result<()> {
+    let mut cr: crossroads::Crossroads = crossroads::Crossroads::new();
+
+    let token = Notify::register_org_freedesktop_xinux_relago(&mut cr);
+    cr.insert("/", &[token], ());
+
+    let conn = dbus::blocking::Connection::new_session()?;
+    conn.request_name("org.freedesktop.Xinux.relago", true, true, true)?;
+
+    cr.serve(&conn)?;
+    Ok(())
+}

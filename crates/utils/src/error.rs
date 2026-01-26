@@ -8,7 +8,7 @@ pub enum Error {
     NonExistent(String),
     Write(std::io::Error),
     Read(std::io::Error),
-    EnvLoad(dotenvy::Error),
+    // EnvLoad(dotenvy::Error),
     SocketParse(std::io::Error),
     EnvRead(std::env::VarError),
     NumberConversion(std::num::ParseIntError),
@@ -23,7 +23,7 @@ impl Display for Error {
             Error::Read(e) => write!(f, "Error while reading config: {}", e),
             Error::Write(e) => write!(f, "Error while writing config: {}", e),
             Error::NonExistent(e) => write!(f, "File is probably non existent: {}", e),
-            Error::EnvLoad(e) => write!(f, "Error while reading .env variables: {}", e),
+            // Error::EnvLoad(e) => write!(f, "Error while reading .env variables: {}", e),
             Error::SocketParse(e) => write!(f, "Error while parsing address to SocketAddr: {}", e),
             Error::EnvRead(e) => write!(f, "Error while getting a variable: {}", e),
             Error::Serialization(e) => {

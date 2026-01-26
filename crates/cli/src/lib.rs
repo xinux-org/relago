@@ -1,57 +1,80 @@
-use clap::{Args, Parser, Subcommand};
-use std::path::PathBuf;
+use clap::{arg, command, Arg, ArgAction, Command, Parser, Subcommand};
 
-pub use utils::error::{Error, Result};
+use daemon::core;
+use nixlog::error as NixErr;
+use std::io::{BufRead, Read};
+use subprocess::Exec;
 
-/// CLI interface for server infrastructure
-#[derive(Debug, Parser)]
-#[command(name = "server", version)]
-#[command(about = "CLI interface for server infrastructure", long_about = None)]
-pub struct Cli {
-    #[command(subcommand)]
-    pub command: Commands,
+
+pub fn run() -> anyhow::Result<()> {
+    tracing_subscriber::fmt()
+        .with_env_filter(
+            tracing_subscriber::EnvFilter::from_default_env()
+                .add_directive(tracing::Level::INFO.into()),
+        )
+        .init();
+
+    let matches = command!() // requires `cargo` feature
+        .subcommand(
+            Command::new("exec")
+                .about("Run daemon")
+                .arg(Arg::new("exec").action(ArgAction::Append)),
+        )
+        .subcommand(Command::new("daemon").about("Run daemon").arg(arg!([NAME])))
+        .get_matches();
+
+    match matches.subcommand() {
+        Some(("exec", sub_matches)) => {
+            let r = sub_matches
+                .get_many::<String>("exec")
+                .unwrap_or_default()
+                .map(|v| v.as_str())
+                .collect::<Vec<_>>();
+            match cmd_exec(&r[0]) {
+                Err(_) => println!("Cooked"),
+                Ok(_) => println!("exec"),
+            }
+        }
+        Some(("daemon", sub_matches)) => {
+            // Daemon started
+            // println!("daemon");
+            // dbus-send --system --type=signal /com/example com.example.signal_name string:"hello world"
+
+            let _ = daemon::core::run();
+        }
+        _ => println!("`None`"),
+    }
+
+    Ok(())
 }
 
-#[derive(Debug, Subcommand)]
-pub enum Commands {
-    /// Commands for operating with server instance
-    Server(ServerArgs),
+fn cmd_exec(cmd: &str) -> anyhow::Result<()> {
+    let cm = Exec::shell(cmd);
 
-    /// Commands for manging configurations
-    Config(ConfigArgs),
-}
+    match cm.clone().capture() {
+        Ok(capture) => {
+            if !capture.success() {
+                let mut collected_output = String::new();
 
-#[derive(Debug, Args)]
-#[command(flatten_help = true)]
-pub struct ServerArgs {
-    #[command(subcommand)]
-    pub command: ServerCommands,
-}
+                let v = cm.stream_stderr()?;
+                let reader = std::io::BufReader::new(v);
+                for line in reader.lines() {
+                    match line {
+                        Ok(l) => {
+                            // println!("Line :{}", l);
+                            collected_output.push_str(&l);
+                        }
+                        Err(e) => print!("Error:{}", e),
+                    }
+                }
 
-#[derive(Debug, Subcommand)]
-pub enum ServerCommands {
-    /// Starting server with reading a config file
-    Run { path: PathBuf },
-}
+                let _ = NixErr::process_nix_error(&collected_output);
+            }
+        }
+        Err(e) => {
+            print!("{}", e)
+        }
+    }
 
-#[derive(Debug, Args)]
-#[command(flatten_help = true)]
-pub struct ConfigArgs {
-    #[command(subcommand)]
-    pub command: ConfigCommands,
-}
-
-#[derive(Debug, Subcommand)]
-pub enum ConfigCommands {
-    /// Starting server with reading a config file
-    Check { path: PathBuf },
-
-    /// Generate an example configuration configuration at given path
-    Generate {
-        path: PathBuf,
-        port: Option<String>,
-        url: Option<String>,
-        threads: Option<String>,
-        database: Option<String>,
-    },
+    Ok(())
 }
