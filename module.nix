@@ -65,7 +65,7 @@ flake: {
         ExecReload = "${pkgs.coreutils}/bin/kill -s HUP $MAINPID";
         # StateDirectory = cfg.user;
         # StateDirectoryMode = "0750";
-        Type = "dbus";
+        # Type = "dbus";
         BusName="org.freedesktop.Xinux.relago";
         # Access write directories
         # ReadWritePaths = [cfg.dataDir "/run/postgresql"];
