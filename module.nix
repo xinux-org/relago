@@ -67,6 +67,7 @@ flake: {
         StateDirectory = cfg.user;
         StateDirectoryMode = "0750";
         Type = "dbus";
+        BusName="org.freedesktop.Xinux.relago"
         # Access write directories
         # ReadWritePaths = [cfg.dataDir "/run/postgresql"];
         CapabilityBoundingSet = [
@@ -121,37 +122,10 @@ in {
         ${manifest.name}, actix + diesel server on rust.
       '';
 
-      address = mkOption {
-        type = types.str;
-        default = "127.0.0.1";
-        description = "Port to use for passing over proxy";
-      };
-
-   
-
       threads = mkOption {
         type = types.int;
         default = 1;
         description = "How many cores to use while pooling";
-      };
-
-      proxy-reverse = {
-        enable = mkEnableOption ''
-          Enable proxy reversing via nginx/caddy.
-        '';
-      };
-
-
-      user = mkOption {
-        type = types.str;
-        default = "${manifest.name}";
-        description = "User for running system + accessing keys";
-      };
-
-      group = mkOption {
-        type = types.str;
-        default = "${manifest.name}";
-        description = "Group for running system + accessing keys";
       };
 
       dataDir = mkOption {
@@ -162,13 +136,6 @@ in {
         '';
       };
 
-      package = mkOption {
-        type = types.package;
-        default = fpkg;
-        description = ''
-          Compiled ${manifest.name} actix server package to use with the service.
-        '';
-      };
     };
   };
 
