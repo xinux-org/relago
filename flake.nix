@@ -27,6 +27,7 @@
       # pkgs = nixpkgs.legacyPackages.${system};
       flake = {
       	nixosModules.relago = import ./module.nix self;
+      	nixosModules.default = import ./module.nix self;
       };
       
       perSystem = {
