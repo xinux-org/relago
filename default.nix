@@ -64,7 +64,8 @@
     # Set Environment Variables
     RUST_BACKTRACE = 1;
     RUST_SRC_PATH = "${pkgs.rust.packages.stable.rustPlatform.rustLibSrc}";
-
+    RUST_MIN_STACK = 16777216;
+    
     # # Compiler LD variables
     NIX_LDFLAGS = "-L${(getLibFolder pkgs.libiconv)} -L${(getLibFolder pkgs.pkg-config)} -L${(getLibFolder pkgs.dbus.dev)}";
     LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath (with pkgs; [
