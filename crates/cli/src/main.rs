@@ -6,9 +6,10 @@ use clap::Parser;
 use cli::run;
 
 fn main() -> anyhow::Result<()> {
-    print!("hellooo");
+    print!("Relago daemon application is started without fuckery!!!");
 
-    run();
+    let _ = daemon::core::run();
+    // run();
 
     Ok(())
 }

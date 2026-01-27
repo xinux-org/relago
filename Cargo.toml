@@ -10,7 +10,7 @@ members = ["crates/cli", "crates/daemon", "crates/utils", "crates/nixlog"]
 # Don't remove `name` regardless of warnings
 # Lots of nix things depend on this value alone
 name = "relago"
-version = "0.0.1"
+version = "0.0.2"
 edition = "2021"
 
 license = "MIT OR Apache-2.0"

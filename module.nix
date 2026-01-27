@@ -61,7 +61,7 @@ flake: {
         # User = cfg.user;
         # Group = cfg.group;
         Restart = "always";
-        ExecStart = "${lib.getBin fpkg}/bin/relago daemon";
+        ExecStart = "${lib.getBin fpkg}/bin/relago";
         ExecReload = "${pkgs.coreutils}/bin/kill -s HUP $MAINPID";
         # StateDirectory = cfg.user;
         # StateDirectoryMode = "0750";
