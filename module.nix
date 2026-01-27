@@ -59,7 +59,7 @@ flake: {
       path = [cfg.package];
 
       serviceConfig = {
-        User = cfg.user;
+        # User = cfg.user;
         # Group = cfg.group;
         Restart = "always";
         ExecStart = "${lib.getBin fpkg}/bin/relago daemon";
