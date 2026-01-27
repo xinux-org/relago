@@ -55,8 +55,7 @@ flake: {
       # after = ["network.target" "${manifest.name}-config.service" "${manifest.name}-migration.service"] ++ lib.optional local-database "postgresql.service";
       # requires = lib.optional local-database "postgresql.service";
       # wants = ["network-online.target"];
-      # wantedBy = ["multi-user.target"];
-      path = [fpkg];
+      wantedBy = ["multi-user.target"];
 
       serviceConfig = {
         # User = cfg.user;
@@ -65,7 +64,7 @@ flake: {
         ExecStart = "${lib.getBin fpkg}/bin/relago daemon";
         ExecReload = "${pkgs.coreutils}/bin/kill -s HUP $MAINPID";
         # StateDirectory = cfg.user;
-        StateDirectoryMode = "0750";
+        # StateDirectoryMode = "0750";
         Type = "dbus";
         BusName="org.freedesktop.Xinux.relago";
         # Access write directories
