@@ -26,11 +26,12 @@
     rustc
     cargo
     clippy
-
+    
     # Other compile time dependencies
     pkg-config
 
     dbus.dev
+    systemd.dev
     zlib
     # libssl
   ];
@@ -90,7 +91,7 @@ in
   craneLib.buildPackage ({
       pname = manifest.name;
       version = manifest.version;
-
+      
       inherit src cargoArtifacts;
 
       nativeBuildInputs = commonNativeBuildInputs;

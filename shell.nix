@@ -18,5 +18,9 @@ in
       nixfmt-tree
 
       rust-analyzer
+
+      pkg-config
+      dbus.dev
+      systemd.dev
     ];
   }
