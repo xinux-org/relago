@@ -64,7 +64,7 @@ flake: {
         Restart = "always";
         ExecStart = "${lib.getBin fpkg}/bin/relago daemon";
         ExecReload = "${pkgs.coreutils}/bin/kill -s HUP $MAINPID";
-        StateDirectory = cfg.user;
+        # StateDirectory = cfg.user;
         StateDirectoryMode = "0750";
         Type = "dbus";
         BusName="org.freedesktop.Xinux.relago";
