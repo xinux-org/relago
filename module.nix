@@ -46,74 +46,90 @@ flake: {
     #   ${manifest.name} = {};
     # };
 
-
-    ## Main server service
     systemd.services."${manifest.name}" = {
-      description = "${manifest.name} Relago daemonr";
-      # documentation = [manifest.homepage];
-
-      # after = ["network.target" "${manifest.name}-config.service" "${manifest.name}-migration.service"] ++ lib.optional local-database "postgresql.service";
-      # requires = lib.optional local-database "postgresql.service";
-      # wants = ["network-online.target"];
+      description = "${manifest.name} Relago daemon";
       wantedBy = ["multi-user.target"];
-
+      
       serviceConfig = {
-        # User = cfg.user;
-        # Group = cfg.group;
-        Restart = "always";
+        Type = "dbus";
+        BusName = "org.freedesktop.Xinux.relago";
+        
         ExecStart = "${lib.getBin fpkg}/bin/relago";
-        ExecReload = "${pkgs.coreutils}/bin/kill -s HUP $MAINPID";
-        # StateDirectory = cfg.user;
-        # StateDirectoryMode = "0750";
-        # Type = "dbus";
-        BusName="org.freedesktop.Xinux.relago";
-        # Access write directories
-        # ReadWritePaths = [cfg.dataDir "/run/postgresql"];
-        # CapabilityBoundingSet = [
-        #   "AF_NETLINK"
-        #   "AF_INET"
-        #   "AF_INET6"
-        # ];
-        # DeviceAllow = ["/dev/stdin r"];
+        
         StandardInput = "null";
         StandardOutput = "journal";
         StandardError = "journal";
-        DevicePolicy = "strict";
-        # IPAddressAllow = "localhost";
-        # LockPersonality = true;
-        # NoNewPrivileges = true;
-        PrivateDevices = true;
-        PrivateTmp = true;
-        PrivateUsers = false;
-        ProtectClock = true;
-        ProtectControlGroups = true;
-        # ProtectHome = true;
-        # ProtectHostname = true;
-        # ProtectKernelLogs = true;
-        # ProtectKernelModules = true;
-        # ProtectKernelTunables = true;
-        ProtectSystem = "strict";
-        # ReadOnlyPaths = ["/"];
-        # RemoveIPC = true;
-        # RestrictAddressFamilies = [
-        #   "AF_NETLINK"
-        #   "AF_INET"
-        #   "AF_INET6"
-        #   "AF_UNIX"
-        # ];
-        # RestrictNamespaces = true;
-        # RestrictRealtime = true;
-        # RestrictSUIDSGID = true;
-        SystemCallArchitectures = "native";
-        # SystemCallFilter = [
-        #   "@system-service"
-        #   "~@privileged"
-        #   "~@resources"
-        #   "@pkey"
-        # ];
-        UMask = "0027";
+        
+        Restart = "always";
       };
     };
+    ## Main server service
+    # systemd.services."${manifest.name}" = {
+    #   description = "${manifest.name} Relago daemonr";
+    #   # documentation = [manifest.homepage];
+
+    #   # after = ["network.target" "${manifest.name}-config.service" "${manifest.name}-migration.service"] ++ lib.optional local-database "postgresql.service";
+    #   # requires = lib.optional local-database "postgresql.service";
+    #   # wants = ["network-online.target"];
+    #   wantedBy = ["multi-user.target"];
+
+    #   serviceConfig = {
+    #     # User = cfg.user;
+    #     # Group = cfg.group;
+    #     Restart = "always";
+    #     ExecStart = "${lib.getBin fpkg}/bin/relago";
+    #     ExecReload = "${pkgs.coreutils}/bin/kill -s HUP $MAINPID";
+    #     # StateDirectory = cfg.user;
+    #     # StateDirectoryMode = "0750";
+    #     Type = "dbus";
+    #     BusName="org.freedesktop.Xinux.relago";
+    #     # Access write directories
+    #     # ReadWritePaths = [cfg.dataDir "/run/postgresql"];
+    #     # CapabilityBoundingSet = [
+    #     #   "AF_NETLINK"
+    #     #   "AF_INET"
+    #     #   "AF_INET6"
+    #     # ];
+    #     # DeviceAllow = ["/dev/stdin r"];
+    #     StandardInput = "null";
+    #     StandardOutput = "journal";
+    #     StandardError = "journal";
+    #     DevicePolicy = "strict";
+    #     # IPAddressAllow = "localhost";
+    #     # LockPersonality = true;
+    #     # NoNewPrivileges = true;
+    #     PrivateDevices = true;
+    #     PrivateTmp = true;
+    #     PrivateUsers = false;
+    #     ProtectClock = true;
+    #     ProtectControlGroups = true;
+    #     # ProtectHome = true;
+    #     # ProtectHostname = true;
+    #     # ProtectKernelLogs = true;
+    #     # ProtectKernelModules = true;
+    #     # ProtectKernelTunables = true;
+    #     ProtectSystem = "strict";
+    #     # ReadOnlyPaths = ["/"];
+    #     # RemoveIPC = true;
+    #     # RestrictAddressFamilies = [
+    #     #   "AF_NETLINK"
+    #     #   "AF_INET"
+    #     #   "AF_INET6"
+    #     #   "AF_UNIX"
+    #     # ];
+    #     # RestrictNamespaces = true;
+    #     # RestrictRealtime = true;
+    #     # RestrictSUIDSGID = true;
+    #     SystemCallArchitectures = "native";
+    #     # SystemCallFilter = [
+    #     #   "@system-service"
+    #     #   "~@privileged"
+    #     #   "~@resources"
+    #     #   "@pkey"
+    #     # ];
+    #     UMask = "0027";
+    #   };
+    # };
   };
 
 in {
