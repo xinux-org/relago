@@ -31,20 +31,20 @@ flake: {
   # Systemd services
   service = mkIf cfg.enable {
     ## User for our services
-    users.users = lib.mkIf (cfg.user == manifest.name) {
-      ${manifest.name} = {
-        description = "${manifest.name} Service";
-        home = cfg.dataDir;
-        useDefaultShell = true;
-        group = cfg.group;
-        isSystemUser = true;
-      };
-    };
+    # users.users = lib.mkIf (cfg.user == manifest.name) {
+    #   ${manifest.name} = {
+    #     description = "${manifest.name} Service";
+    #     home = cfg.dataDir;
+    #     useDefaultShell = true;
+    #     group = cfg.group;
+    #     isSystemUser = true;
+    #   };
+    # };
 
     ## Group to join our user
-    users.groups = mkIf (cfg.group == manifest.name) {
-      ${manifest.name} = {};
-    };
+    # users.groups = mkIf (cfg.group == manifest.name) {
+    #   ${manifest.name} = {};
+    # };
 
 
     ## Main server service
