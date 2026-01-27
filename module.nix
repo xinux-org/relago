@@ -56,7 +56,7 @@ flake: {
       # requires = lib.optional local-database "postgresql.service";
       # wants = ["network-online.target"];
       # wantedBy = ["multi-user.target"];
-      path = [cfg.package];
+      path = [fpkg];
 
       serviceConfig = {
         # User = cfg.user;
