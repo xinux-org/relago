@@ -75,6 +75,9 @@ flake: {
         #   "AF_INET6"
         # ];
         # DeviceAllow = ["/dev/stdin r"];
+        StandardInput = "null";
+        StandardOutput = "journal";
+        StandardError = "journal";
         DevicePolicy = "strict";
         # IPAddressAllow = "localhost";
         # LockPersonality = true;
