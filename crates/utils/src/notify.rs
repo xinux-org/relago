@@ -28,13 +28,13 @@ impl arg::ReadAll for OrgFreedesktopXinuxRelagoNixError {
 
 impl dbus::message::SignalArgs for OrgFreedesktopXinuxRelagoNixError {
     const NAME: &'static str = "NixError";
-    const INTERFACE: &'static str = "org.freedesktop.Xinux.relago";
+    const INTERFACE: &'static str = "org.freedesktop.problems.daemon";
 }
 
 pub fn register_org_freedesktop_xinux_relago<T>(cr: &mut crossroads::Crossroads) -> crossroads::IfaceToken<T>
 where T: OrgFreedesktopXinuxRelago + Send + 'static
 {
-    cr.register("org.freedesktop.Xinux.relago", |b| {
+    cr.register("org.freedesktop.problems.daemon", |b| {
         b.signal::<(String,), _>("NixError", ("log_file",));
     })
 }

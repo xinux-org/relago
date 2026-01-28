@@ -1,3 +1,3 @@
 [D-BUS Service]
-Name=org.freedesktop.Xinux.relago
+Name=org.freedesktop.problems.daemon
 Exec=/home/lambdajon/workspace/xinux/relago/result/bin/relago
