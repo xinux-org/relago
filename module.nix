@@ -60,7 +60,7 @@ flake: {
         StandardOutput = "journal";
         StandardError = "journal";
         
-        Restart = "always";
+        # Restart = "always";
 
         DevicePolicy="closed";
         KeyringMode="private";
