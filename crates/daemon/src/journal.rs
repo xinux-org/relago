@@ -5,100 +5,118 @@ use anyhow::anyhow;
 use systemd::journal::{self, Journal, JournalEntryField, JournalSeek};
 use tracing::error;
 
-const KEY_UNIT: &str = "_SYSTEMD_UNIT";
-const KEY_MESSAGE: &str = "MESSAGE";
-const KEY_PRIORITY: &str = "PRIORITY";
-const KEY_CODE_FILE: &str = "CODE_FILE";
-const KEY_ERRNO: &str = "ERRNO";
-const KEY_SYSLOG_RAW: &str = "SYSLOG_RAW";
-const KEY_STDOUT_ERR: &str = "_TRANSPORT=stdout";
+pub mod fields {
+    pub const MESSAGE: &str = "MESSAGE";
+    pub const MESSAGE_ID: &str = "MESSAGE_ID";
+    pub const PRIORITY: &str = "PRIORITY";
+    pub const UNIT: &str = "_SYSTEMD_UNIT";
+    pub const PID: &str = "_PID";
+    pub const UID: &str = "_UID";
+    pub const EXE: &str = "_EXE";
+    pub const COMM: &str = "_COMM";
+    pub const CMDLINE: &str = "_CMDLINE";
+    pub const TRANSPORT: &str = "_TRANSPORT";
+    pub const BOOT_ID: &str = "_BOOT_ID";
+    pub const ERRNO: &str = "ERRNO";
+    pub const CODE_FILE: &str = "CODE_FILE";
+    pub const SYSLOG_IDENTIFIER: &str = "SYSLOG_IDENTIFIER";
 
-const MAX_MESSAGES: usize = 5;
-
-#[derive(Debug)]
-struct JournalItem {
-    message: String,
-    // message_id: String,
-    priority: String,
-    unit: Option<String>,
-    errno: Option<String>,
-    std_err: Option<String>,
+    // Coredump-specific fields
+    pub const COREDUMP_PID: &str = "COREDUMP_PID";
+    pub const COREDUMP_EXE: &str = "COREDUMP_EXE";
+    pub const COREDUMP_COMM: &str = "COREDUMP_COMM";
+    pub const COREDUMP_SIGNAL: &str = "COREDUMP_SIGNAL";
+    pub const COREDUMP_SIGNAL_NAME: &str = "COREDUMP_SIGNAL_NAME";
+    pub const COREDUMP_FILENAME: &str = "COREDUMP_FILENAME";
+    pub const COREDUMP_UID: &str = "COREDUMP_UID";
+    pub const COREDUMP_CMDLINE: &str = "COREDUMP_CMDLINE";
 }
 
-fn from_journal_fields(mut journal: Journal) -> JournalItem {
-    let keys = vec![KEY_UNIT, KEY_MESSAGE];
-
-    // let a =  journal.get_data(field)
-    todo!()
+#[derive(Debug, Debug, Clone)]
+pub struct JournalEntry {
+    pub message: String,
+    pub priority: Option<u8>,
+    pub unit: Option<String>,
+    pub pid: Option<u32>,
+    pub exe: Option<String>,
+    pub comm: Option<String>,
+    pub transport: Option<String>,
+    pub errno: Option<i32>,
 }
 
-// TODO: Need handle errror when illegal journal field
-fn get_field_from_journal(journal: &mut Journal, j_field: &str) -> Option<String> {
-    let Some(Some(entry)) = journal.get_data(j_field).ok() else {
-        return None;
-    };
-
-    // TODO: need match option
-    return entry
+pub fn get_field(journal: &mut Journal, field: &str) -> Option<String> {
+    let entry = journal.get_data(field).ok()??;
+    entry
         .value()
         .map(String::from_utf8_lossy)
-        .map(|v| v.into_owned());
+        .map(|v| v.into_owned())
 }
-struct J {
+
+/// Extract a structured [`JournalEntry`] from the current journal position.
+pub fn extract_entry(journal: &mut Journal) -> Option<JournalEntry> {
+    let message = get_field(journal, fields::MESSAGE)?;
+
+    Some(JournalEntry {
+        message,
+        priority: get_field(journal, fields::PRIORITY).and_then(|s| s.parse().ok()),
+        unit: get_field(journal, fields::UNIT),
+        pid: get_field(journal, fields::PID).and_then(|s| s.parse().ok()),
+        exe: get_field(journal, fields::EXE),
+        comm: get_field(journal, fields::COMM),
+        transport: get_field(journal, fields::TRANSPORT),
+        errno: get_field(journal, fields::ERRNO).and_then(|s| s.parse().ok()),
+    })
+}
+pub struct JournalTail {
     journal: Journal,
 }
 
-impl J {
-    pub fn new(mut journal: Journal) -> anyhow::Result<Self> {
-        // Seek to end of current log to prevent old messages from being printed
+impl JournalTail {
+    /// Open the journal and seek to the tail (only new entries).
+    pub fn open() -> anyhow::Result<Self> {
+        let mut journal = journal::OpenOptions::default()
+            .open()
+            .map_err(|e| anyhow!("Could not open journal: {e}"))?;
+
         journal
             .seek(JournalSeek::Tail)
             .map_err(|_| anyhow!("Could not seek to end of journal"))?;
 
-        // JournalSeek::Tail goes to the position after the most recent entry so step back to
-        // point to the most recent entry.
+        // Tail points past the last entry, step back to it
         journal.previous()?;
 
         Ok(Self { journal })
     }
+
+    pub fn add_match(mut self, field: &str, value: &str) -> anyhow::Result<Self> {
+        self.journal
+            .match_add(field, value)
+            .map_err(|e| anyhow!("Failed to add match {field}={value}: {e}"))?;
+        Ok(self)
+    }
+
 }
 
-impl Iterator for J {
-    type Item = JournalItem;
+
+impl Iterator for JournalTail {
+    type Item = JournalEntry;
 
     fn next(&mut self) -> Option<Self::Item> {
         loop {
             match self.journal.next() {
                 Ok(0) => {
                     if let Err(err) = self.journal.wait(None) {
-                        error!(error = %err, "failed to wait on journal");
+                        error!(error = %err, "Failed to wait on journal");
                         return None;
                     }
                 }
                 Ok(_) => {
-                    let message = get_field_from_journal(&mut self.journal, KEY_MESSAGE)?;
-
-                    let unit = get_field_from_journal(&mut self.journal, KEY_UNIT);
-                    // let unit = "someUNit".to_string();
-
-                    let priority = get_field_from_journal(&mut self.journal, KEY_PRIORITY)?;
-                    let errno = get_field_from_journal(&mut self.journal, KEY_ERRNO);
-                    let std_err = get_field_from_journal(&mut self.journal, KEY_STDOUT_ERR);
-
-                    println!("{}", priority);
-
-                    let jr = JournalItem {
-                        message,
-                        priority,
-                        unit,
-                        errno,
-                        std_err,
-                    };
-
-                    return Some(jr);
+                    if let Some(entry) = extract_entry(&mut self.journal) {
+                        return Some(entry);
+                    }
                 }
                 Err(err) => {
-                    error!(error = %err, "failed to get next on journal");
+                    error!(error = %err, "Failed to read next journal entry");
                     return None;
                 }
             }
@@ -106,24 +124,13 @@ impl Iterator for J {
     }
 }
 
-pub fn main() -> Result<(), Box<dyn std::error::Error>> {
+pub fn run() -> Result<(), Box<dyn std::error::Error>> {
     println!("Starting journal-logger");
 
-    // Open the journal
-    let journal = journal::OpenOptions::default()
-        .open()
-        .expect("Could not open journal");
-
-    let j = J::new(journal)?;
-
-    let mut a = j.into_iter();
-    while let Some(log) = a.next() {
-        println!("{log:#?}");
+    let tail = JournalTail::open()?;
+    for entry in tail {
+        println!("{entry:#?}");
     }
 
     Ok(())
-}
-
-pub fn run() -> Result<(), Box<dyn std::error::Error>> {
-    main()
 }
