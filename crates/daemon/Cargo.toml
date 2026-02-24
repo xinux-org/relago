@@ -20,5 +20,6 @@ systemd = "0.10.1"
 dbus = { workspace = true }
 utils = { path = "../utils" }
 dbus-crossroads = { workspace = true }
+nom = { workspace = true }
 
 # nixlog ={ path = "../nixlog"}

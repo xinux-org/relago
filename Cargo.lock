@@ -207,6 +207,7 @@ dependencies = [
  "dbus",
  "dbus-crossroads",
  "libsystemd-sys",
+ "nom",
  "proc-macro2",
  "quote",
  "serde",
