@@ -32,7 +32,7 @@ pub mod fields {
     pub const COREDUMP_CMDLINE: &str = "COREDUMP_CMDLINE";
 }
 
-#[derive(Debug, Debug, Clone)]
+#[derive(Debug, Clone)]
 pub struct JournalEntry {
     pub message: String,
     pub priority: Option<u8>,
