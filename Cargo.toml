@@ -4,7 +4,15 @@
 
 resolver = "2"
 default-members = ["crates/cli"]
-members = ["crates/cli", "crates/daemon", "crates/utils", "crates/nixlog"]
+members = [
+  "crates/cli",
+  "crates/daemon",
+  "crates/utils",
+  "crates/nixlog",
+  "crates/crash-event",
+  "crates/relago-journal-ext",
+]
+
 
 [workspace.package]
 # Don't remove `name` regardless of warnings
