@@ -1,6 +1,5 @@
 //! Follow future journal log messages and print up to 100 of them.
 use anyhow::anyhow;
-use nom::{self, branch::alt, Parser};
 use systemd::journal::{self, Journal, JournalEntryField, JournalSeek};
 use tracing::error;
 
