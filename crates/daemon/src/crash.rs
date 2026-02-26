@@ -3,7 +3,7 @@ use  crash_event::CrashEvent;
 
 
 #[derive(Debug, CrashEvent)]
-#[journal(match(MESSAGE_ID = "fc2e22bc6ee647b6b90729ab34a250b1"))]
+#[journal(filter(MESSAGE_ID = "fc2e22bc6ee647b6b90729ab34a250b1"))]
 pub struct CoredumpCrash {
     #[journal(field = "COREDUMP_EXE", required)]
     pub exe: String,
@@ -32,7 +32,7 @@ pub struct CoredumpCrash {
 
 
 #[derive(Debug, CrashEvent)]
-#[journal(match(MESSAGE_ID = "be02cf6855d2428ba40df7e9d022f03d"))]
+#[journal(filter(MESSAGE_ID = "be02cf6855d2428ba40df7e9d022f03d"))]
 pub struct ServiceFailureCrash {
     #[journal(field = "UNIT", required)]
     pub unit: String,
@@ -53,7 +53,7 @@ pub struct ServiceFailureCrash {
 
 
 #[derive(Debug, CrashEvent)]
-#[journal(match(MESSAGE_ID = "fe6bda9e7f4a4f5593682fcbcf9ee3f9"))]
+#[journal(filter(MESSAGE_ID = "fe6bda9e7f4a4f5593682fcbcf9ee3f9"))]
 pub struct OomCrash {
     #[journal(field = "_PID", required)]
     pub pid: u32,
