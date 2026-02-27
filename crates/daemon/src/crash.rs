@@ -3,7 +3,7 @@ use crash_event::CrashEvent;
 use relago_journal_ext::JournalExt;
 
 #[derive(Debug, CrashEvent)]
-#[journal(filter(SYSLOG_IDENTIFIER = "systemd-coredump"))]
+#[journal(filter(MESSAGE_ID = "fc2e22bc6ee647b6b90729ab34a250b1"))]
 pub struct CoredumpCrash {
     #[journal(field = "COREDUMP_EXE", required)]
     pub exe: String,
