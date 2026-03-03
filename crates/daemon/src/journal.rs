@@ -33,7 +33,7 @@ pub fn run() -> anyhow::Result<()> {
         .map_err(|e| anyhow!("journal seek failed: {e}"))?;
 
     journal.previous()?;
-    
+
     registry.install_filters(&mut journal)?;
 
     loop {
@@ -59,7 +59,7 @@ pub fn run() -> anyhow::Result<()> {
                 }
 
                 Some(Crash::Oom(r)) => {
-                    println!("Out of memory");
+                    println!("Out of memory: {:#r}");
                 }
 
                 None => {
