@@ -14,9 +14,6 @@ pub struct CoredumpCrash {
     #[journal(field = "COREDUMP_SIGNAL")]
     pub signal: Option<u32>,
 
-    #[journal(field = "COREDUMP_SIGNAL_NAME")]
-    pub signal_name: Option<String>,
-
     #[journal(field = "COREDUMP_CMDLINE")]
     pub cmdline: Option<String>,
 
