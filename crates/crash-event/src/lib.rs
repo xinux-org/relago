@@ -47,6 +47,7 @@ fn expand(ast: &DeriveInput) -> syn::Result<TokenStream2> {
     let mut initializers = Vec::new();
 
     for field in fields {
+        print!("field: {:?}", field.ident);
         let ident = field.ident.as_ref().unwrap();
         let ty    = &field.ty;
         let meta  = parse_field_meta(field)?;
@@ -87,6 +88,7 @@ fn expand(ast: &DeriveInput) -> syn::Result<TokenStream2> {
 
             pub fn detect(journal: &mut impl JournalExt) -> Option<Self> {
                 (|| -> Result<Self, ()> {
+
                     #(#extractions)*
                     Ok(Self { #(#initializers),* })
                 })().ok()
