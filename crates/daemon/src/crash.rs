@@ -35,8 +35,8 @@ pub struct ServiceFailureCrash {
     pub unit: String,
 
     // "done" | "failed" | "timeout" | "canceled" | "dependency" | "skipped"
-    #[journal(field = "JOB_RESULT", required)]
-    pub job_result: String,
+    // #[journal(field = "JOB_RESULT", required)]
+    // pub job_result: String,
 
     #[journal(field = "EXIT_CODE")]
     pub exit_code: Option<u32>,
