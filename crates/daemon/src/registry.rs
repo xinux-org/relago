@@ -47,6 +47,8 @@ impl PluginRegistry {
             }
 
             for &(field, value) in group {
+                println!("journal fields: {:?}, {:?}", field, value);
+                
                 journal
                     .match_add(field, value)
                     .map_err(|e| anyhow!("match_add({field}={value}) failed: {e}"))?;
