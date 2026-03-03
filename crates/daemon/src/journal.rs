@@ -32,6 +32,8 @@ pub fn run() -> anyhow::Result<()> {
         .seek(JournalSeek::Tail)
         .map_err(|e| anyhow!("journal seek failed: {e}"))?;
 
+    journal.previous()?;
+    
     registry.install_filters(&mut journal)?;
 
     loop {
