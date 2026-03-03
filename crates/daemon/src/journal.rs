@@ -49,9 +49,9 @@ pub fn run() -> anyhow::Result<()> {
                 }
 
                 Some(Crash::ServiceFailure(r)) => {
-                    if r.job_result == "done" {
-                        continue;
-                    }
+                    // if r.job_result == "done" {
+                    //     continue;
+                    // }
 
                     println!("Service failed");
                 }
