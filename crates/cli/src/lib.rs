@@ -39,8 +39,9 @@ pub fn run() -> anyhow::Result<()> {
             // Daemon started
             // println!("daemon");
             // dbus-send --system --type=signal /com/example com.example.signal_name string:"hello world"
+            println!("Relago daemon application is started without fuckery!!!");
+            let _ = daemon::journal::run();
 
-            let _ = daemon::core::run();
         }
         _ => println!("`None`"),
     }
