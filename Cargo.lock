@@ -190,6 +190,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "773648b94d0e5d620f64f280777445740e61fe701025087ec8b57f45c791888b"
 
 [[package]]
+name = "crash-event"
+version = "0.1.0"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "relago-journal-ext",
+ "syn 2.0.114",
+]
+
+[[package]]
 name = "cstr-argument"
 version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -204,11 +214,14 @@ name = "daemon"
 version = "0.0.2"
 dependencies = [
  "anyhow",
+ "crash-event",
  "dbus",
  "dbus-crossroads",
  "libsystemd-sys",
+ "nom",
  "proc-macro2",
  "quote",
+ "relago-journal-ext",
  "serde",
  "serde_json",
  "systemd",
@@ -512,6 +525,13 @@ name = "regex-syntax"
 version = "0.8.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7a2d987857b319362043e95f5353c0535c1f58eec5336fdfcf626430af7def58"
+
+[[package]]
+name = "relago-journal-ext"
+version = "0.1.0"
+dependencies = [
+ "systemd",
+]
 
 [[package]]
 name = "rustversion"
