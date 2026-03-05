@@ -1,6 +1,7 @@
 use clap::{arg, command, Arg, ArgAction, Command, Parser, Subcommand};
 
-use daemon::core;
+// use daemon::core;
+use daemon::*;
 use nixlog::error as NixErr;
 use std::io::{BufRead, Read};
 use subprocess::Exec;
@@ -21,6 +22,7 @@ pub fn run() -> anyhow::Result<()> {
                 .arg(Arg::new("exec").action(ArgAction::Append)),
         )
         .subcommand(Command::new("daemon").about("Run daemon").arg(arg!([NAME])))
+        .subcommand(Command::new("fetch").about("Fetch data").arg(arg!([INTERFACE])))
         .get_matches();
 
     match matches.subcommand() {
@@ -35,12 +37,16 @@ pub fn run() -> anyhow::Result<()> {
                 Ok(_) => println!("exec"),
             }
         }
+        Some(("fetch", sub_matches)) => {
+            println!("Fetcher should take data from journal might be around here");
+            let _ = fetcher::run();
+        }
         Some(("daemon", sub_matches)) => {
             // Daemon started
             // println!("daemon");
             // dbus-send --system --type=signal /com/example com.example.signal_name string:"hello world"
-
-            let _ = daemon::core::run();
+            let _ = fetcher::run();
+            let _ = core::run();
         }
         _ => println!("`None`"),
     }
