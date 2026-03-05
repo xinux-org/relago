@@ -4,7 +4,7 @@ use daemon::core;
 use nixlog::error as NixErr;
 use std::io::{BufRead, Read};
 use subprocess::Exec;
-
+use export;
 
 pub fn run() -> anyhow::Result<()> {
     tracing_subscriber::fmt()
@@ -21,6 +21,7 @@ pub fn run() -> anyhow::Result<()> {
                 .arg(Arg::new("exec").action(ArgAction::Append)),
         )
         .subcommand(Command::new("daemon").about("Run daemon").arg(arg!([NAME])))
+        .subcommand(Command::new("export").about("Export journal").arg(arg!([NAME])))
         .get_matches();
 
     match matches.subcommand() {
@@ -34,6 +35,11 @@ pub fn run() -> anyhow::Result<()> {
                 Err(_) => println!("Cooked"),
                 Ok(_) => println!("exec"),
             }
+        }
+        Some(("export", sub_matches)) => {
+            println!("Relago starting export journal");
+            let _ = export::run();
+
         }
         Some(("daemon", sub_matches)) => {
             // Daemon started
