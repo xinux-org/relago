@@ -24,7 +24,7 @@ pub fn run() -> anyhow::Result<()> {
                 }
                 None => {
                     println!("none");
-                    return Ok(())
+                    return Ok(());
                 }
             }
 
