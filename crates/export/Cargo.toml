@@ -20,3 +20,4 @@ utils = { path = "../utils" }
 dbus-crossroads = { workspace = true }
 nom = { workspace = true }
 # nixlog ={ path = "../nixlog"}
+flate2 = "1.1.9"

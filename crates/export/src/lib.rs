@@ -1,3 +1,5 @@
+pub mod compress;
+
 use anyhow::anyhow;
 use serde_json;
 use std::collections::BTreeMap;
@@ -5,7 +7,10 @@ use std::fs::File;
 use std::io::BufWriter;
 use std::path::Path;
 use systemd::journal::{self, JournalSeek};
+use compress as cmp;
+use std::path::PathBuf;
 
+// TODO: Maybe good move to config ?
 const TMP: &str = "/tmp/relago/journal_export.json";
 
 pub fn run() -> anyhow::Result<()> {
@@ -14,6 +19,11 @@ pub fn run() -> anyhow::Result<()> {
 /// This function for exporting entries to file
 pub fn export_to_file(path: &str) -> anyhow::Result<()> {
     println!("Exporting all journal entries...");
+
+    // TODO: Maybe we can implement with more optimal way?
+    let binding = PathBuf::from(path);
+    let dest = binding.parent().unwrap().to_path_buf();
+    
 
     let mut reader = journal::OpenOptions::default()
         .open()
@@ -55,6 +65,9 @@ pub fn export_to_file(path: &str) -> anyhow::Result<()> {
 
     println!("Exported {} entries to: {}", entries.len(), path);
 
+    // TODO: need remove file after compression.
+    cmp::compress(path, &dest);
+    
     Ok(())
 }
 
