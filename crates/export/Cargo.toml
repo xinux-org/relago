@@ -1,0 +1,23 @@
+[package]
+name = "export"
+authors.workspace = true
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+homepage.workspace = true
+repository.workspace = true
+
+[dependencies]
+serde = { workspace = true }
+anyhow = { workspace = true }
+tracing-subscriber = { workspace = true }
+tracing = { workspace = true }
+serde_json = "1"
+libsystemd-sys = "0.9.4"
+systemd = "0.10.1"
+dbus = { workspace = true }
+utils = { path = "../utils" }
+dbus-crossroads = { workspace = true }
+nom = { workspace = true }
+# nixlog ={ path = "../nixlog"}
+flate2 = "1.1.9"
