@@ -4,4 +4,3 @@ pub mod journal;
 pub mod core;
 pub mod crash;
 pub mod registry;
-pub mod fetcher;

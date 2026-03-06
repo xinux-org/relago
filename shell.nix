@@ -22,5 +22,6 @@ in
       pkg-config
       dbus.dev
       systemd.dev
+      just
     ];
   }

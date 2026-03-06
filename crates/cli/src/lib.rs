@@ -1,11 +1,10 @@
 use clap::{arg, command, Arg, ArgAction, Command, Parser, Subcommand};
 
-// use daemon::core;
 use daemon::*;
 use nixlog::error as NixErr;
 use std::io::{BufRead, Read};
 use subprocess::Exec;
-
+use export;
 
 pub fn run() -> anyhow::Result<()> {
     tracing_subscriber::fmt()
@@ -22,7 +21,25 @@ pub fn run() -> anyhow::Result<()> {
                 .arg(Arg::new("exec").action(ArgAction::Append)),
         )
         .subcommand(Command::new("daemon").about("Run daemon").arg(arg!([NAME])))
-        .subcommand(Command::new("fetch").about("Fetch data").arg(arg!([INTERFACE])))
+        .subcommand(
+            Command::new("export")
+                .about("Export journal entries to JSON file")
+                .arg(
+                    Arg::new("output")
+                        .short('o')
+                        .long("output")
+                        .value_name("FILE")
+                        .help("Output JSON file path")
+                        .default_value("/tmp/relago/journal_export.json"),
+                )
+                .arg(
+                    Arg::new("recent")
+                        .short('r')
+                        .long("recent")
+                        .value_name("NUM")
+                        .help("Export only N most recent entries (from tail)"),
+                ),
+        )
         .get_matches();
 
     match matches.subcommand() {
@@ -34,19 +51,35 @@ pub fn run() -> anyhow::Result<()> {
                 .collect::<Vec<_>>();
             match cmd_exec(&r[0]) {
                 Err(_) => println!("Cooked"),
-                Ok(_) => println!("exec"),
+                Ok(_)  => println!("exec"),
             }
         }
-        Some(("fetch", sub_matches)) => {
-            println!("Fetcher should take data from journal might be around here");
-            let _ = fetcher::run();
+        Some(("export", sub_matches)) => {
+            let exp = sub_matches
+                .get_one::<String>("output")
+                .map(|s| s.as_str())
+                .unwrap_or("/tmp/relago/journal_export.json");
+
+            // Check if `--recent` argument added
+            if let Some(recent_str) = sub_matches.get_one::<String>("recent") {
+                let num: usize = recent_str.parse().unwrap_or(100);
+                export::export_recent(exp, num)?;
+            } else {
+                // Export all entries
+                export::export_to_file(exp)?;
+            }
         }
         Some(("daemon", sub_matches)) => {
             // Daemon started
             // println!("daemon");
             // dbus-send --system --type=signal /com/example com.example.signal_name string:"hello world"
-            let _ = fetcher::run();
-            let _ = core::run();
+
+            // let _ = fetcher::run();
+            // let _ = core::run();
+
+            println!("Relago daemon application is started without fuckery!!!");
+            let _ = daemon::journal::run();
+
         }
         _ => println!("`None`"),
     }

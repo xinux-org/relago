@@ -55,11 +55,11 @@ pub fn run() -> anyhow::Result<()> {
                     //     continue;
                     // }
 
-                    println!("Service failed: {:?}", r);
+                    println!("Service failed");
                 }
 
                 Some(Crash::Oom(r)) => {
-                    // println!("Out of memory: {:?}", r);
+                    println!("Out of memory: {:?}", r);
                 }
 
                 None => {

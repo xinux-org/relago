@@ -27,3 +27,17 @@
 
 #### On-startup Check
 - Relago start bo'layotgan davrda journal'dan kernelga aloqador hamma loglar fetch qilib olinadi. (Voobshe oson ekan, tayyor ekan, chopish kerak ekan.)
+
+
+## Commands: for test exports
+### Test exports
+  #### default path = `/tmp/relago/journal_export.json`
+
+  - Export all data/entries to default path
+    - `cargo run -- export`
+  - Export last N entries to default path
+    - `cargo run -- export -r N`
+  - Export with custom path
+    - `cargo run -- export -o /path/out.json`
+  - Export last N entries with custom path
+    - `cargo run -- export -r N -o /path/out.json`
