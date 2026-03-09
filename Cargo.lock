@@ -176,8 +176,8 @@ dependencies = [
  "anyhow",
  "clap",
  "daemon",
- "export",
  "nixlog",
+ "report",
  "subprocess",
  "tracing",
  "tracing-subscriber",
@@ -273,7 +273,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "877a4ace8713b0bcf2a4e7eec82529c029f1d0619886d18145fea96c3ffe5c0f"
 
 [[package]]
-name = "export"
+name = "report"
 version = "0.0.2"
 dependencies = [
  "anyhow",
@@ -585,6 +585,23 @@ name = "relago-journal-ext"
 version = "0.1.0"
 dependencies = [
  "systemd",
+]
+
+[[package]]
+name = "report"
+version = "0.0.2"
+dependencies = [
+ "anyhow",
+ "dbus",
+ "dbus-crossroads",
+ "libsystemd-sys",
+ "nom",
+ "serde",
+ "serde_json",
+ "systemd",
+ "tracing",
+ "tracing-subscriber",
+ "utils",
 ]
 
 [[package]]

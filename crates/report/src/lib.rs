@@ -11,19 +11,18 @@ use compress as cmp;
 use std::path::PathBuf;
 
 // TODO: Maybe good move to config ?
-const TMP: &str = "/tmp/relago/journal_export.json";
+const TMP: &str = "/tmp/relago/journal_report.json";
 
 pub fn run() -> anyhow::Result<()> {
-    export_to_file(TMP)
+    report_to_file(TMP)
 }
-/// This function for exporting entries to file
-pub fn export_to_file(path: &str) -> anyhow::Result<()> {
-    println!("Exporting all journal entries...");
+/// This function for reporting entries to file
+pub fn report_to_file(path: &str) -> anyhow::Result<()> {
+    println!("Reporting all journal entries...");
 
     // TODO: Maybe we can implement with more optimal way?
     let binding = PathBuf::from(path);
     let dest = binding.parent().unwrap().to_path_buf();
-    
 
     let mut reader = journal::OpenOptions::default()
         .open()
@@ -63,19 +62,18 @@ pub fn export_to_file(path: &str) -> anyhow::Result<()> {
     let writer = BufWriter::new(file);
     serde_json::to_writer_pretty(writer, &entries)?;
 
-    println!("Exported {} entries to: {}", entries.len(), path);
+    println!("Reported {} entries to: {}", entries.len(), path);
 
     // TODO: need remove file after compression.
     cmp::compress(path, &dest);
-    
     Ok(())
 }
 
-/// This function for exporting only recent N entries to file
+/// This function for reporting only recent N entries to file
 /// if recent entries not needed you can commit this function
-/// or just will not add extra arguments for export command like `-r number`
-pub fn export_recent(path: &str, num_entries: usize) -> anyhow::Result<()> {
-    println!("Exporting {} recent journal entries...", num_entries);
+/// or just will not add extra arguments for report command like `-r number`
+pub fn report_recent(path: &str, num_entries: usize) -> anyhow::Result<()> {
+    println!("Reporting {} recent journal entries...", num_entries);
 
     let mut reader = journal::OpenOptions::default()
         .open()
@@ -121,7 +119,7 @@ pub fn export_recent(path: &str, num_entries: usize) -> anyhow::Result<()> {
     let writer = BufWriter::new(file);
     serde_json::to_writer_pretty(writer, &entries)?;
 
-    println!("Exported {} entries to: {}", entries.len(), path);
+    println!("Reported {} entries to: {}", entries.len(), path);
 
     Ok(())
 }

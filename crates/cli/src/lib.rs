@@ -4,7 +4,7 @@ use daemon::*;
 use nixlog::error as NixErr;
 use std::io::{BufRead, Read};
 use subprocess::Exec;
-use export;
+use report;
 
 pub fn run() -> anyhow::Result<()> {
     tracing_subscriber::fmt()
@@ -22,22 +22,22 @@ pub fn run() -> anyhow::Result<()> {
         )
         .subcommand(Command::new("daemon").about("Run daemon").arg(arg!([NAME])))
         .subcommand(
-            Command::new("export")
-                .about("Export journal entries to JSON file")
+            Command::new("report")
+                .about("Report journal entries to JSON file")
                 .arg(
                     Arg::new("output")
                         .short('o')
                         .long("output")
                         .value_name("FILE")
                         .help("Output JSON file path")
-                        .default_value("/tmp/relago/journal_export.json"),
+                        .default_value("/tmp/relago/journal_report.json"),
                 )
                 .arg(
                     Arg::new("recent")
                         .short('r')
                         .long("recent")
                         .value_name("NUM")
-                        .help("Export only N most recent entries (from tail)"),
+                        .help("Report only N most recent entries (from tail)"),
                 ),
         )
         .get_matches();
@@ -54,19 +54,19 @@ pub fn run() -> anyhow::Result<()> {
                 Ok(_)  => println!("exec"),
             }
         }
-        Some(("export", sub_matches)) => {
-            let exp = sub_matches
+        Some(("report", sub_matches)) => {
+            let rep = sub_matches
                 .get_one::<String>("output")
                 .map(|s| s.as_str())
-                .unwrap_or("/tmp/relago/journal_export.json");
+                .unwrap_or("/tmp/relago/journal_report.json");
 
             // Check if `--recent` argument added
             if let Some(recent_str) = sub_matches.get_one::<String>("recent") {
                 let num: usize = recent_str.parse().unwrap_or(100);
-                export::export_recent(exp, num)?;
+                report::report_recent(rep, num)?;
             } else {
-                // Export all entries
-                export::export_to_file(exp)?;
+                // Report all entries
+                report::report_to_file(rep)?;
             }
         }
         Some(("daemon", sub_matches)) => {
