@@ -56,6 +56,7 @@ pub fn report_to_file(path: impl AsRef<Path>) -> anyhow::Result<()> {
 
     let dest = path.parent().unwrap_or(Path::new("/tmp/relago"));
     cmp::compress(path, dest)?;
+    std::fs::remove_file(path)?;
     Ok(())
 }
 
@@ -108,6 +109,10 @@ pub fn report_recent(path: impl AsRef<Path>, num_entries: usize) -> anyhow::Resu
     serde_json::to_writer_pretty(writer, &entries)?;
 
     println!("Reported {} entries to: {}", entries.len(), path.display());
+
+    let dest = path.parent().unwrap_or(Path::new("/tmp/relago"));
+    cmp::compress(path, dest)?;
+    std::fs::remove_file(path)?;
 
     Ok(())
 }
