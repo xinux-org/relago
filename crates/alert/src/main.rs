@@ -1,52 +1,35 @@
 // mod notification;
 mod window;
 
-use serde_json::Value;
+use serde_json::{Result, Value, from_str};
 use std::env;
 use std::fs;
-use std::sync::mpsc;
 
-fn main() {;
-    let errors = load_errors(&args);
+fn main() -> Result<()> {
+    let args: Vec<String> = env::args().collect();
+    let content = load_error(&args);
+    let v: Value = from_str(&content)?;
 
-    if errors.is_empty() {
-        eprintln!("No errors to display.");
-        return;
-    }
+    println!("{} {} {}", v["unit"], v["exe"], v["message"]);
 
-    window::open(errors);
+    Ok(())
 }
 
-fn load_errors(args: &[String]) -> Vec<Value> {
+fn load_error(args: &[String]) -> String {
     let path = args
         .iter()
         .skip(1)
         .find(|a| !a.starts_with("--"))
         .map(|s| s.as_str())
-        .unwrap_or("errors.json");
+        .unwrap_or("error.json");
 
     let content = match fs::read_to_string(path) {
         Ok(c) => c,
         Err(e) => {
             eprintln!("Failed to read '{}': {}", path, e);
-            return vec![];
+            return "".to_string();
         }
     };
 
-    match serde_json::from_str::<Value>(&content) {
-        Ok(Value::Array(arr)) => arr,
-        Ok(Value::Object(obj)) => {
-            for (_, v) in &obj {
-                if let Value::Array(arr) = v {
-                    return arr.clone();
-                }
-            }
-            vec![Value::Object(obj)]
-        }
-        Ok(v) => vec![v],
-        Err(e) => {
-            eprintln!("Failed to parse JSON: {}", e);
-            vec![]
-        }
-    }
+    content
 }
