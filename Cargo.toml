@@ -5,6 +5,7 @@
 resolver = "2"
 default-members = ["crates/cli"]
 members = [
+  "crates/alert",
   "crates/cli",
   "crates/daemon",
   "crates/utils",
