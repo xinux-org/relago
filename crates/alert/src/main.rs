@@ -6,8 +6,7 @@ use std::env;
 use std::fs;
 use std::sync::mpsc;
 
-fn main() {
-    let args: Vec<String> = env::args().collect();
+fn main() {;
     let errors = load_errors(&args);
 
     if errors.is_empty() {
