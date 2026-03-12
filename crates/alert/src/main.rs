@@ -1,16 +1,18 @@
 // mod notification;
 mod window;
 
-use serde_json::{Result, Value, from_str};
+use serde_json::{Result, Value};
 use std::env;
 use std::fs;
 
 fn main() -> Result<()> {
     let args: Vec<String> = env::args().collect();
-    let content = load_error(&args);
-    let v: Value = from_str(&content)?;
+    let error = load_error(&args);
+    // let v: Value = from_str(&content)?;
 
-    println!("{} {} {}", v["unit"], v["exe"], v["message"]);
+    // println!("{} {} {}", v["unit"], v["exe"], v["message"]);
+
+    window::open(error);
 
     Ok(())
 }
