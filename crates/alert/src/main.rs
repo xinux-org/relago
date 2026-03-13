@@ -1,7 +1,7 @@
 // mod notification;
 mod window;
 
-use serde_json::{Result, Value};
+use serde_json::{Result};
 use std::env;
 use std::fs;
 
