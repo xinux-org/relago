@@ -1,32 +1,60 @@
-use gtk::prelude::{BoxExt, ButtonExt, GtkWindowExt, OrientableExt, WidgetExt, TextViewExt};
-use relm4::{gtk, ComponentParts, ComponentSender, RelmApp, RelmWidgetExt, SimpleComponent};
+use relm4::{gtk::{self, prelude::*}, adw::{self, prelude::*}, *};
 
 struct AppModel {
     error: String,
+}
+
+#[derive(Debug)]
+enum AppMsg {
+    Report
 }
 
 #[relm4::component]
 impl SimpleComponent for AppModel {
     type Init = String;
 
-    type Input = ();
+    type Input = AppMsg;
+    // type Input = ();
     type Output = ();
 
     view! {
-        gtk::Window {
+        adw::Window {
             set_title: Some("Simple app"),
             set_default_size: (400, 200),
 
-            gtk::TextView {
-                set_monospace: true,
-                set_editable: false,
-                set_cursor_visible: false,
-                set_margin_all: 20,
 
-                set_buffer: Some(&gtk::TextBuffer::builder()
-                    .text(&format! ("{}", model.error))
-                    .build()),
-            }
+            gtk::Box {
+                set_orientation: gtk::Orientation::Vertical,
+
+                adw::HeaderBar {
+                    #[wrap(Some)]
+                    set_title_widget = &adw::WindowTitle {
+                        set_title: "Sidebar",
+                    }
+                },
+
+                gtk::Box {
+                    set_orientation: gtk::Orientation::Vertical,
+
+                    gtk::TextView {
+                        set_monospace: true,
+                        set_editable: false,
+                        set_cursor_visible: false,
+
+                        #[wrap(Some)]
+                        set_buffer = &gtk::TextBuffer {
+                            set_text: &format! ("{}", model.error),
+                        }
+                    },
+
+                    gtk::Button {
+                        set_label: "Report",
+                        set_hexpand: true,
+                        connect_clicked => AppMsg::Report
+                    }
+                },
+
+            },
         }
     }
 
@@ -42,6 +70,14 @@ impl SimpleComponent for AppModel {
         let widgets = view_output!();
 
         ComponentParts { model, widgets }
+    }
+
+    fn update(&mut self, msg: Self::Input, _sender: ComponentSender<Self>) {
+        match msg {
+            AppMsg::Report => {
+                println!("{}", self.error);
+            }
+        }
     }
 }
 
