@@ -1,4 +1,6 @@
-use relm4::{gtk::{self, prelude::*}, adw::{self, prelude::*}, *};
+use relm4::{gtk::{self, prelude::*}, adw::{self, prelude::*}, component::{*}, *};
+use std::future::Future;
+use serde_json::Value;
 
 struct AppModel {
     error: String,
@@ -9,13 +11,14 @@ enum AppMsg {
     Report
 }
 
-#[relm4::component]
-impl SimpleComponent for AppModel {
+#[relm4::component(async)]
+impl AsyncComponent for AppModel {
     type Init = String;
 
     type Input = AppMsg;
     // type Input = ();
     type Output = ();
+    type CommandOutput = ();
 
     view! {
         adw::Window {
@@ -59,29 +62,43 @@ impl SimpleComponent for AppModel {
     }
 
     // Initialize the UI.
-    fn init(
+    async fn init(
         error: Self::Init,
         root: Self::Root,
-        sender: ComponentSender<Self>,
-    ) -> ComponentParts<Self> {
+        sender: AsyncComponentSender<Self>,
+    ) -> AsyncComponentParts<Self> {
         let model = AppModel { error };
 
         // Insert the macro code generation here
         let widgets = view_output!();
 
-        ComponentParts { model, widgets }
+        AsyncComponentParts { model, widgets }
     }
 
-    fn update(&mut self, msg: Self::Input, _sender: ComponentSender<Self>) {
+    async fn update(&mut self, msg: Self::Input, _sender: AsyncComponentSender<Self>, _root: &Self::Root) {
         match msg {
             AppMsg::Report => {
                 println!("{}", self.error);
+                report(self.error.clone()).await;
             }
         }
     }
 }
 
+async fn report(error: String) -> Result<(), reqwest::Error> {
+    let client = reqwest::Client::new();
+    let res = client
+        .post("http://localhost:5678/")
+        .header("content-type", "application/json")
+        .body(error)
+        .send()
+        .await?;
+    let body = res.text().await?;
+    println!("{:?}", body);
+    Ok(())
+}
+
 pub fn open(error: String) {
     let app = RelmApp::new("relm4.test.simple");
-    app.run::<AppModel>(error);
+    app.run_async::<AppModel>(error);
 }
