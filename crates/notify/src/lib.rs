@@ -1,4 +1,4 @@
-mod window;
+pub mod window;
 use notify_rust::Notification;
 use window::Modal;
 use std::{env, fs};

@@ -418,6 +418,7 @@ dependencies = [
  "daemon",
  "nixlog",
  "notify",
+ "serde_core",
  "subprocess",
  "tracing",
  "tracing-subscriber",
