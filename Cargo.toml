@@ -5,11 +5,11 @@
 resolver = "2"
 default-members = ["crates/cli"]
 members = [
-  "crates/alert",
   "crates/cli",
   "crates/daemon",
   "crates/utils",
   "crates/nixlog",
+  "crates/notify",
   "crates/crash-event",
   "crates/relago-journal-ext",
 ]
