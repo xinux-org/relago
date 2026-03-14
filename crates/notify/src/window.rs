@@ -1,9 +1,17 @@
 use relm4::{gtk::{self, prelude::*}, adw::{self, prelude::*}, component::{*}, *};
 use std::future::Future;
 use serde_json::Value;
+use sserde_core::ser::Serialize;
+
+#[derive(Clone, Debug, Serialize)]
+pub struct Modal {
+    pub unit: String,
+    pub exe: String,
+    pub message: String,
+}
 
 struct AppModel {
-    error: String,
+    error: Modal,
 }
 
 #[derive(Debug)]
@@ -13,10 +21,9 @@ enum AppMsg {
 
 #[relm4::component(async)]
 impl AsyncComponent for AppModel {
-    type Init = String;
+    type Init = Modal;
 
     type Input = AppMsg;
-    // type Input = ();
     type Output = ();
     type CommandOutput = ();
 
@@ -46,7 +53,7 @@ impl AsyncComponent for AppModel {
 
                         #[wrap(Some)]
                         set_buffer = &gtk::TextBuffer {
-                            set_text: &format! ("{}", model.error),
+                            set_text: &format! ("{}", self.error.clone()),
                         }
                     },
 
@@ -61,7 +68,6 @@ impl AsyncComponent for AppModel {
         }
     }
 
-    // Initialize the UI.
     async fn init(
         error: Self::Init,
         root: Self::Root,
@@ -69,7 +75,6 @@ impl AsyncComponent for AppModel {
     ) -> AsyncComponentParts<Self> {
         let model = AppModel { error };
 
-        // Insert the macro code generation here
         let widgets = view_output!();
 
         AsyncComponentParts { model, widgets }
@@ -78,19 +83,19 @@ impl AsyncComponent for AppModel {
     async fn update(&mut self, msg: Self::Input, _sender: AsyncComponentSender<Self>, _root: &Self::Root) {
         match msg {
             AppMsg::Report => {
-                println!("{}", self.error);
+                // println!("{}", self.error);
                 report(self.error.clone()).await;
             }
         }
     }
 }
 
-async fn report(error: String) -> Result<(), reqwest::Error> {
+async fn report(error: Modal) -> Result<(), reqwest::Error> {
     let client = reqwest::Client::new();
     let res = client
         .post("http://localhost:5678/")
-        .header("content-type", "application/json")
-        .body(error)
+        .header("Content-Type", "application/json; charset=utf-8")
+        .json(&error)
         .send()
         .await?;
     let body = res.text().await?;
@@ -98,7 +103,7 @@ async fn report(error: String) -> Result<(), reqwest::Error> {
     Ok(())
 }
 
-pub fn open(error: String) {
+pub fn open(error: Modal) {
     let app = RelmApp::new("relm4.test.simple");
     app.run_async::<AppModel>(error);
 }
