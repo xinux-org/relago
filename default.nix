@@ -26,7 +26,7 @@
     rustc
     cargo
     clippy
-    
+
     # Other compile time dependencies
     pkg-config
 
@@ -48,6 +48,14 @@
 
     zlib
     pkg-configUpstream
+
+    gtk4
+    libadwaita
+    glib
+    cairo
+    pango
+    gdk-pixbuf
+    graphene
   ];
 
   src = craneLib.cleanCargoSource ./.;
@@ -65,7 +73,7 @@
     RUST_BACKTRACE = 1;
     RUST_SRC_PATH = "${pkgs.rust.packages.stable.rustPlatform.rustLibSrc}";
     RUST_MIN_STACK = 16777216;
-    
+
     # # Compiler LD variables
     NIX_LDFLAGS = "-L${(getLibFolder pkgs.libiconv)} -L${(getLibFolder pkgs.pkg-config)} -L${(getLibFolder pkgs.dbus.dev)}";
     LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath (with pkgs; [
@@ -92,7 +100,7 @@ in
   craneLib.buildPackage ({
       pname = manifest.name;
       version = manifest.version;
-      
+
       inherit src cargoArtifacts;
 
       nativeBuildInputs = commonNativeBuildInputs;

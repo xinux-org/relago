@@ -1,13 +1,19 @@
 #![allow(unused_must_use)]
 
-use std::process::exit;
+use std::{process::exit, fs, env};
 
 use clap::Parser;
-use cli::run;
+use notify::modal;
+use notify::window::Modal;
 
 fn main() -> anyhow::Result<()> {
+    let error = Modal {
+        unit: "xyz.service".to_string(),
+        exe: "firefox".to_string(),
+        message: "yebat".to_string(),
+    };
 
-    run();
+    modal(error);
 
     Ok(())
 }

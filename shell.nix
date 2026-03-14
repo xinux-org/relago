@@ -22,5 +22,13 @@ in
       pkg-config
       dbus.dev
       systemd.dev
+
+      gtk4
+      libadwaita
+      glib
+      cairo
+      pango
+      gdk-pixbuf
+      graphene
     ];
   }
