@@ -1,7 +1,7 @@
 use relm4::{gtk::{self, prelude::*}, adw::{self, prelude::*}, component::{*}, *};
 use std::future::Future;
-use serde_json::Value;
-use sserde_core::ser::Serialize;
+use serde_json::{Value, json};
+use serde::Serialize;
 
 #[derive(Clone, Debug, Serialize)]
 pub struct Modal {
@@ -53,7 +53,10 @@ impl AsyncComponent for AppModel {
 
                         #[wrap(Some)]
                         set_buffer = &gtk::TextBuffer {
-                            set_text: &format! ("{}", self.error.clone()),
+                            set_text: &format! (
+                                "{}",
+                                serde_json::to_string_pretty(&error)
+                                    .unwrap_or("Invalid data".to_string())),
                         }
                     },
 
@@ -73,7 +76,7 @@ impl AsyncComponent for AppModel {
         root: Self::Root,
         sender: AsyncComponentSender<Self>,
     ) -> AsyncComponentParts<Self> {
-        let model = AppModel { error };
+        let model = AppModel { error: error.clone() };
 
         let widgets = view_output!();
 
@@ -84,7 +87,7 @@ impl AsyncComponent for AppModel {
         match msg {
             AppMsg::Report => {
                 // println!("{}", self.error);
-                report(self.error.clone()).await;
+                let _ = report(self.error.clone()).await;
             }
         }
     }
