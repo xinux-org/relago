@@ -47,7 +47,7 @@ pub fn run() -> anyhow::Result<()> {
 
             Ok(_) => match registry.run(&mut journal) {
                 Some(Crash::Coredump(r)) => {
-                    println!("Core dumped");
+                    println!("Core dumped: {:?}", r);
                 }
 
                 Some(Crash::ServiceFailure(r)) => {

@@ -7,6 +7,7 @@ default-members = ["crates/cli"]
 members = [
   "crates/cli",
   "crates/daemon",
+  "crates/report",
   "crates/utils",
   "crates/nixlog",
   "crates/crash-event",
