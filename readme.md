@@ -1,43 +1,67 @@
 # Relago
 
-## Hamidulloh
+System crash reporting and diagnostics tool for Linux.
 
-#### Journal Fetcher
-- Journaldan kerakli data larni bizga kerakli structda olib kelish
-- Journal handlerga barcha ma'lumotlar yetkaziladi qayta ishlangan holatda
+## Commands
 
-#### Journal Handler (Relago)
-- Journal Fetcherni ishga tushiradi.
-- View/modalga bo'lib o'tgan errorlarni process qilib, ular haqida xabar beriladi.
-- So'ng qabul qilib olingan ma'lumotlar db_file - <custom db type || sqlite> tipli faylga yozib olinadi. (Ehtimoliy binary file)
-- Errorlar haqida GNOME notificationsga xabar beriladi, xuddi "oops!" kabi
+### Report Command
 
-#### Report Lib (ehtimoliy)
-- View/modaldan olingan ma'lumotlarni report uchun struct ni to'g'irlab, kerakli field larni qo'shib serverga report qiladi.
-- Bundan tashqari, db_file'ni ham serverga report qiladi.
-(Server qani deb hayron bo'lmaymiz, Ahmad aka hal qilarkan serverni)
+Generate a comprehensive system report including journal entries, system information, and NixOS configuration.
 
-## Kamron
+**Default output:** `/tmp/relago/report_YYYY-MM-DD_HH-MM-SS/`
 
-#### View/modal
-- View/modal hamma errorlarni yoziladigan GTK app orqali ko'rsatiladi.
-- Buning ishga tushishi avtomatik amalga oshiriladi.
-- GTK app'da ba'zi optional checkboxes'dagi configlarni o'zining config.toml fayliga yozib qo'yadi
-- Details button bosilganda current errors plain text holatda ko'rsatiladi.
+#### Basic Usage
 
-#### On-startup Check
-- Relago start bo'layotgan davrda journal'dan kernelga aloqador hamma loglar fetch qilib olinadi. (Voobshe oson ekan, tayyor ekan, chopish kerak ekan.)
+```bash
+# Report all journal entries (default)
+cargo run -- report
 
+# Report with NixOS configuration
+cargo run -- report --nixos-config ~/configuration-path
 
-## Commands: for test reports
-### Test reports
-  #### default path = `/tmp/relago/journal_report.json`
+# Report last N entries only
+cargo run -- report --recent 100
 
-  - Report all data/entries to default path
-    - `cargo run -- report`
-  - Report last N entries to default path
-    - `cargo run -- report -r N`
-  - Report with custom path
-    - `cargo run -- report -o /path/out.json`
-  - Report last N entries with custom path
-    - `cargo run -- report -r N -o /path/out.json`
+# Report with custom output directory
+cargo run -- report --output /custom/path
+
+# Combine options
+cargo run -- report --nixos-config ~/configuration-path --recent 500 --output /custom/path
+```
+
+#### Short Flags
+
+```bash
+# Recent entries (short flag)
+cargo run -- report -r 100
+
+# Output directory (short flag)
+cargo run -- report -o /custom/path
+```
+
+#### Report Structure
+
+The report creates a timestamped directory containing:
+
+```
+report_YYYY-MM-DD_HH-MM-SS/
+├── journal_report.json.zlib    # Compressed systemd journal entries
+├── system_info.json            # CPU, RAM, disks, network information
+└── nixos-config/               # NixOS configuration (if --nixos-config provided)
+    ├── flake.nix
+    ├── systems/
+    └── modules/
+```
+
+#### Examples
+
+```bash
+# Full system report with NixOS config
+cargo run -- report --nixos-config ~/configuration-path
+
+# Recent entries only, custom location
+cargo run -- report -r 50 -o /var/reports
+
+# Quick diagnostic with last 10 entries
+cargo run -- report -r 10
+```

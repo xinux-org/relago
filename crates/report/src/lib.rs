@@ -1,118 +1,64 @@
 pub mod compress;
+pub mod info;
 
-use anyhow::anyhow;
-use serde_json::Serializer;
-use serde::ser::SerializeSeq;
-use serde::Serializer as _;
-use std::collections::BTreeMap;
-use std::fs::File;
-use std::io::BufWriter;
-use systemd::journal::{self, JournalSeek};
+use std::fs::{self, File};
+use std::path::PathBuf;
 use compress as cmp;
-use std::path::Path;
-
-// TODO: Maybe good move to config ?
-const TMP: &str = "/tmp/relago/journal_report.json";
 
 pub fn run() -> anyhow::Result<()> {
-    report_to_file(TMP)
-}
-/// This function for reporting entries to file
-pub fn report_to_file(path: impl AsRef<Path>) -> anyhow::Result<()> {
-    let path = path.as_ref();
-    println!("Reporting all journal entries...");
-
-    if let Some(parent) = path.parent() {
-        std::fs::create_dir_all(parent)?;
-    }
-
-    let file = File::create(path)?;
-    let writer = BufWriter::new(file);
-    let mut ser = Serializer::pretty(writer);
-    let mut seq = ser.serialize_seq(None)?;
-
-    let mut reader = journal::OpenOptions::default()
-        .open()
-        .map_err(|e| anyhow!("Could not open journal: {e}"))?;
-
-    reader
-        .seek(JournalSeek::Head)
-        .map_err(|e| anyhow!("Could not seek to head of journal: {e}"))?;
-
-    let mut count: usize = 0;
-
-    while let Some(entry) = reader.next_entry()? {
-        seq.serialize_element(&entry)?;
-        count += 1;
-
-        if count % 1000 == 0 {
-            eprint!("\rProcessed {} entries...", count);
-        }
-    }
-
-    seq.end()?;
-
-    println!("Reported {} entries to: {}", count, path.display());
-
-    let dest = path.parent().unwrap_or(Path::new("/tmp/relago"));
-    cmp::compress(path, dest)?;
-    std::fs::remove_file(path)?;
-    Ok(())
+    create_report("/tmp/relago", None, None)
 }
 
-pub fn report_recent(path: impl AsRef<Path>, num_entries: usize) -> anyhow::Result<()> {
-    let path = path.as_ref();
-    println!("Reporting {} recent journal entries...", num_entries);
+pub fn create_report(
+    output_dir: &str,
+    nixos_config_path: Option<&str>,
+    recent_entries: Option<usize>,
+) -> anyhow::Result<()> {
 
-    let mut reader = journal::OpenOptions::default()
-        .open()
-        .map_err(|e| anyhow!("Could not open journal: {e}"))?;
+    let timestamp = chrono::Local::now().format("%Y-%m-%d_%H-%M-%S");
+    let report_dir = PathBuf::from(output_dir).join(format!("report_{}", timestamp));
 
-    // Seek to end
-    reader
-        .seek(JournalSeek::Tail)
-        .map_err(|e| anyhow!("Could not seek to tail: {e}"))?;
+    println!("Creating report directory: {}", report_dir.display());
+    fs::create_dir_all(&report_dir)?;
 
-    let mut entries: Vec<BTreeMap<String, String>> = Vec::with_capacity(num_entries);
+    // 1. Collect and save system information
+    println!("Collecting system information...");
+    let system_info = info::collect_system_info()?;
+    let system_info_path = report_dir.join("system_info.json");
+    let file = File::create(&system_info_path)?;
+    serde_json::to_writer_pretty(file, &system_info)?;
+    println!("System info saved: {}", system_info_path.display());
 
-    for _ in 0..num_entries {
-        if reader.previous()? == 0 {
-            break;
-        }
+    // 2. Collect journal entries
+    let journal_path = report_dir.join("journal_report.json");
+    if let Some(num) = recent_entries {
+        info::collect_journal_recent(&journal_path, num)?;
+    } else {
+        info::collect_journal_all(&journal_path)?;
+    }
 
-        let mut entry_map: BTreeMap<String, String> = BTreeMap::new();
+    // Compress .json then remove it
+    println!("Compressing journal file...");
+    cmp::compress(&journal_path, &report_dir)?;
+    fs::remove_file(&journal_path)?;
 
-        reader.restart_data();
-        while let Some(field) = reader.enumerate_data()? {
-            let name = String::from_utf8_lossy(field.name()).into_owned();
-            if let Some(value) = field.value() {
-                let value_str = String::from_utf8_lossy(value).into_owned();
-                entry_map.insert(name, value_str);
-            }
-        }
+    // 3. Copy NixOS configuration if provided
+    if let Some(config_path) = nixos_config_path {
+        let config_path = shellexpand::tilde(config_path).to_string();
+        let src = PathBuf::from(&config_path);
 
-        if !entry_map.is_empty() {
-            entries.push(entry_map);
+        if !src.exists() {
+            eprintln!("Warning: NixOS config path does not exist: {}", config_path);
+        } else {
+            println!("Copying NixOS configuration from: {}", src.display());
+            let dest = report_dir.join("nixos-config");
+            info::copy_dir_recursive(&src, &dest)?;
+            println!("NixOS config copied: {}", dest.display());
         }
     }
 
-    // Reverse to get chronological order because we start seek end of the journal
-    entries.reverse();
-
-    if let Some(parent) = path.parent() {
-        std::fs::create_dir_all(parent)?;
-    }
-
-    // Write to JSON
-    let file = File::create(path)?;
-    let writer = BufWriter::new(file);
-    serde_json::to_writer_pretty(writer, &entries)?;
-
-    println!("Reported {} entries to: {}", entries.len(), path.display());
-
-    let dest = path.parent().unwrap_or(Path::new("/tmp/relago"));
-    cmp::compress(path, dest)?;
-    std::fs::remove_file(path)?;
+    println!("Report created successfully!");
+    println!("Location: {}", report_dir.display());
 
     Ok(())
 }

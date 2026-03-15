@@ -28,9 +28,9 @@ pub fn run() -> anyhow::Result<()> {
                     Arg::new("output")
                         .short('o')
                         .long("output")
-                        .value_name("FILE")
-                        .help("Output JSON file path")
-                        .default_value("/tmp/relago/journal_report.json"),
+                        .value_name("DIR")
+                        .help("Output directory for report")
+                        .default_value("/tmp/relago"),
                 )
                 .arg(
                     Arg::new("recent")
@@ -38,6 +38,12 @@ pub fn run() -> anyhow::Result<()> {
                         .long("recent")
                         .value_name("NUM")
                         .help("Report only N most recent entries (from tail)"),
+                )
+                .arg(
+                    Arg::new("nixos-config")
+                        .long("nixos-config")
+                        .value_name("PATH")
+                        .help("Path to NixOS configuration directory (e.g., ~/nix-conf)"),
                 ),
         )
         .get_matches();
@@ -58,16 +64,18 @@ pub fn run() -> anyhow::Result<()> {
             let rep = sub_matches
                 .get_one::<String>("output")
                 .map(|s| s.as_str())
-                .unwrap_or("/tmp/relago/journal_report.json");
+                .unwrap_or("/tmp/relago");
+
+            let nixos_config = sub_matches
+                .get_one::<String>("nixos-config")
+                .map(|s| s.as_str());
 
             // Check if `--recent` argument added
-            if let Some(recent_str) = sub_matches.get_one::<String>("recent") {
-                let num: usize = recent_str.parse().unwrap_or(100);
-                report::report_recent(rep, num)?;
-            } else {
-                // Report all entries
-                report::report_to_file(rep)?;
-            }
+            let recent_entries = sub_matches
+                .get_one::<String>("recent")
+                .and_then(|s| s.parse::<usize>().ok());
+
+            report::create_report(rep, nixos_config, recent_entries)?;
         }
         Some(("daemon", sub_matches)) => {
             // Daemon started
