@@ -3,32 +3,33 @@
   pkgs,
   craneLib,
   ...
-}: let
+}:
+let
   manifest = (pkgs.lib.importTOML ./Cargo.toml).workspace.package;
 in
-  craneLib.devShell {
-    name = "${manifest.name}-dev";
+craneLib.devShell {
+  name = "${manifest.name}-dev";
 
-    # Compile time dependencies
-    packages = with pkgs; [
-      nixd
-      statix
-      deadnix
-      self.formatter.${pkgs.stdenv.hostPlatform.system}
-      nixfmt-tree
+  # Compile time dependencies
+  packages = with pkgs; [
+    nixd
+    statix
+    deadnix
+    self.formatter.${pkgs.stdenv.hostPlatform.system}
+    nixfmt-tree
 
-      rust-analyzer
+    rust-analyzer
 
-      pkg-config
-      dbus.dev
-      systemd.dev
+    pkg-config
+    dbus.dev
+    systemd.dev
 
-      gtk4
-      libadwaita
-      glib
-      cairo
-      pango
-      gdk-pixbuf
-      graphene
-    ];
-  }
+    gtk4
+    libadwaita
+    glib
+    cairo
+    pango
+    gdk-pixbuf
+    graphene
+  ];
+}

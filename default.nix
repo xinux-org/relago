@@ -2,7 +2,8 @@
   pkgs,
   craneLib,
   ...
-}: let
+}:
+let
   # Helpful nix function
   lib = pkgs.lib;
   getLibFolder = pkg: "${pkg}/lib";
@@ -76,13 +77,16 @@
 
     # # Compiler LD variables
     NIX_LDFLAGS = "-L${(getLibFolder pkgs.libiconv)} -L${(getLibFolder pkgs.pkg-config)} -L${(getLibFolder pkgs.dbus.dev)}";
-    LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath (with pkgs; [
-      gcc
-      libiconv
-      # postgresql
-      llvmPackages.llvm
-      dbus.dev
-    ]);
+    LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath (
+      with pkgs;
+      [
+        gcc
+        libiconv
+        # postgresql
+        llvmPackages.llvm
+        dbus.dev
+      ]
+    );
 
     # PKG_CONFIG_PATH = "${pkgs.dbus.dev}/lib/pkgconfig";
   };
@@ -97,13 +101,15 @@
     }
     // common;
 in
-  craneLib.buildPackage ({
-      pname = manifest.name;
-      version = manifest.version;
+craneLib.buildPackage (
+  {
+    pname = manifest.name;
+    version = manifest.version;
 
-      inherit src cargoArtifacts;
+    inherit src cargoArtifacts;
 
-      nativeBuildInputs = commonNativeBuildInputs;
-      buildInputs = commonBuildInputs;
-    }
-    // common)
+    nativeBuildInputs = commonNativeBuildInputs;
+    buildInputs = commonBuildInputs;
+  }
+  // common
+)

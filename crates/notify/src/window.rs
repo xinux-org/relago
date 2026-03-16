@@ -66,7 +66,6 @@ impl AsyncComponent for AppModel {
                         connect_clicked => AppMsg::Report
                     }
                 },
-
             },
         }
     }
@@ -86,7 +85,6 @@ impl AsyncComponent for AppModel {
     async fn update(&mut self, msg: Self::Input, _sender: AsyncComponentSender<Self>, _root: &Self::Root) {
         match msg {
             AppMsg::Report => {
-                // println!("{}", self.error);
                 let _ = report(self.error.clone()).await;
             }
         }
