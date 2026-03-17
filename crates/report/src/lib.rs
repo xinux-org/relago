@@ -2,7 +2,7 @@ pub mod compress;
 pub mod info;
 
 use std::fs::{self, File};
-use std::path::PathBuf;
+use std::path::{ PathBuf, Path};
 use compress as cmp;
 
 pub fn run() -> anyhow::Result<()> {
@@ -55,6 +55,11 @@ pub fn create_report(
             info::copy_dir_recursive(&src, &dest)?;
             println!("NixOS config copied: {}", dest.display());
         }
+    }
+    if system_info.system_name.to_owned() == Some("XinuxOS".to_string()) {
+        let src = Path::new("/etc/nixos");
+        let dest = report_dir.join("xinux-config");
+        info::copy_dir_recursive(&src, &dest)?;
     }
 
     // report_dir
