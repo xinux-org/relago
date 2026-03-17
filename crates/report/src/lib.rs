@@ -16,7 +16,7 @@ pub fn create_report(
 ) -> anyhow::Result<()> {
 
     let timestamp = chrono::Local::now().format("%Y-%m-%d_%H-%M-%S");
-    let report_dir = PathBuf::from(output_dir).join(format!("report_{}", timestamp));
+    let report_dir = PathBuf::from(&output_dir).join(format!("report_{}", timestamp));
 
     println!("Creating report directory: {}", report_dir.display());
     fs::create_dir_all(&report_dir)?;
@@ -56,6 +56,10 @@ pub fn create_report(
             println!("NixOS config copied: {}", dest.display());
         }
     }
+
+    // report_dir
+
+    let _ = cmp::compress_zip(&report_dir, &output_dir);
 
     println!("Report created successfully!");
     println!("Location: {}", report_dir.display());

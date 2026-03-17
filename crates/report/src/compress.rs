@@ -4,7 +4,9 @@ use flate2::write::ZlibEncoder;
 use flate2::Compression;
 use std::fs::File;
 use std::io::{copy, BufReader};
-use std::path::Path;
+use std::path::{Path, PathBuf};
+use zip_archive::Archiver;
+
 
 // TODO: expect will panic, better use `?` or `.context("message")?`
 pub fn compress(path: impl AsRef<Path>, dest: impl AsRef<Path>) -> anyhow::Result<()> {
@@ -26,4 +28,25 @@ pub fn compress(path: impl AsRef<Path>, dest: impl AsRef<Path>) -> anyhow::Resul
 
     println!("Compressed to: {}", output_path.display());
     Ok(())
+}
+
+pub fn compress_zip(origin: impl AsRef<Path>, dest: impl AsRef<Path>) -> anyhow::Result<()> {
+
+    let thread_count = 4; // FIXME: Get from config
+    let origin = PathBuf::from(origin.as_ref());
+    let dest = PathBuf::from(dest.as_ref());
+    
+    let mut archiver = Archiver::new();
+
+    archiver.push(origin);
+    archiver.set_destination(dest);
+    archiver.set_thread_count(thread_count);
+    // println!("Compressed to: {}", output_path.display());
+    let _ = match archiver.archive(){
+        Ok(_) => (),
+        Err(e) => println!("Cannot archive the directory! {}", e),
+    };
+
+    Ok(())
+
 }
