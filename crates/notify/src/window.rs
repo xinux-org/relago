@@ -1,5 +1,4 @@
-use relm4::{gtk::{self, prelude::*}, adw::{self, prelude::*}, component::{*}, *};
-use std::future::Future;
+use relm4::{gtk::{self, prelude::*}, adw::{self, prelude::*}, component::{*}, main_application, *};
 use serde_json::{Value, json};
 use serde::Serialize;
 
@@ -85,23 +84,14 @@ impl AsyncComponent for AppModel {
     async fn update(&mut self, msg: Self::Input, _sender: AsyncComponentSender<Self>, _root: &Self::Root) {
         match msg {
             AppMsg::Report => {
-                let _ = report(self.error.clone()).await;
+                println!("Hello chigga");
+                // relm4::main_
+                // main_application::quit();
+                // self.window.close();
+                relm4::main_application().quit();
             }
         }
     }
-}
-
-async fn report(error: Modal) -> Result<(), reqwest::Error> {
-    let client = reqwest::Client::new();
-    let res = client
-        .post("http://localhost:5678/")
-        .header("Content-Type", "application/json; charset=utf-8")
-        .json(&error)
-        .send()
-        .await?;
-    let body = res.text().await?;
-    println!("{:?}", body);
-    Ok(())
 }
 
 pub fn open(error: Modal) {
