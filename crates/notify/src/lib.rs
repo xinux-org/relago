@@ -1,7 +1,13 @@
 pub mod window;
 use notify_rust::Notification;
-use window::Modal;
-use std::{env, fs};
+use serde::Serialize;
+
+#[derive(Clone, Debug, Serialize)]
+pub struct Modal {
+    pub unit: String,
+    pub exe: String,
+    pub message: String,
+}
 
 pub fn modal(error: Modal) -> Result<(), Box<dyn std::error::Error>> {
     let error_string = serde_json::to_string(&error)?;

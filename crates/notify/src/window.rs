@@ -1,24 +1,31 @@
-use relm4::{gtk::{self, prelude::*}, adw::{self, prelude::*}, component::{*}, main_application, *};
-use serde_json::{Value, json};
-use serde::Serialize;
+use relm4::{
+    adw::{self, prelude::*},
+    component::*,
+    gtk::{self, prelude::*},
+    main_application, *,
+};
+use reqwest::blocking::multipart;
 
-#[derive(Clone, Debug, Serialize)]
-pub struct Modal {
-    pub unit: String,
-    pub exe: String,
-    pub message: String,
-}
+use super::Modal;
+use serde_json::{json, Value};
 
 struct AppModel {
     error: Modal,
-    report_label: String,
-    main_box: gtk::Box,
-    spinner: bool,
+    title: String,
+    state: AppState,
+    url: String,
+}
+
+#[derive(Debug)]
+enum AppState {
+    Init,
+    Spinning,
+    Send,
 }
 
 #[derive(Debug)]
 enum AppMsg {
-    Report
+    Report,
 }
 
 #[relm4::component(async)]
@@ -45,40 +52,63 @@ impl AsyncComponent for AppModel {
                     #[wrap(Some)]
                     set_title_widget = &adw::WindowTitle {
                         #[watch]
-                        set_title: &model.report_label,
+                        set_title: model.title.as_str(),
                     }
                 },
 
-                #[name(main_box)]
-                gtk::Box {
-                    set_orientation: gtk::Orientation::Vertical,
-                    set_vexpand: true,
-                    set_hexpand: true,
-
-                    gtk::Spinner {
-                        #[watch]
-                        set_spinning: model.spinner,
-                    },
-
-                    gtk::TextView {
-                        set_monospace: true,
-                        set_editable: false,
-                        set_cursor_visible: false,
-
-                        #[wrap(Some)]
-                        set_buffer = &gtk::TextBuffer {
-                            set_text: &format! (
-                                "{}",
-                                serde_json::to_string_pretty(&error)
-                                    .unwrap_or("Invalid data".to_string())),
-                        }
-                    },
-
-                    gtk::Button {
-                        set_label: "Report",
+                match model.state {
+                    AppState::Init => gtk::Box {
+                        set_orientation: gtk::Orientation::Vertical,
+                        set_vexpand: true,
                         set_hexpand: true,
-                        connect_clicked => AppMsg::Report
-                    }
+
+                        gtk::TextView {
+                            set_monospace: true,
+                            set_editable: false,
+                            set_cursor_visible: false,
+                            set_hexpand: true,
+                            set_vexpand: true,
+
+                            #[wrap(Some)]
+                            set_buffer = &gtk::TextBuffer {
+                                set_text: &format! (
+                                    "{}",
+                                    serde_json::to_string_pretty(&error)
+                                        .unwrap_or("Invalid data".to_string())),
+                            }
+                        },
+
+                        gtk::Button {
+                            set_label: "Report",
+                            set_hexpand: true,
+                            connect_clicked => AppMsg::Report
+                        },
+                    },
+                    AppState::Spinning => gtk::Box {
+                        set_orientation: gtk::Orientation::Vertical,
+                        set_vexpand: true,
+                        set_hexpand: true,
+                        set_valign: gtk::Align::Center,
+                        set_halign: gtk::Align::Center,
+                        // set_size_request: (120, 120),
+
+                        adw::Spinner {
+                            set_height_request: 180,
+                            set_width_request: 180,
+                        },
+                        gtk::Label  {
+                            set_text: "Ma'lumotlar yig'ilmoqda",
+                            set_valign: gtk::Align::Center,
+                        },
+                    },
+                    AppState::Send => gtk::Box {
+                        set_orientation: gtk::Orientation::Vertical,
+                        set_hexpand: true,
+                        set_vexpand: true,
+                        gtk::Label  {
+                            set_text: "xuynya"
+                        },
+                    },
                 },
             },
         }
@@ -91,28 +121,35 @@ impl AsyncComponent for AppModel {
     ) -> AsyncComponentParts<Self> {
         let mut model = AppModel {
             error: error.clone(),
-            report_label: "sidebar".to_string(),
-            main_box: gtk::Box::new(gtk::Orientation::Vertical, 1),
-            spinner: false,
+            title: format!("Error on {}", error.unit),
+            state: AppState::Init,
+            url: "http://localhost:5678".to_string(),
         };
 
         let widgets = view_output!();
-        let main_box = widgets.main_box.clone();
-        model.main_box = main_box;
 
         AsyncComponentParts { model, widgets }
     }
 
-    async fn update(&mut self, msg: Self::Input, _sender: AsyncComponentSender<Self>, _root: &Self::Root) {
+    async fn update(
+        &mut self,
+        msg: Self::Input,
+        _sender: AsyncComponentSender<Self>,
+        _root: &Self::Root,
+    ) {
         match msg {
             AppMsg::Report => {
                 println!("Hello chigga");
-                // relm4::main_
-                // main_application::quit();
-                // self.window.close();
-                self.report_label = "changed".to_string();
-                self.spinner = !(self.spinner);
-                // relm4::main_application().quit();
+                self.title = "Spinner".to_string();
+                self.state = AppState::Spinning;
+
+                match report() {
+                    Ok(()) => {
+                        self.state = AppState::Send;
+                        println!("Suka")
+                    }
+                    Err(_) => self.state = AppState::Init,
+                }
             }
         }
     }
@@ -121,4 +158,17 @@ impl AsyncComponent for AppModel {
 pub fn open(error: Modal) {
     let app = RelmApp::new("relm4.test.simple");
     app.run_async::<AppModel>(error);
+}
+
+fn report(file_path: String) -> anyhow::Result<()> {
+    let url = "http://localhost:5678";
+    let file_path = "error.json";
+
+    let form = multipart::Form::new()
+        .text("username", "seanmonstar")
+        .file("file", file_path)?;
+
+    let client = reqwest::blocking::Client::new();
+    client.post(url).multipart(form).send()?;
+    Ok(())
 }
