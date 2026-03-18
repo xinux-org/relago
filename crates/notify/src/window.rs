@@ -97,7 +97,7 @@ impl AsyncComponent for AppModel {
                             set_width_request: 180,
                         },
                         gtk::Label  {
-                            set_text: "Ma'lumotlar yig'ilmoqda",
+                            set_text: "Xatoliklar bilan bog'liq barcha ma'lumotlar yig'ilmoqda. Iltimos kuting",
                             set_valign: gtk::Align::Center,
                         },
                     },
@@ -106,7 +106,7 @@ impl AsyncComponent for AppModel {
                         set_hexpand: true,
                         set_vexpand: true,
                         gtk::Label  {
-                            set_text: "xuynya"
+                            set_text: "Logs sent successfully"
                         },
                     },
                 },
@@ -146,7 +146,11 @@ impl AsyncComponent for AppModel {
                 match report() {
                     Ok(()) => {
                         self.state = AppState::Send;
-                        println!("Suka")
+                        // FIXME: we need to set tmp directory, config path in env
+                        match report::create_report("tmp", "~/.config/nix", None) {
+                            Ok(rep) => self.state = AppState::Send,
+                            Err(_) => self.state = AppState::Init,
+                        }
                     }
                     Err(_) => self.state = AppState::Init,
                 }
