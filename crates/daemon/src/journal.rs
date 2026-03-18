@@ -1,5 +1,7 @@
 //! Follow future journal log messages and print up to 100 of them.
 use anyhow::anyhow;
+use std::sync::mpsc;
+use std::thread;
 use systemd::journal::{self, Journal, JournalEntryField, JournalSeek};
 use tracing::error;
 
@@ -46,7 +48,9 @@ pub fn run() -> anyhow::Result<()> {
             }
 
             Ok(_) => match registry.run(&mut journal) {
-                Some(Crash::Coredump(r)) => {
+                Some( ref cr @ Crash::Coredump(ref r)) => {
+
+                    handle_crash(cr);
                     println!("Core dumped: {:?}", r);
                 }
 
@@ -72,4 +76,19 @@ pub fn run() -> anyhow::Result<()> {
             }
         }
     }
+}
+
+fn handle_crash(cr: &Crash) -> anyhow::Result<()> {
+    match cr {
+        Crash::Coredump(dump) => {
+            thread::spawn(move || {
+                println!("Handler called inside thread");
+            });
+        }
+        Crash::ServiceFailure(r) => {
+            println!("Service failed");
+        }
+        Crash::Oom(r) => {}
+    }
+    Ok(())
 }
