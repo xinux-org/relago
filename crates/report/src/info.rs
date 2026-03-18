@@ -9,6 +9,7 @@ use systemd::journal::{self, JournalSeek};
 use serde_json::Serializer;
 use serde::ser::SerializeSeq;
 use serde::Serializer as _;
+use ignore::WalkBuilder;
 
 #[derive(Serialize)]
 pub struct SystemInfo {
@@ -168,26 +169,27 @@ pub fn collect_journal_recent(path: &Path, num_entries: usize) -> Result<()> {
 }
 
 pub fn copy_dir_recursive(src: &Path, dest: &Path) -> Result<()> {
-    if !dest.exists() {
-        fs::create_dir_all(dest)?;
-    }
 
-    for entry in fs::read_dir(src)? {
+    let walker = WalkBuilder::new(src)
+        .hidden(false)
+        .build();
+
+    for entry in walker {
         let entry = entry?;
-        let file_type = entry.file_type()?;
         let src_path = entry.path();
-        let dest_path = dest.join(entry.file_name());
 
-        if let Some(name) = entry.file_name().to_str() {
-            if name.starts_with('.') {
-                continue;
-            }
-        }
+        let relative = src_path
+            .strip_prefix(src)
+            .unwrap_or(src_path);
+        let dest_path = dest.join(relative);
 
-        if file_type.is_dir() {
-            copy_dir_recursive(&src_path, &dest_path)?;
+        if entry.file_type().map(|ft| ft.is_dir()).unwrap_or(false) {
+            fs::create_dir_all(&dest_path)?;
         } else {
-            fs::copy(&src_path, &dest_path)?;
+            if let Some(parent) = dest_path.parent() {
+                fs::create_dir_all(parent)?;
+            }
+            fs::copy(src_path, &dest_path)?;
         }
     }
 

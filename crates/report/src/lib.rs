@@ -85,6 +85,7 @@ pub fn create_report(
         info::copy_dir_recursive(&src, &dest);
     }
 
+    // TODO: delete original file after compressed
     let _ = cmp::compress_zip(&report_dir, &output_dir);
 
     println!("Report created successfully!");
