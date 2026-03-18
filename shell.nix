@@ -17,10 +17,29 @@ in
       self.formatter.${pkgs.stdenv.hostPlatform.system}
       nixfmt-tree
 
+      # Rust
+      rustc
+      cargo
+      rustfmt
+      clippy
       rust-analyzer
+      cargo-watch
+      cargo-expand
 
       pkg-config
       dbus.dev
       systemd.dev
+
+      gtk4
+      libadwaita
+      cairo
+      pango
+      graphene
+      openssl
+      rustPlatform.bindgenHook
     ];
+
+    # Set Environment Variables
+    RUST_BACKTRACE = "full";
+    RUST_SRC_PATH = "${pkgs.rust.packages.stable.rustPlatform.rustLibSrc}";
   }

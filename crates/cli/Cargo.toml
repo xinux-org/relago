@@ -17,6 +17,7 @@ path = "src/main.rs"
 utils = { path = "../utils" }
 nixlog ={ path = "../nixlog"}
 daemon ={ path = "../daemon"}
+notify = { path = "../notify" }
 report ={ path = "../report"}
 
 # Third party dependencies

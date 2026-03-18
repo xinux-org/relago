@@ -1,10 +1,18 @@
-flake: {
+flake:
+{
   config,
   lib,
   pkgs,
   ...
-}: let
-  inherit (lib) mkEnableOption mkOption mkIf mkMerge types;
+}:
+let
+  inherit (lib)
+    mkEnableOption
+    mkOption
+    mkIf
+    mkMerge
+    types
+    ;
 
   # Manifest via Cargo.toml
   manifest = (pkgs.lib.importTOML ./Cargo.toml).workspace.package;
@@ -16,8 +24,7 @@ flake: {
   fpkg = flake.packages.${pkgs.stdenv.hostPlatform.system}.default;
 
   # Toml management
-  toml = pkgs.formats.toml {};
-
+  toml = pkgs.formats.toml { };
 
   # The digesting configuration of server
   toml-config = toml.generate "config.toml" {
@@ -26,7 +33,6 @@ flake: {
     threads = cfg.threads;
     database_url = "#databaseUrl#";
   };
-
 
   # Systemd services
   service = mkIf cfg.enable {
@@ -48,45 +54,46 @@ flake: {
 
     systemd.services."${manifest.name}" = {
       description = "${manifest.name} Relago daemon";
-      wantedBy = ["multi-user.target"];
-      
+      wantedBy = [ "multi-user.target" ];
+
       serviceConfig = {
         Type = "dbus";
         BusName = "org.freedesktop.problems.daemon";
-        
+
         ExecStart = "${lib.getBin fpkg}/bin/relago";
-        
+
         StandardInput = "null";
         StandardOutput = "journal";
         StandardError = "journal";
-        
+
         # Restart = "always";
 
-        DevicePolicy="closed";
-        KeyringMode="private";
-        LockPersonality="yes";
-        MemoryDenyWriteExecute="yes";
-        NoNewPrivileges="yes";
-        PrivateDevices="yes";
-        PrivateTmp="true";
-        ProtectClock="yes";
-        ProtectControlGroups="yes";
-        ProtectHome="read-only";
-        ProtectHostname="yes";
-        ProtectKernelLogs="yes";
-        ProtectKernelModules="yes";
-        ProtectKernelTunables="yes";
-        ProtectProc="invisible";
-        ProtectSystem="full";
-        RestrictNamespaces="yes";
-        RestrictRealtime="yes";
-        RestrictSUIDSGID="yes";
-        SystemCallArchitectures="native";
+        DevicePolicy = "closed";
+        KeyringMode = "private";
+        LockPersonality = "yes";
+        MemoryDenyWriteExecute = "yes";
+        NoNewPrivileges = "yes";
+        PrivateDevices = "yes";
+        PrivateTmp = "true";
+        ProtectClock = "yes";
+        ProtectControlGroups = "yes";
+        ProtectHome = "read-only";
+        ProtectHostname = "yes";
+        ProtectKernelLogs = "yes";
+        ProtectKernelModules = "yes";
+        ProtectKernelTunables = "yes";
+        ProtectProc = "invisible";
+        ProtectSystem = "full";
+        RestrictNamespaces = "yes";
+        RestrictRealtime = "yes";
+        RestrictSUIDSGID = "yes";
+        SystemCallArchitectures = "native";
       };
     };
   };
 
-in {
+in
+{
   # Available user options
   options = with lib; {
     services.${manifest.name} = {
@@ -111,5 +118,5 @@ in {
     };
   };
 
-  config = mkMerge [service];
+  config = mkMerge [ service ];
 }

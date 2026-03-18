@@ -13,48 +13,55 @@
     crane.url = "github:ipetkov/crane";
   };
 
-  outputs = {
-    self,
-    nixpkgs,
-    flake-utils,
-    ...
-  } @ inputs:
-    inputs.flake-parts.lib.mkFlake {inherit inputs;} ({...}: {
-      systems = [
-        "x86_64-linux"
-        "aarch64-linux"
-      ];
-      # pkgs = nixpkgs.legacyPackages.${system};
-      flake = {
-      	nixosModules.relago = import ./module.nix self;
-      	nixosModules.default = import ./module.nix self;
-      };
-      
-      perSystem = {
-        system,
-        ...
-      }: let 
-        pkgs = nixpkgs.legacyPackages.${system};
-        craneLib = inputs.crane.mkLib pkgs;
-        # slf = inputs.self;
-       in rec {
+  outputs =
+    {
+      self,
+      nixpkgs,
+      flake-utils,
+      ...
+    }@inputs:
+    inputs.flake-parts.lib.mkFlake { inherit inputs; } (
+      { ... }:
+      {
+        systems = [
+          "x86_64-linux"
+          "aarch64-linux"
+        ];
+        # pkgs = nixpkgs.legacyPackages.${system};
+        flake = {
+          nixosModules.relago = import ./module.nix self;
+          nixosModules.default = import ./module.nix self;
+        };
 
-        # Nix script formatter
-        formatter = pkgs.nixfmt;
+        perSystem =
+          {
+            system,
+            ...
+          }:
+          let
+            pkgs = nixpkgs.legacyPackages.${system};
+            craneLib = inputs.crane.mkLib pkgs;
+            # slf = inputs.self;
+          in
+          rec {
 
-        # Development environment
-        devShells.default = import ./shell.nix  {inherit self pkgs craneLib;};
+            # Nix script formatter
+            formatter = pkgs.nixfmt;
 
-        # Output package
-        # packages.default = pkgs.callPackage ./. {inherit pkgs;};
-        packages = {
-          default = self.packages.${system}.relago;
-          relago = pkgs.callPackage ./. {inherit pkgs craneLib;};
-          relago-dev = self.packages.${system}.relago.overrideAttrs {
-            dontCheck = true;
+            # Development environment
+            devShells.default = import ./shell.nix { inherit self pkgs craneLib; };
+
+            # Output package
+            # packages.default = pkgs.callPackage ./. {inherit pkgs;};
+            packages = {
+              default = self.packages.${system}.relago;
+              relago = pkgs.callPackage ./. { inherit pkgs craneLib; };
+              relago-dev = self.packages.${system}.relago.overrideAttrs {
+                dontCheck = true;
+              };
+            };
+
           };
-      };
-		
-      };
-    });
+      }
+    );
 }
