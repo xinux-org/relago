@@ -2,12 +2,19 @@
 use anyhow::anyhow;
 use std::sync::mpsc;
 use std::thread;
+use std::time::Duration;
 use systemd::journal::{self, Journal, JournalEntryField, JournalSeek};
 use tracing::error;
 
 use crate::crash::{CoredumpCrash, Crash, OomCrash, ServiceFailureCrash};
 use crate::registry::PluginRegistry;
 use notify::{modal, Modal};
+
+#[derive(Debug)]
+enum ReportRes {
+    Done
+
+}
 
 pub fn run() -> anyhow::Result<()> {
     let mut registry = PluginRegistry::new();
@@ -39,6 +46,10 @@ pub fn run() -> anyhow::Result<()> {
 
     registry.install_filters(&mut journal)?;
 
+    let (tx, rx) = mpsc::channel();
+
+    // let mut value = tx.send(ReportRes::Done);
+    let sender = tx.clone();
     loop {
         match journal.next() {
             // 0 means "no new entries yet" — block until journald wakes us.
@@ -48,6 +59,7 @@ pub fn run() -> anyhow::Result<()> {
                     .map_err(|e| anyhow!("journal wait failed: {e}"))?;
             }
 
+            
             Ok(_) => match registry.run(&mut journal) {
                 Some(Crash::Coredump(ref r)) => {
                     let unit = "".to_string();
@@ -60,11 +72,38 @@ pub fn run() -> anyhow::Result<()> {
                     };
                     println!("Core dumped: {:?}", r);
                     // handle_crash(cr)?
+                    let value = sender.clone();
                     thread::spawn(move || {
                         println!("Handler called inside thread");
 
-                        let _ = modal(rr);
+                        match modal(rr){
+                            Some(_) => {
+                                println!("worked");
+                                value.clone().send(ReportRes::Done).unwrap()
+                            }
+                            None => {
+                                panic!("Fuck")
+                            }
+                        }
+                        
                     });
+
+                    loop {
+                        // thread::sleep(Duration::new(3, 0));
+                        match rx.recv() {
+                            Ok(ReportRes::Done) => {
+                                println!("Exiting worker thread");
+                                break;
+                            }
+                            // Ok(_) => {
+                                // thread::sleep(Duration::new(1, 0));
+                            // }
+                            Err(_) => {
+                                println!("Channel closed");
+                                break;
+                            }
+                        }
+                    }
                 }
 
                 Some(Crash::ServiceFailure(r)) => {
