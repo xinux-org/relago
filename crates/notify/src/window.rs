@@ -144,10 +144,10 @@ impl AsyncComponent for AppModel {
                 self.state = AppState::Spinning;
 
                 // FIXME: we need to set tmp directory, config path in env
-                match report::create_report("tmp", "~/.config/nix", None) {
+                match report::create_report("tmp", Some("~/.config/nix"), None) {
                     Ok(rep_file) => {
                         // FIXME: we need to set tmp directory, config path in env
-                        match report_srv(rep_file.file.to_string()) {
+                        match report_srv(rep_file.file.to_str().unwrap()) {
                             Ok(rep) => self.state = AppState::Send,
                             Err(_) => self.state = AppState::Init,
                         }
@@ -164,13 +164,12 @@ pub fn open(error: Modal) {
     app.run_async::<AppModel>(error);
 }
 
-fn report_srv(file_path: String) -> anyhow::Result<()> {
-    let url = "http://localhost:5678";
-    let file_path = file_path.as_str();
+fn report_srv(file_path: &str) -> anyhow::Result<()> {
+    let url = "http://localhost:4242/upload/report";
 
     let form = multipart::Form::new()
-        .text("username", "seanmonstar")
-        .file("file", file_path)?;
+        // .text("username", "seanmonstar")
+        .file("report", file_path)?;
 
     let client = reqwest::blocking::Client::new();
     client.post(url).multipart(form).send()?;

@@ -1,6 +1,7 @@
 pub mod window;
 use notify_rust::Notification;
 use serde::Serialize;
+use anyhow::anyhow;
 
 #[derive(Clone, Debug, Serialize)]
 pub struct Modal {
@@ -9,16 +10,15 @@ pub struct Modal {
     pub message: String,
 }
 
-pub fn modal(error: Modal) -> Result<(), Box<dyn std::error::Error>> {
-    let error_string = serde_json::to_string(&error)?;
+pub fn modal(error: Modal) -> Option<()> {
+    let error_string = serde_json::to_string(&error).expect("Modal cooked");
 
     Notification::new()
         .summary("Error")
         .body(format!("{}", error_string).as_str())
         .icon(&error.exe)
-        .show()?;
-
+        .show().expect("Notify cooked");
     window::open(error);
 
-    Ok(())
+    Some(())
 }

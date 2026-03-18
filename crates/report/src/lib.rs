@@ -18,8 +18,8 @@ pub enum ReportError {
     System(String),
 }
 
-struct Report {
-    file: PathBuf,
+pub struct Report {
+    pub file: PathBuf,
 }
 
 pub fn run(

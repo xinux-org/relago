@@ -25,6 +25,7 @@ pub struct CoredumpCrash {
 
     #[journal(field = "COREDUMP_FILENAME")]
     pub core_file: Option<String>,
+
 }
 
 

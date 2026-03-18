@@ -7,6 +7,7 @@ use tracing::error;
 
 use crate::crash::{CoredumpCrash, Crash, OomCrash, ServiceFailureCrash};
 use crate::registry::PluginRegistry;
+use notify::{modal, Modal};
 
 pub fn run() -> anyhow::Result<()> {
     let mut registry = PluginRegistry::new();
@@ -48,10 +49,22 @@ pub fn run() -> anyhow::Result<()> {
             }
 
             Ok(_) => match registry.run(&mut journal) {
-                Some( ref cr @ Crash::Coredump(ref r)) => {
+                Some(Crash::Coredump(ref r)) => {
+                    let unit = "".to_string();
+                    let exe = r.exe.to_string();
 
-                    handle_crash(cr);
+                    let rr = Modal {
+                        unit,
+                        exe,
+                        message: "Coredump error".to_string(),
+                    };
                     println!("Core dumped: {:?}", r);
+                    // handle_crash(cr)?
+                    thread::spawn(move || {
+                        println!("Handler called inside thread");
+
+                        let _ = modal(rr);
+                    });
                 }
 
                 Some(Crash::ServiceFailure(r)) => {
@@ -59,7 +72,7 @@ pub fn run() -> anyhow::Result<()> {
                     //     continue;
                     // }
 
-                    println!("Service failed");
+                    println!("Service failed: {:?}", r);
                 }
 
                 Some(Crash::Oom(r)) => {
@@ -78,17 +91,25 @@ pub fn run() -> anyhow::Result<()> {
     }
 }
 
-fn handle_crash(cr: &Crash) -> anyhow::Result<()> {
-    match cr {
-        Crash::Coredump(dump) => {
-            thread::spawn(move || {
-                println!("Handler called inside thread");
-            });
-        }
-        Crash::ServiceFailure(r) => {
-            println!("Service failed");
-        }
-        Crash::Oom(r) => {}
-    }
-    Ok(())
-}
+// fn handle_crash(ref cr: &Crash) -> anyhow::Result<()> {
+//     match cr {
+//         Crash::Coredump(dump) => {
+//             thread::spawn(|| {
+//                 println!("Handler called inside thread");
+//                 let unit = "".to_string();
+//                 let exe = dump.exe.to_string();
+
+//                 let _ = modal(Modal {
+//                     unit,
+//                     exe,
+//                     message: "Coredump error".to_string(),
+//                 });
+//             });
+//         }
+//         Crash::ServiceFailure(r) => {
+//             println!("Service failed");
+//         }
+//         Crash::Oom(r) => {}
+//     };
+//     Ok(())
+// }
