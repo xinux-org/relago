@@ -12,7 +12,5 @@ fn main() -> anyhow::Result<()> {
 
     modal(error);
 
-    // println!("Nigger");
-
     Ok(())
 }

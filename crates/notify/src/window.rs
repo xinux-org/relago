@@ -11,6 +11,9 @@ pub struct Modal {
 
 struct AppModel {
     error: Modal,
+    report_label: String,
+    main_box: gtk::Box,
+    spinner: bool,
 }
 
 #[derive(Debug)]
@@ -25,6 +28,7 @@ impl AsyncComponent for AppModel {
     type Input = AppMsg;
     type Output = ();
     type CommandOutput = ();
+    // type Root;
 
     view! {
         adw::Window {
@@ -34,16 +38,27 @@ impl AsyncComponent for AppModel {
 
             gtk::Box {
                 set_orientation: gtk::Orientation::Vertical,
+                set_vexpand: true,
+                set_hexpand: true,
 
                 adw::HeaderBar {
                     #[wrap(Some)]
                     set_title_widget = &adw::WindowTitle {
-                        set_title: "Sidebar",
+                        #[watch]
+                        set_title: &model.report_label,
                     }
                 },
 
+                #[name(main_box)]
                 gtk::Box {
                     set_orientation: gtk::Orientation::Vertical,
+                    set_vexpand: true,
+                    set_hexpand: true,
+
+                    gtk::Spinner {
+                        #[watch]
+                        set_spinning: model.spinner,
+                    },
 
                     gtk::TextView {
                         set_monospace: true,
@@ -74,9 +89,16 @@ impl AsyncComponent for AppModel {
         root: Self::Root,
         sender: AsyncComponentSender<Self>,
     ) -> AsyncComponentParts<Self> {
-        let model = AppModel { error: error.clone() };
+        let mut model = AppModel {
+            error: error.clone(),
+            report_label: "sidebar".to_string(),
+            main_box: gtk::Box::new(gtk::Orientation::Vertical, 1),
+            spinner: false,
+        };
 
         let widgets = view_output!();
+        let main_box = widgets.main_box.clone();
+        model.main_box = main_box;
 
         AsyncComponentParts { model, widgets }
     }
@@ -88,7 +110,9 @@ impl AsyncComponent for AppModel {
                 // relm4::main_
                 // main_application::quit();
                 // self.window.close();
-                relm4::main_application().quit();
+                self.report_label = "changed".to_string();
+                self.spinner = !(self.spinner);
+                // relm4::main_application().quit();
             }
         }
     }
