@@ -75,7 +75,8 @@ pub fn run() -> anyhow::Result<()> {
                 .get_one::<String>("recent")
                 .and_then(|s| s.parse::<usize>().ok());
 
-            report::create_report(rep, nixos_config, recent_entries)?;
+            // report::create_report(rep, nixos_config, recent_entries)?;
+            report::run(rep, nixos_config, recent_entries)?
         }
         Some(("daemon", sub_matches)) => {
             // Daemon started
