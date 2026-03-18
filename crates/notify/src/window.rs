@@ -143,11 +143,11 @@ impl AsyncComponent for AppModel {
                 self.title = "Spinner".to_string();
                 self.state = AppState::Spinning;
 
-                match report() {
-                    Ok(()) => {
-                        self.state = AppState::Send;
+                // FIXME: we need to set tmp directory, config path in env
+                match report::create_report("tmp", "~/.config/nix", None) {
+                    Ok(rep_file) => {
                         // FIXME: we need to set tmp directory, config path in env
-                        match report::create_report("tmp", "~/.config/nix", None) {
+                        match report_srv(rep_file.file.to_string()) {
                             Ok(rep) => self.state = AppState::Send,
                             Err(_) => self.state = AppState::Init,
                         }
@@ -164,9 +164,9 @@ pub fn open(error: Modal) {
     app.run_async::<AppModel>(error);
 }
 
-fn report(file_path: String) -> anyhow::Result<()> {
+fn report_srv(file_path: String) -> anyhow::Result<()> {
     let url = "http://localhost:5678";
-    let file_path = "error.json";
+    let file_path = file_path.as_str();
 
     let form = multipart::Form::new()
         .text("username", "seanmonstar")
