@@ -3,12 +3,7 @@ pub mod window;
 use notify_rust::Notification;
 use serde::Serialize;
 
-#[derive(Clone, Debug, Serialize)]
-pub struct Modal {
-    pub unit: String,
-    pub exe: String,
-    pub message: String,
-}
+use window::Modal;
 
 fn main() -> anyhow::Result<()> {
     let unit = "".to_string();
