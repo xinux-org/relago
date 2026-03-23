@@ -31,23 +31,41 @@ impl Component for App {
         root: Self::Root,
         sender: ComponentSender<Self>,
     ) -> ComponentParts<Self> {
-        let buffer = gtk::TextBuffer::new(None);
-        buffer.set_text(
-            &serde_json::to_string_pretty(&error).unwrap_or_else(|_| "Invalid data".to_string()),
-        );
-
-        let textview = gtk::TextView::builder()
-            .buffer(&buffer)
-            .monospace(true)
-            .editable(false)
-            .cursor_visible(false)
-            .hexpand(true)
-            .vexpand(false)
-            .top_margin(10)
-            .bottom_margin(10)
-            .left_margin(12)
-            .right_margin(12)
+        let grid = gtk::Grid::builder()
+            .row_spacing(8)
+            .column_spacing(16)
+            .margin_start(4)
+            .margin_end(4)
             .build();
+
+        for (i, (key, val)) in [
+            ("Unit", error.unit.as_str()),
+            ("Executable", error.exe.as_str()),
+            ("Message", error.message.as_str()),
+        ]
+        .into_iter()
+        .enumerate()
+        {
+            let k = gtk::Label::builder()
+                .label(key)
+                .xalign(0.0)
+                .width_chars(12)
+                .build();
+            k.add_css_class("dim-label");
+            k.add_css_class("caption");
+
+            let v = gtk::Label::builder()
+                .label(val)
+                .xalign(0.0)
+                .hexpand(true)
+                .ellipsize(gtk::pango::EllipsizeMode::Middle)
+                .selectable(true)
+                .build();
+            v.add_css_class("monospace");
+
+            grid.attach(&k, 0, i as i32, 1, 1);
+            grid.attach(&v, 1, i as i32, 1, 1);
+        }
 
         let scroll = gtk::ScrolledWindow::builder()
             .hexpand(true)
@@ -56,9 +74,9 @@ impl Component for App {
             .margin_start(16)
             .margin_end(16)
             .margin_bottom(12)
+            .child(&grid)
             .build();
         scroll.add_css_class("card");
-        scroll.set_child(Some(&textview));
 
         relm4::view! {
             toolbar_view = adw::ToolbarView {
@@ -85,15 +103,28 @@ impl Component for App {
                         set_visible: false,
                         set_margin_start: 16,
                         set_margin_end: 16,
-                        set_margin_bottom: 4,
-                        set_pulse_step: 0.1,
+                        set_margin_top: 8,
                     },
 
-                    append: label = &gtk::Label {
-                        set_label: "",
-                        set_margin_bottom: 8,
-                        add_css_class: "caption",
-                        add_css_class: "dim-label",
+                    gtk::Box {
+                        set_orientation: gtk::Orientation::Horizontal,
+                        set_margin_start: 16,
+                        set_margin_end: 16,
+                        set_margin_top: 4,
+                        set_margin_bottom: 12,
+
+                        append: label = &gtk::Label {
+                            set_hexpand: true,
+                            set_xalign: 0.0,
+                            add_css_class: "caption",
+                            add_css_class: "dim-label",
+                        },
+
+                        append: label_pct = &gtk::Label {
+                            set_xalign: 1.0,
+                            add_css_class: "caption",
+                            add_css_class: "monospace",
+                        },
                     },
 
                     append: button = &gtk::Button {
@@ -128,7 +159,7 @@ impl Component for App {
                 button_close,
                 progress,
                 label,
-                textview,
+                label_pct,
                 scroll,
             },
         }
@@ -165,28 +196,28 @@ impl Component for App {
             match task {
                 CmdOut::Progress { fraction, message } => {
                     widgets.scroll.set_visible(false);
-                    widgets.textview.set_visible(false);
                     widgets.button.set_visible(false);
                     widgets.progress.set_visible(true);
                     widgets.progress.set_fraction(*fraction);
                     widgets.label.set_label(message);
+                    widgets
+                        .label_pct
+                        .set_label(&format!("{:.0}%", fraction * 100.0));
                     widgets.button_close.set_label("Cancel");
                 }
                 CmdOut::Finished { bytes } => {
                     widgets.scroll.set_visible(false);
-                    widgets.textview.set_visible(false);
                     widgets.progress.set_fraction(1.0);
-                    widgets.progress.set_visible(true);
-                    widgets.button.set_visible(false);
+                    widgets.label.set_label("Sent successfully");
                     widgets
-                        .label
-                        .set_label(&format!("Sent — {:.1} KB uploaded", *bytes as f64 / 1024.0));
+                        .label_pct
+                        .set_label(&format!("{:.1} KB", *bytes as f64 / 1024.0));
+                    widgets.button.set_visible(false);
                     widgets.button_close.set_label("Close");
                 }
                 CmdOut::Error(e) => {
                     widgets.scroll.set_visible(true);
                     widgets.progress.set_visible(false);
-                    widgets.textview.set_visible(true);
                     widgets.label.set_label(&format!("Error: {e}"));
                     widgets.button.set_visible(true);
                     widgets.button.set_label("Retry");

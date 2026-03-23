@@ -23,6 +23,6 @@ pub struct Widgets {
     pub button_close: gtk::Button,
     pub progress: gtk::ProgressBar,
     pub label: gtk::Label,
-    pub textview: gtk::TextView,
+    pub label_pct: gtk::Label,
     pub scroll: gtk::ScrolledWindow,
 }
