@@ -125,7 +125,7 @@ pub fn run() -> anyhow::Result<()> {
 
             relm4::RelmApp::new(&app_id)
                 .with_args(vec![])
-                .run::<notify::window::App>(modal);
+                .run::<notify::window::model::App>(modal);
         }
         _ => println!("`None`"),
     }

@@ -5,7 +5,6 @@ use std::process::Command;
 
 pub fn modal(unit: &str, exe: &str, message: &str) -> anyhow::Result<()> {
     let exe_path = std::env::current_exe()?;
-
     let wayland = find_wayland_display().unwrap_or_else(|| "wayland-1".to_string());
 
     Command::new("systemd-run")

@@ -1,50 +1,15 @@
+pub mod messages;
+pub mod model;
+pub mod report;
+
+pub use model::Modal;
+
 use adw::prelude::*;
-use futures::FutureExt;
 use gtk::prelude::*;
 use relm4::*;
-use report::create_report;
-use reqwest::blocking::multipart;
-use serde::Serialize;
-use std::error::Error;
 
-#[derive(Clone, Debug, Serialize)]
-pub struct Modal {
-    #[serde(rename = "Unit")]
-    pub unit: String,
-    #[serde(rename = "Executable")]
-    pub exe: String,
-    #[serde(rename = "Message")]
-    pub message: String,
-}
-
-#[derive(Default)]
-pub struct App {
-    computing: bool,
-    task: Option<CmdOut>,
-}
-
-pub struct Widgets {
-    button: gtk::Button,
-    spinner: adw::Spinner,
-    label: gtk::Label,
-    textview: gtk::TextView,
-}
-
-#[derive(Debug)]
-pub enum Input {
-    Report,
-}
-
-#[derive(Debug)]
-pub enum Output {
-    Clicked(u32),
-}
-
-#[derive(Debug)]
-pub enum CmdOut {
-    Spinner,
-    Finished,
-}
+use messages::{CmdOut, Input, Output};
+use model::{App, Widgets};
 
 impl Component for App {
     type Init = Modal;
@@ -116,15 +81,17 @@ impl Component for App {
 
                     append: &scroll,
 
-                    append: spinner = &adw::Spinner {
+                    append: progress = &gtk::ProgressBar {
                         set_visible: false,
-                        set_width_request: 24,
-                        set_height_request: 24,
+                        set_margin_start: 16,
+                        set_margin_end: 16,
+                        set_margin_bottom: 4,
+                        set_pulse_step: 0.1,
                     },
 
                     append: label = &gtk::Label {
                         set_label: "",
-                        set_margin_bottom: 4,
+                        set_margin_bottom: 8,
                         add_css_class: "caption",
                         add_css_class: "dim-label",
                     },
@@ -133,10 +100,20 @@ impl Component for App {
                         set_label: "Send Report",
                         set_margin_start: 16,
                         set_margin_end: 16,
-                        set_margin_bottom: 16,
+                        set_margin_top: 8,
                         add_css_class: "suggested-action",
                         add_css_class: "pill",
                         connect_clicked => Input::Report,
+                    },
+
+                    append: button_close = &gtk::Button {
+                        set_label: "Close",
+                        set_margin_start: 16,
+                        set_margin_end: 16,
+                        set_margin_top: 4,
+                        set_margin_bottom: 16,
+                        add_css_class: "pill",
+                        connect_clicked => Input::Dismiss,
                     },
                 },
             }
@@ -148,38 +125,21 @@ impl Component for App {
             model: App::default(),
             widgets: Widgets {
                 button,
-                spinner,
+                button_close,
+                progress,
                 label,
                 textview,
+                scroll,
             },
         }
     }
 
-    fn update(&mut self, message: Self::Input, sender: ComponentSender<Self>, _root: &Self::Root) {
+    fn update(&mut self, message: Self::Input, sender: ComponentSender<Self>, root: &Self::Root) {
         match message {
+            Input::Dismiss => root.close(),
             Input::Report => {
                 self.computing = true;
-                sender.command(|out, shutdown| {
-                    out.send(CmdOut::Spinner).unwrap();
-                    shutdown
-                        .register(async move {
-                            let path = create_report("tmp", Some("~/.config/nix"), None)
-                                .map(|f| format!("{}.zip", f.file.display()))
-                                .unwrap_or_else(|_| "error.json".to_string());
-
-                            let result = tokio::task::spawn_blocking(move || report_srv(path))
-                                .await
-                                .unwrap();
-
-                            if result.is_err() {
-                                eprintln!("Failed to send report");
-                            }
-
-                            out.send(CmdOut::Finished).unwrap();
-                        })
-                        .drop_on_shutdown()
-                        .boxed()
-                });
+                report::run(sender);
             }
         }
     }
@@ -190,39 +150,49 @@ impl Component for App {
         _sender: ComponentSender<Self>,
         _root: &Self::Root,
     ) {
-        if let CmdOut::Finished = message {
-            self.computing = false;
+        match &message {
+            CmdOut::Finished { .. } | CmdOut::Error(_) => self.computing = false,
+            _ => {}
         }
         self.task = Some(message);
     }
 
     fn update_view(&self, widgets: &mut Self::Widgets, _sender: ComponentSender<Self>) {
         widgets.button.set_sensitive(!self.computing);
+        widgets.button_close.set_sensitive(true);
 
         if let Some(ref task) = self.task {
             match task {
-                CmdOut::Spinner => {
-                    widgets.label.set_label("Ma'lumotlar yuborilmoqda");
+                CmdOut::Progress { fraction, message } => {
+                    widgets.scroll.set_visible(false);
                     widgets.textview.set_visible(false);
-                    widgets.spinner.set_visible(true);
                     widgets.button.set_visible(false);
+                    widgets.progress.set_visible(true);
+                    widgets.progress.set_fraction(*fraction);
+                    widgets.label.set_label(message);
+                    widgets.button_close.set_label("Cancel");
                 }
-                CmdOut::Finished => {
-                    widgets.spinner.set_visible(false);
+                CmdOut::Finished { bytes } => {
+                    widgets.scroll.set_visible(false);
+                    widgets.textview.set_visible(false);
+                    widgets.progress.set_fraction(1.0);
+                    widgets.progress.set_visible(true);
+                    widgets.button.set_visible(false);
                     widgets
                         .label
-                        .set_label("Ma'lumotlar muvaffaqiyatli yuborildi");
+                        .set_label(&format!("Sent — {:.1} KB uploaded", *bytes as f64 / 1024.0));
+                    widgets.button_close.set_label("Close");
+                }
+                CmdOut::Error(e) => {
+                    widgets.scroll.set_visible(true);
+                    widgets.progress.set_visible(false);
+                    widgets.textview.set_visible(true);
+                    widgets.label.set_label(&format!("Error: {e}"));
+                    widgets.button.set_visible(true);
+                    widgets.button.set_label("Retry");
+                    widgets.button_close.set_label("Close");
                 }
             }
         }
     }
-}
-
-fn report_srv(file_path: String) -> Result<(), Box<dyn Error + Send + Sync>> {
-    let form = multipart::Form::new().file("report", file_path)?;
-    reqwest::blocking::Client::new()
-        .post("http://localhost:5678/upload/report")
-        .multipart(form)
-        .send()?;
-    Ok(())
 }
