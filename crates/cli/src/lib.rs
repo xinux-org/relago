@@ -121,9 +121,9 @@ pub fn run() -> anyhow::Result<()> {
                 std::env::var("RELAGO_MESSAGE").unwrap_or_else(|_| "Coredump".to_string());
 
             let modal = notify::window::Modal { unit, exe, message };
-            let id = format!("org.relm4.Reporter.p{}", std::process::id());
+            let app_id = format!("org.relm4.Reporter.p{}", std::process::id());
 
-            relm4::RelmApp::new(&id)
+            relm4::RelmApp::new(&app_id)
                 .with_args(vec![])
                 .run::<notify::window::App>(modal);
         }
