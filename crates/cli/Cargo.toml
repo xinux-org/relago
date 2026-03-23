@@ -27,3 +27,17 @@ tracing-subscriber = { workspace = true }
 tracing = { workspace = true }
 subprocess = { workspace = true }
 relm4 = { workspace = true }
+# pprof2 = { version = "0.13.1",  features = ["protobuf-codec", "flamegraph",  "cpp"]}
+
+pprof2 = "0.13.1"
+# jemalloc_pprof = { version = "0.7", features = ["symbolize"] }
+dhat = "0.3.3"
+
+# [features]
+# protobuf-codec=[]
+# cpp = ["pprof2"]
+# dhat-heap = []
+# [profile.profiling]
+# inherits = "dev"
+# opt-level = 1
+# debug = true

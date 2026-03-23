@@ -2,15 +2,14 @@ use std::{error::Error, path::PathBuf, sync::Arc};
 
 use futures::FutureExt;
 use gtk::prelude::*;
-use relm4::*;
+use relm4::{gtk::gio, *};
 use report::create_report;
 use reqwest::blocking::multipart;
 use serde::Serialize;
 
 pub fn open(rr: Modal) {
-    RelmApp::new("org.relm4.ProgressExample").run::<App>(rr.into());
-    // let json = "error.json";
-    // let res = report_srv(json.to_string());
+    let app = RelmApp::new("org.relm4.Modal");
+    app.run::<App>(rr.into());
 }
 
 #[derive(Clone, Debug, Serialize)]

@@ -2,9 +2,10 @@ use clap::{arg, command, Arg, ArgAction, Command, Parser, Subcommand};
 
 use daemon::*;
 use nixlog::error as NixErr;
+use notify::modal;
+use report;
 use std::io::{BufRead, Read};
 use subprocess::Exec;
-use report;
 
 pub fn run() -> anyhow::Result<()> {
     tracing_subscriber::fmt()
@@ -21,6 +22,7 @@ pub fn run() -> anyhow::Result<()> {
                 .arg(Arg::new("exec").action(ArgAction::Append)),
         )
         .subcommand(Command::new("daemon").about("Run daemon").arg(arg!([NAME])))
+        .subcommand(Command::new("notify").about("Run notification"))
         .subcommand(
             Command::new("report")
                 .about("Report journal entries to JSON file")
@@ -46,6 +48,29 @@ pub fn run() -> anyhow::Result<()> {
                         .help("Path to NixOS configuration directory (e.g., ~/nix-conf)"),
                 ),
         )
+        .subcommand(
+            Command::new("reporter")
+                .about("Launch crash reporter GUI")
+                .arg(
+                    Arg::new("unit")
+                        .long("unit")
+                        .value_name("UNIT")
+                        .help("Unit name"),
+                )
+                .arg(
+                    Arg::new("exe")
+                        .long("exe")
+                        .value_name("EXE")
+                        .help("Executable name"),
+                )
+                .arg(
+                    Arg::new("message")
+                        .long("message")
+                        .value_name("MESSAGE")
+                        .help("Crash message")
+                        .default_value("Coredump"),
+                ),
+        )
         .get_matches();
 
     match matches.subcommand() {
@@ -57,7 +82,7 @@ pub fn run() -> anyhow::Result<()> {
                 .collect::<Vec<_>>();
             match cmd_exec(&r[0]) {
                 Err(_) => println!("Cooked"),
-                Ok(_)  => println!("exec"),
+                Ok(_) => println!("exec"),
             }
         }
         Some(("report", sub_matches)) => {
@@ -88,7 +113,19 @@ pub fn run() -> anyhow::Result<()> {
 
             println!("Relago daemon application is started without fuckery!!!");
             let _ = daemon::journal::run();
+        }
+        Some(("reporter", _)) => {
+            let unit = std::env::var("RELAGO_UNIT").unwrap_or_default();
+            let exe = std::env::var("RELAGO_EXE").unwrap_or_default();
+            let message =
+                std::env::var("RELAGO_MESSAGE").unwrap_or_else(|_| "Coredump".to_string());
 
+            let modal = notify::window::Modal { unit, exe, message };
+            let id = format!("org.relm4.Reporter.p{}", std::process::id());
+
+            relm4::RelmApp::new(&id)
+                .with_args(vec![])
+                .run::<notify::window::App>(modal);
         }
         _ => println!("`None`"),
     }

@@ -1,5 +1,7 @@
 //! Follow future journal log messages and print up to 100 of them.
 use anyhow::anyhow;
+use notify::modal;
+use std::process::Command;
 use std::sync::mpsc;
 use std::thread;
 use std::time::Duration;
@@ -59,31 +61,11 @@ pub fn run() -> anyhow::Result<()> {
 
             Ok(_) => match registry.run(&mut journal) {
                 Some(Crash::Coredump(ref r)) => {
-                    let unit = "".to_string();
-                    let exe = r.exe.to_string();
-
-                    let rr = Modal {
-                        unit,
-                        exe,
-                        message: "Coredump error".to_string(),
-                    };
-                    println!("Core dumped: {:?}", r);
-                    // handle_crash(cr)?
-                    // let value = sender.clone();
-                    // relm4::spawn_blocking(move || {
-                    //     println!("Handler called inside thread");
-
-                    //     match modal(rr) {
-                    //         Some(_) => {
-                    //             println!("worked");
-                    //             value.clone().send(ReportRes::Done).unwrap()
-                    //         }
-                    //         None => {
-                    //             panic!("Fuck")
-                    //         }
-                    //     }
-                    // });
-                    modal(rr);
+                    let _ = modal(
+                        r.unit.as_deref().unwrap_or("unknown"),
+                        &r.exe,
+                        "Coredump detected",
+                    );
                 }
 
                 Some(Crash::ServiceFailure(r)) => {
