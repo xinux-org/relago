@@ -1728,6 +1728,7 @@ dependencies = [
 name = "notify"
 version = "0.0.2"
 dependencies = [
+ "anyhow",
  "notify-rust",
  "relm4",
  "relm4-components",
