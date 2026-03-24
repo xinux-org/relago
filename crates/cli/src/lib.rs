@@ -1,10 +1,10 @@
 use clap::{arg, command, Arg, ArgAction, Command, Parser, Subcommand};
 
-use daemon::core;
+use daemon::*;
 use nixlog::error as NixErr;
 use std::io::{BufRead, Read};
 use subprocess::Exec;
-
+use report;
 
 pub fn run() -> anyhow::Result<()> {
     tracing_subscriber::fmt()
@@ -21,6 +21,31 @@ pub fn run() -> anyhow::Result<()> {
                 .arg(Arg::new("exec").action(ArgAction::Append)),
         )
         .subcommand(Command::new("daemon").about("Run daemon").arg(arg!([NAME])))
+        .subcommand(
+            Command::new("report")
+                .about("Report journal entries to JSON file")
+                .arg(
+                    Arg::new("output")
+                        .short('o')
+                        .long("output")
+                        .value_name("DIR")
+                        .help("Output directory for report")
+                        .default_value("/tmp/relago"),
+                )
+                .arg(
+                    Arg::new("recent")
+                        .short('r')
+                        .long("recent")
+                        .value_name("NUM")
+                        .help("Report only N most recent entries (from tail)"),
+                )
+                .arg(
+                    Arg::new("nixos-config")
+                        .long("nixos-config")
+                        .value_name("PATH")
+                        .help("Path to NixOS configuration directory (e.g., ~/nix-conf)"),
+                ),
+        )
         .get_matches();
 
     match matches.subcommand() {
@@ -32,13 +57,35 @@ pub fn run() -> anyhow::Result<()> {
                 .collect::<Vec<_>>();
             match cmd_exec(&r[0]) {
                 Err(_) => println!("Cooked"),
-                Ok(_) => println!("exec"),
+                Ok(_)  => println!("exec"),
             }
+        }
+        Some(("report", sub_matches)) => {
+            let rep = sub_matches
+                .get_one::<String>("output")
+                .map(|s| s.as_str())
+                .unwrap_or("/tmp/relago");
+
+            let nixos_config = sub_matches
+                .get_one::<String>("nixos-config")
+                .map(|s| s.as_str());
+
+            // Check if `--recent` argument added
+            let recent_entries = sub_matches
+                .get_one::<String>("recent")
+                .and_then(|s| s.parse::<usize>().ok());
+
+            // report::create_report(rep, nixos_config, recent_entries)?;
+            report::run(rep, nixos_config, recent_entries)?
         }
         Some(("daemon", sub_matches)) => {
             // Daemon started
             // println!("daemon");
             // dbus-send --system --type=signal /com/example com.example.signal_name string:"hello world"
+
+            // let _ = fetcher::run();
+            // let _ = core::run();
+
             println!("Relago daemon application is started without fuckery!!!");
             let _ = daemon::journal::run();
 
