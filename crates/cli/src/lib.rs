@@ -1,10 +1,7 @@
-use clap::{arg, command, Arg, ArgAction, Command, Parser, Subcommand};
+use clap::{arg, command, Arg, ArgAction, Command, Parser};
 
-use daemon::*;
 use nixlog::error as NixErr;
-use notify::modal;
-use report;
-use std::io::{BufRead, Read};
+use std::io::BufRead;
 use subprocess::Exec;
 
 pub fn run() -> anyhow::Result<()> {
@@ -80,7 +77,7 @@ pub fn run() -> anyhow::Result<()> {
                 .unwrap_or_default()
                 .map(|v| v.as_str())
                 .collect::<Vec<_>>();
-            match cmd_exec(&r[0]) {
+            match cmd_exec(r[0]) {
                 Err(_) => println!("Cooked"),
                 Ok(_) => println!("exec"),
             }
@@ -103,7 +100,7 @@ pub fn run() -> anyhow::Result<()> {
             // report::create_report(rep, nixos_config, recent_entries)?;
             report::run(rep, nixos_config, recent_entries)?
         }
-        Some(("daemon", sub_matches)) => {
+        Some(("daemon", _sub_matches)) => {
             // Daemon started
             // println!("daemon");
             // dbus-send --system --type=signal /com/example com.example.signal_name string:"hello world"
