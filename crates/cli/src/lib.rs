@@ -50,18 +50,23 @@ pub fn run() -> anyhow::Result<()> {
                 .about("Launch crash reporter GUI")
                 .arg(
                     Arg::new("unit")
+                        .short('u')
                         .long("unit")
                         .value_name("UNIT")
-                        .help("Unit name"),
+                        .help("Unit name")
+                        .default_value("test"),
                 )
                 .arg(
                     Arg::new("exe")
+                        .short('e')
                         .long("exe")
                         .value_name("EXE")
-                        .help("Executable name"),
+                        .help("Executable name")
+                        .default_value("test"),
                 )
                 .arg(
                     Arg::new("message")
+                        .short('m')
                         .long("message")
                         .value_name("MESSAGE")
                         .help("Crash message")
@@ -111,11 +116,23 @@ pub fn run() -> anyhow::Result<()> {
             println!("Relago daemon application is started without fuckery!!!");
             let _ = daemon::journal::run();
         }
-        Some(("reporter", _)) => {
-            let unit = std::env::var("RELAGO_UNIT").unwrap_or_default();
-            let exe = std::env::var("RELAGO_EXE").unwrap_or_default();
-            let message =
-                std::env::var("RELAGO_MESSAGE").unwrap_or_else(|_| "Coredump".to_string());
+        Some(("reporter", sub_matches)) => {
+            let unit = sub_matches
+                .get_one::<String>("unit")
+                .map(|s| s.to_owned())
+                .unwrap_or("test".to_string());
+            let exe = sub_matches
+                .get_one::<String>("exe")
+                .map(|s| s.to_owned())
+                .unwrap_or("test".to_string());
+            let message = sub_matches
+                .get_one::<String>("message")
+                .map(|s| s.to_owned())
+                .unwrap_or("Coredump".to_string());
+
+            println!("{}", unit);
+            println!("{}", exe);
+            println!("{}", message);
 
             let modal = notify::window::Modal { unit, exe, message };
             let app_id = format!("org.relm4.Reporter.p{}", std::process::id());
