@@ -7,6 +7,7 @@ default-members = ["crates/cli"]
 members = [
   "crates/cli",
   "crates/daemon",
+  "crates/report",
   "crates/utils",
   "crates/nixlog",
   "crates/notify",
@@ -46,6 +47,7 @@ nom = "8.0.0"
 dbus = "0.9.10"
 dbus-tree = "0.9.2"
 dbus-crossroads = "0.5.3"
+relm4 = {version = "0.9.1", features=["macros", "libadwaita", "gnome_47"]}
 
 # Optimize release binary as much as possible
 [profile.release]

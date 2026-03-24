@@ -1,0 +1,94 @@
+use super::messages::CmdOut;
+use super::model::App;
+use futures::FutureExt;
+use relm4::ComponentSender;
+use report::create_report;
+use reqwest::blocking::multipart;
+use std::error::Error;
+
+pub fn run(sender: ComponentSender<App>) {
+    sender.command(|out, shutdown| {
+        shutdown
+            .register(async move {
+                out.send(CmdOut::Progress {
+                    fraction: 0.05,
+                    message: "Reading journal entries…".into(),
+                })
+                .unwrap();
+
+                let rep_file = tokio::task::spawn_blocking(|| {
+                    create_report("tmp", Some("~/.config/nix"), None)
+                })
+                .await
+                .unwrap();
+
+                let path = match rep_file {
+                    Err(e) => {
+                        out.send(CmdOut::Error(format!("Failed to collect report: {e}")))
+                            .unwrap();
+                        return;
+                    }
+                    Ok(f) => {
+                        out.send(CmdOut::Progress {
+                            fraction: 0.3,
+                            message: "Report collected, compressing…".into(),
+                        })
+                        .unwrap();
+
+                        tokio::time::sleep(std::time::Duration::from_millis(300)).await;
+
+                        let zip_path = format!("{}.zip", f.file.display());
+
+                        out.send(CmdOut::Progress {
+                            fraction: 0.55,
+                            message: format!(
+                                "Compressed → {}",
+                                zip_path.split('/').last().unwrap_or("report.zip")
+                            ),
+                        })
+                        .unwrap();
+
+                        zip_path
+                    }
+                };
+
+                let size = std::fs::metadata(&path).map(|m| m.len()).unwrap_or(0);
+
+                out.send(CmdOut::Progress {
+                    fraction: 0.65,
+                    message: format!("Uploading {:.1} KB…", size as f64 / 1024.0),
+                })
+                .unwrap();
+
+                let result = tokio::task::spawn_blocking(move || upload(path))
+                    .await
+                    .unwrap();
+
+                out.send(CmdOut::Progress {
+                    fraction: 0.9,
+                    message: "Finalizing…".into(),
+                })
+                .unwrap();
+
+                tokio::time::sleep(std::time::Duration::from_millis(200)).await;
+
+                match result {
+                    Ok(_) => out.send(CmdOut::Finished { bytes: size }).unwrap(),
+                    Err(e) => out
+                        .send(CmdOut::Error(format!("Upload failed: {e}")))
+                        .unwrap(),
+                }
+            })
+            .drop_on_shutdown()
+            .boxed()
+    });
+}
+
+pub fn upload(file_path: String) -> Result<(), Box<dyn Error + Send + Sync>> {
+    let form = multipart::Form::new().file("report", file_path)?;
+    reqwest::blocking::Client::new()
+        .post("http://localhost:5678/upload/report")
+        .multipart(form)
+        .send()?;
+    Ok(())
+}
