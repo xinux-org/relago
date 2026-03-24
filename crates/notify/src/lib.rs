@@ -19,11 +19,11 @@ pub fn modal(unit: &str, exe: &str, message: &str) -> anyhow::Result<()> {
             // "--",
             "reporter",
             "-u",
-            &format!("\"{unit}\""),
+            &format!("{unit}"),
             "-e",
-            &format!("\"{exe}\""),
+            &format!("{exe}"),
             "-m",
-            &format!("\"{message}\""),
+            &format!("{message}"),
         ])
         .spawn()?;
 
