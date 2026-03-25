@@ -44,6 +44,13 @@ pub fn run() -> anyhow::Result<()> {
                         .long("nixos-config")
                         .value_name("PATH")
                         .help("Path to NixOS configuration directory (e.g., ~/nix-conf)"),
+                )
+                .arg(
+                    Arg::new("encrypt-key")
+                        .short('e')
+                        .long("encrypt-key")
+                        .value_name("PATH")
+                        .help("Path to PGP public key file for encrypting the report"),
                 ),
         )
         .get_matches();
@@ -75,8 +82,11 @@ pub fn run() -> anyhow::Result<()> {
                 .get_one::<String>("recent")
                 .and_then(|s| s.parse::<usize>().ok());
 
-            // report::create_report(rep, nixos_config, recent_entries)?;
-            report::run(rep, nixos_config, recent_entries)?
+            let encrypt_key = sub_matches
+                .get_one::<String>("encrypt-key")
+                .map(|s| s.as_str());
+
+            report::run(rep, nixos_config, recent_entries, encrypt_key)?
         }
         Some(("daemon", sub_matches)) => {
             // Daemon started

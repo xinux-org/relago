@@ -27,3 +27,5 @@ shellexpand = "3.1"
 zip_archive="1.2.2"
 thiserror = {workspace = true}
 ignore = "0.4"
+pgp = { workspace = true }
+rand = { workspace = true }

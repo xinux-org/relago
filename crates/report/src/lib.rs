@@ -1,7 +1,9 @@
 pub mod compress;
+pub mod encrypt;
 pub mod info;
 
 use compress as cmp;
+use encrypt as enc;
 use std::fs::{self, File};
 use std::path::{Path, PathBuf};
 use thiserror::Error;
@@ -26,8 +28,9 @@ pub fn run(
     output_dir: &str,
     nixos_config_path: Option<&str>,
     recent_entries: Option<usize>,
+    public_key_path: Option<&str>,
 ) -> anyhow::Result<()> {
-    let _ = create_report(output_dir, nixos_config_path, recent_entries);
+    let _ = create_report(output_dir, nixos_config_path, recent_entries, public_key_path);
     Ok(())
 }
 
@@ -35,6 +38,7 @@ pub fn create_report(
     output_dir: &str,
     nixos_config_path: Option<&str>,
     recent_entries: Option<usize>,
+    public_key_path: Option<&str>,
 ) -> Result<Report, ReportError> {
     let timestamp = chrono::Local::now().format("%Y-%m-%d_%H-%M-%S");
     let report_dir = PathBuf::from(&output_dir).join(format!("report_{}", timestamp));
@@ -79,19 +83,42 @@ pub fn create_report(
             println!("NixOS config copied: {}", dest.display());
         }
     }
-    if system_info.system_name.to_owned() == Some("XinuxOS".to_string()) {
+    let mut key_path = public_key_path.map(|p| shellexpand::tilde(p).to_string());
+
+    if system_info.system_name == Some("XinuxOS".to_string()) {
         let src = Path::new("/etc/nixos");
         let dest = report_dir.join("xinux-config");
         info::copy_dir_recursive(&src, &dest);
+
+        if key_path.is_none() {
+            key_path = Some("/etc/xinux/keys/public.asc".to_string());
+        }
     }
 
-    // TODO: delete original file after compressed
-    let _ = cmp::compress_zip(&report_dir, &output_dir);
+    cmp::compress_zip(&report_dir, &output_dir).expect("Zip compression failed");
+    let zip_path = report_dir.with_extension("zip");
+
+    let final_path = if let Some(key_path) = key_path {
+        println!("Encrypting report with PGP...");
+        match enc::encrypt_file(&zip_path, &key_path) {
+            Ok(encrypted_path) => {
+                // Remove unencrypted zip after successful encryption
+                fs::remove_file(&zip_path).ok();
+                encrypted_path
+            }
+            Err(e) => {
+                eprintln!("Warning: Encryption failed: {}. Keeping unencrypted zip.", e);
+                zip_path
+            }
+        }
+    } else {
+        zip_path
+    };
 
     println!("Report created successfully!");
-    println!("Location: {}", report_dir.display());
+    println!("Location: {}", final_path.display());
 
     Ok(Report {
-        file: report_dir.to_owned(),
+        file: final_path,
     })
 }
