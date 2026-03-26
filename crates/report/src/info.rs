@@ -1,15 +1,15 @@
 use anyhow::{anyhow, Result};
-use ignore::WalkBuilder;
-use serde::ser::SerializeSeq;
 use serde::Serialize;
-use serde::Serializer as _;
-use serde_json::Serializer;
 use std::collections::BTreeMap;
 use std::fs::{self, File};
 use std::io::BufWriter;
 use std::path::Path;
 use sysinfo::{Disks, Networks, System};
 use systemd::journal::{self, JournalSeek};
+use serde_json::Serializer;
+use serde::ser::SerializeSeq;
+use serde::Serializer as _;
+use ignore::WalkBuilder;
 
 #[derive(Serialize)]
 pub struct SystemInfo {
@@ -53,17 +53,16 @@ pub fn collect_system_info() -> Result<SystemInfo> {
         .collect();
 
     let networks = Networks::new_with_refreshed_list();
-    let network_info: Vec<String> = networks.iter().map(|(name, _data)| name.clone()).collect();
+    let network_info: Vec<String> = networks
+        .iter()
+        .map(|(name, _data)| name.clone())
+        .collect();
 
     sys.refresh_cpu_usage();
-    let cpu_vendor = sys
-        .cpus()
-        .first()
+    let cpu_vendor = sys.cpus().first()
         .map(|cpu| cpu.vendor_id().to_string())
         .unwrap_or_default();
-    let cpu_brand = sys
-        .cpus()
-        .first()
+    let cpu_brand = sys.cpus().first()
         .map(|cpu| cpu.brand().to_string())
         .unwrap_or_default();
 
@@ -105,7 +104,6 @@ pub fn collect_journal_all(path: &Path) -> Result<()> {
 
     while let Some(entry) = reader.next_entry()? {
         seq.serialize_element(&entry)?;
-        // println!("ENTRY: {:?}", &entry);
         count += 1;
 
         if count % 1000 == 0 {
@@ -170,13 +168,18 @@ pub fn collect_journal_recent(path: &Path, num_entries: usize) -> Result<()> {
 }
 
 pub fn copy_dir_recursive(src: &Path, dest: &Path) -> Result<()> {
-    let walker = WalkBuilder::new(src).hidden(false).build();
+
+    let walker = WalkBuilder::new(src)
+        .hidden(false)
+        .build();
 
     for entry in walker {
         let entry = entry?;
         let src_path = entry.path();
 
-        let relative = src_path.strip_prefix(src).unwrap_or(src_path);
+        let relative = src_path
+            .strip_prefix(src)
+            .unwrap_or(src_path);
         let dest_path = dest.join(relative);
 
         if entry.file_type().map(|ft| ft.is_dir()).unwrap_or(false) {

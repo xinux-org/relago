@@ -66,6 +66,10 @@ pub fn run() -> anyhow::Result<()> {
                         &r.exe,
                         "Coredump detected",
                     );
+                // Some( ref cr @ Crash::Coredump(ref r)) => {
+
+                //     handle_crash(cr);
+                //     println!("Core dumped: {:?}", r);
                 }
 
                 Some(Crash::ServiceFailure(r)) => {

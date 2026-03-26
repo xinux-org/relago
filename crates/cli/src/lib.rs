@@ -1,8 +1,10 @@
 use clap::{arg, command, Arg, ArgAction, Command, Parser};
 
+use daemon::*;
 use nixlog::error as NixErr;
 use std::io::BufRead;
 use subprocess::Exec;
+use report;
 
 pub fn run() -> anyhow::Result<()> {
     tracing_subscriber::fmt()
@@ -84,7 +86,7 @@ pub fn run() -> anyhow::Result<()> {
                 .collect::<Vec<_>>();
             match cmd_exec(r[0]) {
                 Err(_) => println!("Cooked"),
-                Ok(_) => println!("exec"),
+                Ok(_)  => println!("exec"),
             }
         }
         Some(("report", sub_matches)) => {
@@ -105,7 +107,7 @@ pub fn run() -> anyhow::Result<()> {
             // report::create_report(rep, nixos_config, recent_entries)?;
             report::run(rep, nixos_config, recent_entries)?
         }
-        Some(("daemon", _sub_matches)) => {
+        Some(("daemon", sub_matches)) => {
             // Daemon started
             // println!("daemon");
             // dbus-send --system --type=signal /com/example com.example.signal_name string:"hello world"
