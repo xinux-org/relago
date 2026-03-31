@@ -19,7 +19,7 @@ pub enum ReportError {
     System(String),
 }
 
-struct Report {
+pub struct Report {
     file: PathBuf,
 }
 
@@ -41,7 +41,7 @@ pub fn create_report(
     let report_dir = PathBuf::from(&output_dir).join(format!("report_{}", timestamp));
 
     println!("Creating report directory: {}", report_dir.display());
-    fs::create_dir_all(&report_dir).map_err(|x| ReportError::System(x.to_string()));
+    let _ = fs::create_dir_all(&report_dir).map_err(|x| ReportError::System(x.to_string()));
 
     // 1. Collect and save system information
     println!("Collecting system information...");
@@ -56,9 +56,9 @@ pub fn create_report(
     // 2. Collect journal entries
     let journal_path = report_dir.join("journal_report.json");
     if let Some(num) = recent_entries {
-        info::collect_journal_recent(&journal_path, num);
+        let _ = info::collect_journal_recent(&journal_path, num);
     } else {
-        info::collect_journal_all(&journal_path);
+        let _ = info::collect_journal_all(&journal_path);
     }
 
     // Compress .json then remove it
@@ -83,7 +83,7 @@ pub fn create_report(
     if system_info.system_name.to_owned() == Some("XinuxOS".to_string()) {
         let src = Path::new("/etc/nixos");
         let dest = report_dir.join(Config::get_config().xinux_config);
-        info::copy_dir_recursive(&src, &dest);
+        let _ = info::copy_dir_recursive(&src, &dest);
     }
 
     // TODO: delete original file after compressed

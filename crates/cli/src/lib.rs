@@ -1,14 +1,9 @@
-use clap::{arg, builder::OsStr, command, Arg, ArgAction, Command, Parser, Subcommand};
+use clap::{arg, command, Arg, ArgAction, Command};
 
 use config::Config;
-use daemon::*;
 use nixlog::error as NixErr;
 use report;
-use std::{
-    ffi::OsString,
-    io::{BufRead, Read},
-    path::PathBuf,
-};
+use std::{io::BufRead, path::PathBuf};
 use subprocess::Exec;
 
 pub fn run() -> anyhow::Result<()> {
@@ -85,7 +80,7 @@ pub fn run() -> anyhow::Result<()> {
             // report::create_report(rep, nixos_config, recent_entries)?;
             report::run(rep.as_str(), nixos_config, recent_entries)?
         }
-        Some(("daemon", sub_matches)) => {
+        Some(("daemon", _)) => {
             // Daemon started
             // println!("daemon");
             // dbus-send --system --type=signal /com/example com.example.signal_name string:"hello world"

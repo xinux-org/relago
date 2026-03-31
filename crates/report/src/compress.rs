@@ -1,5 +1,3 @@
-use anyhow::anyhow;
-use anyhow::Context;
 use config::Config;
 use flate2::write::ZlibEncoder;
 use flate2::Compression;

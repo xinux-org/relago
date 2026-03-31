@@ -1,6 +1,6 @@
 use clap::Parser;
 use serde::Deserialize;
-use std::{fs, path::PathBuf, sync::Mutex};
+use std::{fs, path::PathBuf};
 
 const FILE_PATH: &str = "./config.toml";
 
