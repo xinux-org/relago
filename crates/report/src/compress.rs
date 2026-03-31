@@ -1,6 +1,6 @@
 use anyhow::anyhow;
 use anyhow::Context;
-use config::get_config;
+use config::Config;
 use flate2::write::ZlibEncoder;
 use flate2::Compression;
 use std::fs::File;
@@ -31,7 +31,7 @@ pub fn compress(path: impl AsRef<Path>, dest: impl AsRef<Path>) -> anyhow::Resul
 }
 
 pub fn compress_zip(origin: impl AsRef<Path>, dest: impl AsRef<Path>) -> anyhow::Result<()> {
-    let thread_count = get_config().thread_count; // FIXME: Get from config
+    let thread_count = Config::get_config().thread_count; // FIXME: Get from config
     let origin = PathBuf::from(origin.as_ref());
     let dest = PathBuf::from(dest.as_ref());
 

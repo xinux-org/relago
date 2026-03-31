@@ -23,8 +23,10 @@ impl Default for Config {
     }
 }
 
-pub fn get_config() -> Config {
-    let contents = fs::read_to_string(FILE_PATH).expect("Should have been able to read the file");
-    let config: Config = toml::from_str(contents.as_str()).unwrap_or(Config::default());
-    config
+impl Config {
+    pub fn get_config() -> Self {
+        let contents =
+            fs::read_to_string(FILE_PATH).expect("Should have been able to read the file");
+        toml::from_str(contents.as_str()).unwrap_or(Config::default())
+    }
 }

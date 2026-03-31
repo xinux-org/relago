@@ -1,6 +1,6 @@
 use clap::{arg, builder::OsStr, command, Arg, ArgAction, Command, Parser, Subcommand};
 
-use config::{get_config, Config};
+use config::Config;
 use daemon::*;
 use nixlog::error as NixErr;
 use report;
@@ -12,7 +12,7 @@ use std::{
 use subprocess::Exec;
 
 pub fn run() -> anyhow::Result<()> {
-    let tmp_dir: PathBuf = get_config().tmp_dir;
+    let tmp_dir: PathBuf = Config::get_config().tmp_dir;
 
     tracing_subscriber::fmt()
         .with_env_filter(
