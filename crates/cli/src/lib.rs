@@ -1,12 +1,19 @@
-use clap::{arg, command, Arg, ArgAction, Command, Parser, Subcommand};
+use clap::{arg, builder::OsStr, command, Arg, ArgAction, Command, Parser, Subcommand};
 
+use config::{get_config, Config};
 use daemon::*;
 use nixlog::error as NixErr;
-use std::io::{BufRead, Read};
-use subprocess::Exec;
 use report;
+use std::{
+    ffi::OsString,
+    io::{BufRead, Read},
+    path::PathBuf,
+};
+use subprocess::Exec;
 
 pub fn run() -> anyhow::Result<()> {
+    let tmp_dir: PathBuf = get_config().tmp_dir;
+
     tracing_subscriber::fmt()
         .with_env_filter(
             tracing_subscriber::EnvFilter::from_default_env()
@@ -30,7 +37,7 @@ pub fn run() -> anyhow::Result<()> {
                         .long("output")
                         .value_name("DIR")
                         .help("Output directory for report")
-                        .default_value("/tmp/relago"),
+                        .default_value(tmp_dir.as_os_str().to_owned()),
                 )
                 .arg(
                     Arg::new("recent")
@@ -57,14 +64,14 @@ pub fn run() -> anyhow::Result<()> {
                 .collect::<Vec<_>>();
             match cmd_exec(&r[0]) {
                 Err(_) => println!("Cooked"),
-                Ok(_)  => println!("exec"),
+                Ok(_) => println!("exec"),
             }
         }
         Some(("report", sub_matches)) => {
-            let rep = sub_matches
+            let rep: String = sub_matches
                 .get_one::<String>("output")
-                .map(|s| s.as_str())
-                .unwrap_or("/tmp/relago");
+                .unwrap_or(&tmp_dir.into_os_string().into_string().unwrap())
+                .to_owned();
 
             let nixos_config = sub_matches
                 .get_one::<String>("nixos-config")
@@ -76,7 +83,7 @@ pub fn run() -> anyhow::Result<()> {
                 .and_then(|s| s.parse::<usize>().ok());
 
             // report::create_report(rep, nixos_config, recent_entries)?;
-            report::run(rep, nixos_config, recent_entries)?
+            report::run(rep.as_str(), nixos_config, recent_entries)?
         }
         Some(("daemon", sub_matches)) => {
             // Daemon started
@@ -88,7 +95,6 @@ pub fn run() -> anyhow::Result<()> {
 
             println!("Relago daemon application is started without fuckery!!!");
             let _ = daemon::journal::run();
-
         }
         _ => println!("`None`"),
     }

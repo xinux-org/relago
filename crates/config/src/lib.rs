@@ -1,27 +1,30 @@
+use clap::Parser;
 use serde::Deserialize;
-use std::{env, fs};
+use std::{fs, path::PathBuf, sync::Mutex};
 
-const file_path: &str = "./config.toml";
+const FILE_PATH: &str = "./config.toml";
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone, Parser)]
 pub struct Config {
-    thread_count: u8,           // report/src/compress.rs
-    tmp_dir: String,            // cli/src/lib.rs
-    xinux_config: String,       // report/src/lib.rs
-    problems_interface: String, // daemon/src/core.rs, utils/src/notify.rs
+    pub thread_count: u32,          // report/src/compress.rs
+    pub tmp_dir: PathBuf,           // cli/src/lib.rs
+    pub xinux_config: String,       // report/src/lib.rs
+    pub problems_interface: String, // daemon/src/core.rs, utils/src/notify.rs
+}
+
+impl Default for Config {
+    fn default() -> Self {
+        Self {
+            thread_count: 4,
+            tmp_dir: PathBuf::from("/tmp/relago"),
+            xinux_config: "xinux-config".to_string(),
+            problems_interface: "org.freedesktop.problems.daemon".to_string(),
+        }
+    }
 }
 
 pub fn get_config() -> Config {
-    let contents = fs::read_to_string(file_path).expect("Should have been able to read the file");
-    let config: Config = toml::from_str(contents.as_str()).unwrap_or(default_config());
+    let contents = fs::read_to_string(FILE_PATH).expect("Should have been able to read the file");
+    let config: Config = toml::from_str(contents.as_str()).unwrap_or(Config::default());
     config
-}
-
-fn default_config() -> Config {
-    Config {
-        thread_count: 4,
-        tmp_dir: "/tmp/relago".to_owned(),
-        xinux_config: "xinux-config".to_owned(),
-        problems_interface: "org.freedesktop.problems.daemon".to_owned(),
-    }
 }

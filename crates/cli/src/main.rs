@@ -1,9 +1,9 @@
 #![allow(unused_must_use)]
 
 use cli::run;
-use config::get_config;
+use config::{get_config, Config};
 
 fn main() -> anyhow::Result<()> {
-    get_config();
+    println!("{:#?}", get_config());
     run()
 }
