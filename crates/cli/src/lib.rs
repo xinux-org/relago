@@ -6,8 +6,8 @@ use report;
 use std::{io::BufRead, path::PathBuf};
 use subprocess::Exec;
 
-pub fn run() -> anyhow::Result<()> {
-    let tmp_dir: PathBuf = Config::get_config().tmp_dir;
+pub fn run(conf: Config) -> anyhow::Result<()> {
+    let tmp_dir: PathBuf = conf.tmp_dir.to_path_buf();
 
     tracing_subscriber::fmt()
         .with_env_filter(
@@ -78,7 +78,7 @@ pub fn run() -> anyhow::Result<()> {
                 .and_then(|s| s.parse::<usize>().ok());
 
             // report::create_report(rep, nixos_config, recent_entries)?;
-            report::run(rep.as_str(), nixos_config, recent_entries)?
+            report::run(rep.as_str(), nixos_config, recent_entries, conf)?
         }
         Some(("daemon", _)) => {
             // Daemon started

@@ -27,8 +27,9 @@ pub fn run(
     output_dir: &str,
     nixos_config_path: Option<&str>,
     recent_entries: Option<usize>,
+    conf: Config,
 ) -> anyhow::Result<()> {
-    let _ = create_report(output_dir, nixos_config_path, recent_entries);
+    let _ = create_report(output_dir, nixos_config_path, recent_entries, conf);
     Ok(())
 }
 
@@ -36,6 +37,7 @@ pub fn create_report(
     output_dir: &str,
     nixos_config_path: Option<&str>,
     recent_entries: Option<usize>,
+    conf: Config,
 ) -> Result<Report, ReportError> {
     let timestamp = chrono::Local::now().format("%Y-%m-%d_%H-%M-%S");
     let report_dir = PathBuf::from(&output_dir).join(format!("report_{}", timestamp));
@@ -87,7 +89,7 @@ pub fn create_report(
     }
 
     // TODO: delete original file after compressed
-    let _ = cmp::compress_zip(&report_dir, &output_dir);
+    let _ = cmp::compress_zip(&report_dir, &output_dir, conf);
 
     println!("Report created successfully!");
     println!("Location: {}", report_dir.display());

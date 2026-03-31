@@ -28,8 +28,12 @@ pub fn compress(path: impl AsRef<Path>, dest: impl AsRef<Path>) -> anyhow::Resul
     Ok(())
 }
 
-pub fn compress_zip(origin: impl AsRef<Path>, dest: impl AsRef<Path>) -> anyhow::Result<()> {
-    let thread_count = Config::get_config().thread_count; // FIXME: Get from config
+pub fn compress_zip(
+    origin: impl AsRef<Path>,
+    dest: impl AsRef<Path>,
+    conf: Config,
+) -> anyhow::Result<()> {
+    let thread_count = conf.thread_count; // FIXME: Get from config
     let origin = PathBuf::from(origin.as_ref());
     let dest = PathBuf::from(dest.as_ref());
 

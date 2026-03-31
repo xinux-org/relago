@@ -1,10 +1,9 @@
-use clap::Parser;
 use serde::Deserialize;
-use std::{fs, path::PathBuf};
+use std::{fs, path::PathBuf, sync::LazyLock};
 
 const FILE_PATH: &str = "./config.toml";
 
-#[derive(Debug, Deserialize, Clone, Parser)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct Config {
     pub thread_count: u32,          // report/src/compress.rs
     pub tmp_dir: PathBuf,           // cli/src/lib.rs
