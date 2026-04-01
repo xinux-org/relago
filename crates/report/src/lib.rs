@@ -81,7 +81,7 @@ pub fn create_report(
         }
     }
     if system_info.system_name.to_owned() == Some("XinuxOS".to_string()) {
-        let src = Path::new("xinux-config");
+        let src = CONFIG.get().nix_config.clone();
         let dest = report_dir.join(CONFIG.get().nix_config.clone());
         let _ = info::copy_dir_recursive(&src, &dest);
     }
