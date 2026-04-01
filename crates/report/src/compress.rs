@@ -29,7 +29,7 @@ pub fn compress(path: impl AsRef<Path>, dest: impl AsRef<Path>) -> anyhow::Resul
 }
 
 pub fn compress_zip(origin: impl AsRef<Path>, dest: impl AsRef<Path>) -> anyhow::Result<()> {
-    let thread_count = CONFIG.get().thread_count; // FIXME: Get from config
+    let parallel_compression = CONFIG.get().parallel_compression;
     let origin = PathBuf::from(origin.as_ref());
     let dest = PathBuf::from(dest.as_ref());
 
@@ -37,7 +37,7 @@ pub fn compress_zip(origin: impl AsRef<Path>, dest: impl AsRef<Path>) -> anyhow:
 
     archiver.push(origin);
     archiver.set_destination(dest);
-    archiver.set_thread_count(thread_count);
+    archiver.set_thread_count(parallel_compression);
     // println!("Compressed to: {}", output_path.display());
     let _ = match archiver.archive() {
         Ok(_) => (),

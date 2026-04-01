@@ -8,18 +8,18 @@ pub static CONFIG: LocalInitCell<Config> = LocalInitCell::new();
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct Config {
-    pub thread_count: u32,
+    pub parallel_compression: u32,
     pub tmp_dir: PathBuf,
-    pub xinux_config: String,
+    pub nix_config: PathBuf,
     pub problems_interface: String,
 }
 
 impl Default for Config {
     fn default() -> Self {
         Self {
-            thread_count: 4,
+            parallel_compression: 4,
             tmp_dir: PathBuf::from("/tmp/relago"),
-            xinux_config: "xinux-config".to_string(),
+            nix_config: PathBuf::from("/etc/nixos/xinux-config"),
             problems_interface: "org.freedesktop.problems.daemon".to_string(),
         }
     }
