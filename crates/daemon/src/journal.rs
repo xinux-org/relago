@@ -85,7 +85,7 @@ fn handle_crash(cr: &Crash) -> anyhow::Result<()> {
         Crash::ServiceFailure(_r) => {
             println!("Service failed");
         }
-        Crash::Oom(_) => {}
+        Crash::Oom(_r) => {}
     }
     Ok(())
 }
