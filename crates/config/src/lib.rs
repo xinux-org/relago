@@ -3,7 +3,7 @@ pub mod error;
 use error::{Error, Result};
 use get_fields::GetFields;
 use serde::{Deserialize, Serialize};
-use std::{net::ToSocketAddrs, path::PathBuf};
+use std::path::PathBuf;
 
 #[derive(Debug, Serialize, Deserialize, GetFields)]
 #[get_fields(rename_all = "SCREAMING_SNAKE_CASE")]
@@ -40,26 +40,6 @@ impl Default for Config {
 impl Config {
     pub fn new() -> Self {
         Self::default()
-    }
-
-    pub fn set<T>(&mut self, field: Field, data: T) -> Result<()>
-    where
-        T: ToString,
-    {
-        match field {
-            Field::ThreadCount => {
-                self.thread_count = data
-                    .to_string()
-                    .parse::<u32>()
-                    .map_err(Error::NumberConversion)?
-            }
-            Field::TmpDir => self.tmp_dir = PathBuf::from(data.to_string()),
-            Field::XinuxConfig => self.xinux_config = data.to_string(),
-            Field::ProblemsInterface => self.problems_interface = data.to_string(),
-            Field::Unknown => {}
-        };
-
-        Ok(())
     }
 
     /// Read a file at given path and return it as String
