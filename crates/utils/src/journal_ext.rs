@@ -12,4 +12,3 @@ impl JournalExt for Journal {
             .map(|b| String::from_utf8_lossy(b).into_owned())
     }
 }
-

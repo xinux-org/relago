@@ -256,7 +256,6 @@ dependencies = [
  "anyhow",
  "clap",
  "daemon",
- "nixlog",
  "report",
  "subprocess",
  "tracing",
@@ -297,7 +296,6 @@ version = "0.1.0"
 dependencies = [
  "proc-macro2",
  "quote",
- "relago-journal-ext",
  "syn 2.0.117",
 ]
 
@@ -376,7 +374,6 @@ dependencies = [
  "nom",
  "proc-macro2",
  "quote",
- "relago-journal-ext",
  "serde",
  "serde_json",
  "systemd",
@@ -807,24 +804,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "nixlog"
-version = "0.0.2"
-dependencies = [
- "anyhow",
- "chrono",
- "libsystemd-sys",
- "nom",
- "proc-macro2",
- "quote",
- "serde",
- "serde_json",
- "subprocess",
- "systemd",
- "tracing",
- "tracing-subscriber",
-]
-
-[[package]]
 name = "nom"
 version = "8.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1016,13 +995,6 @@ name = "regex-syntax"
 version = "0.8.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "dc897dd8d9e8bd1ed8cdad82b5966c3e0ecae09fb1907d58efaa013543185d0a"
-
-[[package]]
-name = "relago-journal-ext"
-version = "0.1.0"
-dependencies = [
- "systemd",
-]
 
 [[package]]
 name = "report"
@@ -1491,6 +1463,7 @@ dependencies = [
  "serde",
  "state",
  "syn 2.0.117",
+ "systemd",
  "toml",
 ]
 

@@ -1,7 +1,7 @@
 
-use crash_event::CrashEvent;
-use relago_journal_ext::JournalExt;
+use crash_event::{CrashEvent};
 
+use utils::journal_ext::JournalExt;
 #[derive(Debug, CrashEvent)]
 #[journal(filter(SYSLOG_IDENTIFIER = "systemd-coredump"))]
 pub struct CoredumpCrash {

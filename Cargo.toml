@@ -7,9 +7,7 @@ members = [
   "crates/daemon",
   "crates/report",
   "crates/utils",
-  "crates/nixlog",
   "crates/crash-event",
-  "crates/relago-journal-ext",
 ]
 
 

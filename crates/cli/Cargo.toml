@@ -15,7 +15,6 @@ path = "src/main.rs"
 # Relative Dependencies
 # http = { path = "../http" }
 utils  = { path = "../utils"  }
-nixlog = { path = "../nixlog" }
 daemon = { path = "../daemon" }
 report = { path = "../report" }
 

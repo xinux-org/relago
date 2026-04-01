@@ -1,6 +1,5 @@
 use clap::{arg, command, Arg, ArgAction, Command};
 
-use nixlog::error as NixErr;
 use report;
 use std::{io::BufRead, path::PathBuf};
 use subprocess::Exec;
@@ -117,7 +116,7 @@ fn cmd_exec(cmd: &str) -> anyhow::Result<()> {
                     }
                 }
 
-                let _ = NixErr::process_nix_error(&collected_output);
+                // let _ = NixErr::process_nix_error(&collected_output);
             }
         }
         Err(e) => {

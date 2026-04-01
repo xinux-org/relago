@@ -2,7 +2,8 @@
   pkgs,
   craneLib,
   ...
-}: let
+}:
+let
   # Helpful nix function
   lib = pkgs.lib;
   getLibFolder = pkg: "${pkg}/lib";
@@ -26,7 +27,7 @@
     rustc
     cargo
     clippy
-    
+
     # Other compile time dependencies
     pkg-config
 
@@ -65,16 +66,19 @@
     RUST_BACKTRACE = 1;
     RUST_SRC_PATH = "${pkgs.rust.packages.stable.rustPlatform.rustLibSrc}";
     RUST_MIN_STACK = 16777216;
-    
+
     # # Compiler LD variables
     NIX_LDFLAGS = "-L${(getLibFolder pkgs.libiconv)} -L${(getLibFolder pkgs.pkg-config)} -L${(getLibFolder pkgs.dbus.dev)}";
-    LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath (with pkgs; [
-      gcc
-      libiconv
-      # postgresql
-      llvmPackages.llvm
-      dbus.dev
-    ]);
+    LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath (
+      with pkgs;
+      [
+        gcc
+        libiconv
+        # postgresql
+        llvmPackages.llvm
+        dbus.dev
+      ]
+    );
 
     # PKG_CONFIG_PATH = "${pkgs.dbus.dev}/lib/pkgconfig";
   };
@@ -89,13 +93,15 @@
     }
     // common;
 in
-  craneLib.buildPackage ({
-      pname = manifest.name;
-      version = manifest.version;
-      
-      inherit src cargoArtifacts;
+craneLib.buildPackage (
+  {
+    pname = manifest.name;
+    version = manifest.version;
 
-      nativeBuildInputs = commonNativeBuildInputs;
-      buildInputs = commonBuildInputs;
-    }
-    // common)
+    inherit src cargoArtifacts;
+
+    nativeBuildInputs = commonNativeBuildInputs;
+    buildInputs = commonBuildInputs;
+  }
+  // common
+)
