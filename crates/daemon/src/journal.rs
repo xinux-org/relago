@@ -82,7 +82,7 @@ fn handle_crash(cr: &Crash) -> anyhow::Result<()> {
                 println!("Handler called inside thread");
             });
         }
-        Crash::ServiceFailure(_) => {
+        Crash::ServiceFailure(_r) => {
             println!("Service failed");
         }
         Crash::Oom(_) => {}
