@@ -77,7 +77,7 @@ pub fn run() -> anyhow::Result<()> {
 
 fn handle_crash(cr: &Crash) -> anyhow::Result<()> {
     match cr {
-        Crash::Coredump(_) => {
+        Crash::Coredump(_dump) => {
             thread::spawn(move || {
                 println!("Handler called inside thread");
             });
