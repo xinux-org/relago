@@ -19,7 +19,9 @@ pub fn compress(path: impl AsRef<Path>, dest: impl AsRef<Path>) -> anyhow::Resul
 
     let input_file = File::open(path).expect("Failed to open input file");
     let output_file = File::create(&output_path).expect("Failed to create output file");
-    let mut encoder = ZlibEncoder::new(output_file, Compression::fast());
+    // Use compression level from config (0-9, where 0 is none and 9 is max)
+    let compression_level = CONFIG.get().compression_level;
+    let mut encoder = ZlibEncoder::new(output_file, Compression::new(compression_level));
     let mut reader = BufReader::new(input_file);
     copy(&mut reader, &mut encoder).expect("Zlib compression failed");
     encoder.finish().expect("Failed to finish Zlib compression");

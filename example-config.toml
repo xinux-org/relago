@@ -1,0 +1,23 @@
+# Relago Configuration File
+# Copy this file to ./config.toml and customize as needed
+
+# Number of threads to use for parallel compression
+# Default: 4
+parallel_compression = 4
+
+# Compression level for zlib compression (0-9)
+# 0 = no compression, 1 = fast (default), 9 = maximum compression
+# Higher levels = smaller files but slower compression
+compression_level = 1
+
+# Temporary directory for reports
+# Default: /tmp/relago
+tmp_dir = "/tmp/relago"
+
+# Path to NixOS configuration directory
+# Default: /etc/nixos/xinux-config
+nix_config = "/etc/nixos/xinux-config"
+
+# D-Bus interface for problem reporting
+# Default: org.freedesktop.problems.daemon
+problems_interface = "org.freedesktop.problems.daemon"

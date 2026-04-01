@@ -2,6 +2,31 @@
 
 System crash reporting and diagnostics tool for Linux.
 
+## Configuration
+
+Relago can be configured via a `config.toml` file in the current working directory. Copy the provided example:
+
+```bash
+cp config.toml.example config.toml
+```
+
+### Configuration Options
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `parallel_compression` | Number of threads for parallel compression | 4 |
+| `compression_level` | Zlib compression level (0-9) | 1 (fast) |
+| `tmp_dir` | Temporary directory for reports | /tmp/relago |
+| `nix_config` | Path to NixOS configuration | /etc/nixos/xinux-config |
+| `problems_interface` | D-Bus interface for problem reporting | org.freedesktop.problems.daemon |
+
+### Compression Level Guide
+
+- **0**: No compression (fastest)
+- **1**: Fast compression (default, recommended for most use cases)
+- **6**: Balanced compression
+- **9**: Maximum compression (slowest, smallest files)
+
 ## Commands
 
 ### Report Command

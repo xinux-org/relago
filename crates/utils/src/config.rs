@@ -12,6 +12,9 @@ pub struct Config {
     pub tmp_dir: PathBuf,
     pub nix_config: PathBuf,
     pub problems_interface: String,
+    /// Compression level for zlib compression (0-9, where 0 is none and 9 is max)
+    /// Default is 1 (fast compression)
+    pub compression_level: u32,
 }
 
 impl Default for Config {
@@ -21,6 +24,7 @@ impl Default for Config {
             tmp_dir: PathBuf::from("/tmp/relago"),
             nix_config: PathBuf::from("/etc/nixos/xinux-config"),
             problems_interface: "org.freedesktop.problems.daemon".to_string(),
+            compression_level: 1, // Fast compression
         }
     }
 }
