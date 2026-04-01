@@ -51,7 +51,7 @@ pub fn run() -> anyhow::Result<()> {
                     println!("Core dumped: {:?}", r);
                 }
 
-                Some(Crash::ServiceFailure(_)) => {
+                Some(Crash::ServiceFailure(_r)) => {
                     // if r.job_result == "done" {
                     //     continue;
                     // }
@@ -77,15 +77,15 @@ pub fn run() -> anyhow::Result<()> {
 
 fn handle_crash(cr: &Crash) -> anyhow::Result<()> {
     match cr {
-        Crash::Coredump(_) => {
+        Crash::Coredump(_dump) => {
             thread::spawn(move || {
                 println!("Handler called inside thread");
             });
         }
-        Crash::ServiceFailure(_) => {
+        Crash::ServiceFailure(_r) => {
             println!("Service failed");
         }
-        Crash::Oom(_) => {}
+        Crash::Oom(_r) => {}
     }
     Ok(())
 }

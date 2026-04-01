@@ -80,7 +80,7 @@ pub fn run() -> anyhow::Result<()> {
             // report::create_report(rep, nixos_config, recent_entries)?;
             report::run(rep.as_str(), nixos_config, recent_entries)?
         }
-        Some(("daemon", _)) => {
+        Some(("daemon", _sub_matches)) => {
             // Daemon started
             // println!("daemon");
             // dbus-send --system --type=signal /com/example com.example.signal_name string:"hello world"
