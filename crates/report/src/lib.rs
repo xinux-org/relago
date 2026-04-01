@@ -84,7 +84,7 @@ pub fn create_report(
     }
     if system_info.system_name.to_owned() == Some("XinuxOS".to_string()) {
         let src = Path::new("/etc/nixos");
-        let dest = report_dir.join(Config::get_config().xinux_config);
+        let dest = report_dir.join(conf.xinux_config.clone());
         let _ = info::copy_dir_recursive(&src, &dest);
     }
 
