@@ -1,9 +1,9 @@
-use config::Config;
 use flate2::write::ZlibEncoder;
 use flate2::Compression;
 use std::fs::File;
 use std::io::{copy, BufReader};
 use std::path::{Path, PathBuf};
+use utils::config::CONFIG;
 use zip_archive::Archiver;
 
 // TODO: expect will panic, better use `?` or `.context("message")?`
@@ -28,12 +28,8 @@ pub fn compress(path: impl AsRef<Path>, dest: impl AsRef<Path>) -> anyhow::Resul
     Ok(())
 }
 
-pub fn compress_zip(
-    origin: impl AsRef<Path>,
-    dest: impl AsRef<Path>,
-    conf: Config,
-) -> anyhow::Result<()> {
-    let thread_count = conf.thread_count; // FIXME: Get from config
+pub fn compress_zip(origin: impl AsRef<Path>, dest: impl AsRef<Path>) -> anyhow::Result<()> {
+    let thread_count = CONFIG.get().thread_count; // FIXME: Get from config
     let origin = PathBuf::from(origin.as_ref());
     let dest = PathBuf::from(dest.as_ref());
 

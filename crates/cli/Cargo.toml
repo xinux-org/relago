@@ -18,7 +18,6 @@ utils  = { path = "../utils"  }
 nixlog = { path = "../nixlog" }
 daemon = { path = "../daemon" }
 report = { path = "../report" }
-config = { path = "../config" }
 
 # Third party dependencies
 clap = { version = "4.5.28", features = ["derive", "cargo", "string"] }

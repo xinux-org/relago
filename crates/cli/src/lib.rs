@@ -1,13 +1,13 @@
 use clap::{arg, command, Arg, ArgAction, Command};
 
-use config::Config;
 use nixlog::error as NixErr;
 use report;
 use std::{io::BufRead, path::PathBuf};
 use subprocess::Exec;
+use utils::config::CONFIG;
 
-pub fn run(conf: Config) -> anyhow::Result<()> {
-    let tmp_dir: PathBuf = conf.tmp_dir.to_path_buf();
+pub fn run() -> anyhow::Result<()> {
+    let tmp_dir: PathBuf = CONFIG.get().tmp_dir.to_path_buf();
 
     tracing_subscriber::fmt()
         .with_env_filter(
@@ -78,7 +78,7 @@ pub fn run(conf: Config) -> anyhow::Result<()> {
                 .and_then(|s| s.parse::<usize>().ok());
 
             // report::create_report(rep, nixos_config, recent_entries)?;
-            report::run(rep.as_str(), nixos_config, recent_entries, conf)?
+            report::run(rep.as_str(), nixos_config, recent_entries)?
         }
         Some(("daemon", _)) => {
             // Daemon started

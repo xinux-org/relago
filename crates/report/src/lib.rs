@@ -2,10 +2,10 @@ pub mod compress;
 pub mod info;
 
 use compress as cmp;
-use config::Config;
 use std::fs::{self, File};
 use std::path::{Path, PathBuf};
 use thiserror::Error;
+use utils::config::CONFIG;
 
 #[derive(Debug, Error)]
 pub enum ReportError {
@@ -27,9 +27,8 @@ pub fn run(
     output_dir: &str,
     nixos_config_path: Option<&str>,
     recent_entries: Option<usize>,
-    conf: Config,
 ) -> anyhow::Result<()> {
-    let _ = create_report(output_dir, nixos_config_path, recent_entries, conf);
+    let _ = create_report(output_dir, nixos_config_path, recent_entries);
     Ok(())
 }
 
@@ -37,7 +36,6 @@ pub fn create_report(
     output_dir: &str,
     nixos_config_path: Option<&str>,
     recent_entries: Option<usize>,
-    conf: Config,
 ) -> Result<Report, ReportError> {
     let timestamp = chrono::Local::now().format("%Y-%m-%d_%H-%M-%S");
     let report_dir = PathBuf::from(&output_dir).join(format!("report_{}", timestamp));
@@ -84,12 +82,12 @@ pub fn create_report(
     }
     if system_info.system_name.to_owned() == Some("XinuxOS".to_string()) {
         let src = Path::new("/etc/nixos");
-        let dest = report_dir.join(conf.xinux_config.clone());
+        let dest = report_dir.join(CONFIG.get().xinux_config.clone());
         let _ = info::copy_dir_recursive(&src, &dest);
     }
 
     // TODO: delete original file after compressed
-    let _ = cmp::compress_zip(&report_dir, &output_dir, conf);
+    let _ = cmp::compress_zip(&report_dir, &output_dir);
 
     println!("Report created successfully!");
     println!("Location: {}", report_dir.display());

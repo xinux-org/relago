@@ -17,3 +17,4 @@ dbus-crossroads = { workspace = true }
 syn = { version = "2.0", features = ["derive", "full"] }
 quote = "1.0"
 proc-macro2 = "1.0"
+state = {version = "0.6.0", features = [ "tls" ]}
