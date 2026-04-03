@@ -115,7 +115,12 @@ let
         User = cfg.user;
         Group = cfg.group;
         Restart = "always";
-        ExecStart = "${lib.getBin fpkg}/bin/relago";
+        ExecStart = ''
+          pwd
+          ls ${toml-config}
+          ${lib.getBin fpkg}/bin/relago
+
+        '';
         ExecReload = "${pkgs.coreutils}/bin/kill -s HUP $MAINPID";
 
         StateDirectory = cfg.user;
