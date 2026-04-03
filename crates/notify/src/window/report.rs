@@ -4,9 +4,12 @@ use futures::FutureExt;
 use relm4::ComponentSender;
 use report::create_report;
 use reqwest::blocking::multipart;
-use std::error::Error;
+use std::{error::Error, sync::Arc};
+use utils::config::CONFIG;
 
 pub fn run(sender: ComponentSender<App>) {
+    let tmp_dir = Arc::new(CONFIG.get().tmp_dir.to_string_lossy().into_owned());
+
     sender.command(|out, shutdown| {
         shutdown
             .register(async move {
@@ -17,7 +20,11 @@ pub fn run(sender: ComponentSender<App>) {
                 .unwrap();
 
                 let rep_file = tokio::task::spawn_blocking(|| {
-                    create_report("tmp", Some("~/.config/nix"), None)
+                    create_report(
+                        Arc::try_unwrap(tmp_dir).unwrap().as_str(),
+                        Some("~/.config/nix"),
+                        None,
+                    )
                 })
                 .await
                 .unwrap();
@@ -85,9 +92,11 @@ pub fn run(sender: ComponentSender<App>) {
 }
 
 pub fn upload(file_path: String) -> Result<(), Box<dyn Error + Send + Sync>> {
+    let server = CONFIG.get().server.clone();
+
     let form = multipart::Form::new().file("report", file_path)?;
     reqwest::blocking::Client::new()
-        .post("https://cocomelon.uz/upload/report")
+        .post(format!("{}/upload/report", &server))
         .multipart(form)
         .send()?;
     Ok(())

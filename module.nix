@@ -180,6 +180,13 @@ in
         description = "Notification daemon";
       };
 
+      server = mkOption {
+        type = types.str;
+        default = "https://cocomelon.uz";
+        example = "https://cocomelon.uz";
+        description = "Relago-support server";
+      };
+
       user = mkOption {
         type = types.str;
         default = "relago-daemon";

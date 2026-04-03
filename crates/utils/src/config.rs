@@ -12,6 +12,7 @@ pub struct Config {
     pub tmp_dir: PathBuf,
     pub nix_config: PathBuf,
     pub problems_interface: String,
+    pub server: String,
 }
 
 impl Default for Config {
@@ -21,6 +22,7 @@ impl Default for Config {
             tmp_dir: PathBuf::from("/tmp/relago"),
             nix_config: PathBuf::from("/etc/nixos/xinux-config"),
             problems_interface: "org.freedesktop.problems.daemon".to_string(),
+            server: "https://cocomelon.uz".to_string(),
         }
     }
 }
