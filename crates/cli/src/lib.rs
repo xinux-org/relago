@@ -1,7 +1,5 @@
 use clap::{arg, command, Arg, ArgAction, Command};
 
-use daemon::*;
-use nixlog::error as NixErr;
 use report;
 use std::{io::BufRead, path::PathBuf};
 use subprocess::Exec;
