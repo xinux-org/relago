@@ -101,21 +101,28 @@ let
       };
     };
 
-    systemd.services."${manifest.name}-daemon" = {
-      description = "${manifest.name} Relago daemon";
+    systemd.services."relago-daemon" = {
+      description = "Relago daemon";
 
       after = [
-        "network-online.target"
+        # "network-online.target"
         "relago-daemon-config.service"
       ];
-      wants = [ "network-online.target" ];
+      # wants = [ "network-online.target" ];
       wantedBy = [ "multi-user.target" ];
 
       serviceConfig = {
-        Type = "dbus";
-        BusName = "org.freedesktop.problems.daemon";
+        # Type = "dbus";
+        # BusName = "org.freedesktop.problems.daemon";
 
+        User = cfg.user;
+        Group = cfg.group;
+        Restart = "always";
         ExecStart = "${lib.getBin fpkg}/bin/relago";
+        ExecReload = "${pkgs.coreutils}/bin/kill -s HUP $MAINPID";
+
+        StateDirectory = cfg.user;
+        StateDirectoryMode = "0750";
 
         StandardInput = "null";
         StandardOutput = "journal";
@@ -132,7 +139,7 @@ let
         PrivateTmp = "true";
         ProtectClock = "yes";
         ProtectControlGroups = "yes";
-        ProtectHome = "read-only";
+        # ProtectHome = "read-only";
         ProtectHostname = "yes";
         ProtectKernelLogs = "yes";
         ProtectKernelModules = "yes";
@@ -163,11 +170,18 @@ in
         description = "How many cores to use while pooling";
       };
 
+      tmp-dir = mkOption {
+        type = types.str;
+        default = "/var/lib/relago-daemon/tmp/";
+        example = "/var/lib/relago-daemon/tmp/";
+        description = "Temp folder for Relago";
+      };
+
       data-dir = mkOption {
         type = types.str;
-        default = "/var/lib/${manifest.name}/tmp/";
-        example = "/var/lib/${manifest.name}/tmp/";
-        description = "Temp folder for Relago";
+        default = "/var/lib/relago-daemon/";
+        example = "/var/lib/relago-daemon/";
+        description = "Folder for Relago";
       };
 
       nix-config = mkOption {

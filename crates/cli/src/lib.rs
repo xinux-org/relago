@@ -1,14 +1,17 @@
 use clap::{arg, command, Arg, ArgAction, Command};
 
 use notify::window::{model::App, Modal};
-use relm4::RelmApp;
 use report;
-use std::{io::BufRead, path::PathBuf};
+use std::{env, io::BufRead, path::PathBuf};
 use subprocess::Exec;
-use utils::config::CONFIG;
+use utils::config::{Config, CONFIG};
+
+const CONFIG_FILE: &str = "/var/lib/relago-daemon/config.toml";
 
 pub fn run() -> anyhow::Result<()> {
-    let tmp_dir: PathBuf = CONFIG.get().tmp_dir.to_path_buf();
+    CONFIG.set(move || Config::get_config(PathBuf::from(&CONFIG_FILE)));
+
+    let tmp_dir = CONFIG.get().tmp_dir.clone();
 
     tracing_subscriber::fmt()
         .with_env_filter(
@@ -23,7 +26,6 @@ pub fn run() -> anyhow::Result<()> {
                 .about("Run daemon")
                 .arg(Arg::new("exec").action(ArgAction::Append)),
         )
-        .subcommand(Command::new("daemon").about("Run daemon").arg(arg!([NAME])))
         .subcommand(Command::new("notify").about("Run notification"))
         .subcommand(
             Command::new("report")
@@ -33,8 +35,7 @@ pub fn run() -> anyhow::Result<()> {
                         .short('o')
                         .long("output")
                         .value_name("DIR")
-                        .help("Output directory for report")
-                        .default_value(tmp_dir.as_os_str().to_owned()),
+                        .help("Output directory for report"), // .default_value(CONFIG.get().tmp_dir.as_os_str().to_owned()),
                 )
                 .arg(
                     Arg::new("recent")
@@ -118,6 +119,7 @@ pub fn run() -> anyhow::Result<()> {
             // let _ = fetcher::run();
             // let _ = core::run();
 
+            println!("{:?}", sub_matches.try_get_raw("NAME"));
             println!("Relago daemon application is started without fuckery!!!");
             let _ = daemon::journal::run();
         }
