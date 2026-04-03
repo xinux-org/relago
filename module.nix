@@ -52,8 +52,59 @@ let
     #   ${manifest.name} = {};
     # };
 
+    users.users.${cfg.user} = {
+      description = "relago user";
+      isSystemUser = true;
+      group = cfg.group;
+      home = cfg.data-dir;
+      useDefaultShell = true;
+    };
+
+    systemd.services."relago-server-config" = {
+      wantedBy = [ "relago-server.target" ];
+      partOf = [ "relago-server.target" ];
+
+      serviceConfig = {
+        Type = "oneshot";
+        User = cfg.user;
+        Group = cfg.group;
+        TimeoutSec = "infinity";
+        Restart = "on-failure";
+        WorkingDirectory = "${cfg.data-dir}";
+        RemainAfterExit = true;
+
+        ExecStartPre =
+          let
+            preStartFullPrivileges = ''
+              set -o errexit -o pipefail -o nounset
+              shopt -s dotglob nullglob inherit_errexit
+
+              chown -R --no-dereference '${cfg.user}':'${cfg.group}' '${cfg.data-ddir}'
+              chmod -R u+rwX,g+rX,o-rwx '${cfg.data-dir}'
+            '';
+          in
+          "+${pkgs.writeShellScript "relago-pre-start-full-privileges" preStartFullPrivileges}";
+
+        ExecStart = pkgs.writeShellScript "$relago-config" ''
+          set -o errexit -o pipefail -o nounset
+          shopt -s inherit_errexit
+
+          umask u=rwx,g=rx,o=
+
+          # Write configuration file for server
+          cp -f ${toml-config} ${cfg.dataDir}/config.toml
+        '';
+      };
+    };
+
     systemd.services."${manifest.name}" = {
       description = "${manifest.name} Relago daemon";
+
+      after = [
+        "network-online.target"
+        "relago-server-config.service"
+      ];
+      wants = [ "network-online.target" ];
       wantedBy = [ "multi-user.target" ];
 
       serviceConfig = {
@@ -127,6 +178,18 @@ in
         default = "org.freedesktop.problems.daemon";
         example = "org.freedesktop.problems.daemon";
         description = "Notification daemon";
+      };
+
+      user = mkOption {
+        type = types.str;
+        default = "relago-daemon";
+        description = "User for running system + access keys";
+      };
+
+      group = mkOption {
+        type = types.str;
+        default = "relago-server";
+        description = "Group for running system + acess keys";
       };
     };
   };
