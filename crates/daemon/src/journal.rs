@@ -60,7 +60,7 @@ pub fn run() -> anyhow::Result<()> {
                     println!("Core dumped: {:?}", r);
                 }
 
-                Some(Crash::ServiceFailure(_r)) => {
+                Some(Crash::ServiceFailure(r)) => {
                     // if r.job_result == "done" {
                     //     continue;
                     // }

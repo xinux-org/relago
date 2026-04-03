@@ -87,7 +87,7 @@ pub fn run(sender: ComponentSender<App>) {
 pub fn upload(file_path: String) -> Result<(), Box<dyn Error + Send + Sync>> {
     let form = multipart::Form::new().file("report", file_path)?;
     reqwest::blocking::Client::new()
-        .post("http://localhost:5678/upload/report")
+        .post("https://cocomelon.uz/upload/report")
         .multipart(form)
         .send()?;
     Ok(())

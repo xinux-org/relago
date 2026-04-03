@@ -1,22 +1,10 @@
-<<<<<<< HEAD
-use anyhow::anyhow;
-use anyhow::Context;
-=======
->>>>>>> main
 use flate2::write::ZlibEncoder;
 use flate2::Compression;
 use std::fs::File;
 use std::io::{copy, BufReader};
 use std::path::{Path, PathBuf};
-<<<<<<< HEAD
-use zip_archive::Archiver;
-
-
-=======
 use utils::config::CONFIG;
 use zip_archive::Archiver;
-
->>>>>>> main
 // TODO: expect will panic, better use `?` or `.context("message")?`
 pub fn compress(path: impl AsRef<Path>, dest: impl AsRef<Path>) -> anyhow::Result<()> {
     let path = path.as_ref();
@@ -48,23 +36,12 @@ pub fn compress_zip(origin: impl AsRef<Path>, dest: impl AsRef<Path>) -> anyhow:
 
     archiver.push(origin);
     archiver.set_destination(dest);
-<<<<<<< HEAD
-    archiver.set_thread_count(thread_count);
-    // println!("Compressed to: {}", output_path.display());
-    let _ = match archiver.archive(){
-=======
     archiver.set_thread_count(parallel_compression);
     // println!("Compressed to: {}", output_path.display());
     let _ = match archiver.archive() {
->>>>>>> main
         Ok(_) => (),
         Err(e) => println!("Cannot archive the directory! {}", e),
     };
 
     Ok(())
-<<<<<<< HEAD
-
 }
-=======
-}
->>>>>>> main

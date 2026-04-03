@@ -22,3 +22,4 @@ anyhow.workspace = true
 report ={ path = "../report"}
 futures = "0.3.32"
 tokio = "1.50.0"
+relm4 = {version = "0.9.1", features=["macros", "libadwaita", "gnome_47"]}
