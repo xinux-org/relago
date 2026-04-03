@@ -29,6 +29,7 @@ impl Default for Config {
 
 impl Config {
     pub fn get_config(config: PathBuf) -> Self {
+        println!("{:?}", config);
         let contents = fs::read_to_string(config).expect("Should have been able to read the file");
         let res = toml::from_str(contents.as_str()).unwrap_or(Config::default());
         println!("{:?}", res);
