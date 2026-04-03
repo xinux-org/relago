@@ -64,9 +64,9 @@ let
       ${cfg.group} = { };
     };
 
-    systemd.services."relago-server-config" = {
-      wantedBy = [ "relago-server.target" ];
-      partOf = [ "relago-server.target" ];
+    systemd.services."relago-daemon-config" = {
+      wantedBy = [ "relago-daemon.target" ];
+      partOf = [ "relago-daemon.target" ];
 
       serviceConfig = {
         Type = "oneshot";
@@ -89,7 +89,7 @@ let
           in
           "+${pkgs.writeShellScript "relago-pre-start-full-privileges" preStartFullPrivileges}";
 
-        ExecStart = pkgs.writeShellScript "$relago-config" ''
+        ExecStart = pkgs.writeShellScript "relago-config" ''
           set -o errexit -o pipefail -o nounset
           shopt -s inherit_errexit
 
@@ -106,7 +106,7 @@ let
 
       after = [
         "network-online.target"
-        "relago-server-config.service"
+        "relago-daemon-config.service"
       ];
       wants = [ "network-online.target" ];
       wantedBy = [ "multi-user.target" ];
