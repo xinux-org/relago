@@ -83,7 +83,7 @@ let
               set -o errexit -o pipefail -o nounset
               shopt -s dotglob nullglob inherit_errexit
 
-              chown -R --no-dereference '${cfg.user}':'${cfg.group}' '${cfg.data-ddir}'
+              chown -R --no-dereference '${cfg.user}':'${cfg.group}' '${cfg.data-dir}'
               chmod -R u+rwX,g+rX,o-rwx '${cfg.data-dir}'
             '';
           in
@@ -96,7 +96,7 @@ let
           umask u=rwx,g=rx,o=
 
           # Write configuration file for server
-          cp -f ${toml-config} ${cfg.dataDir}/config.toml
+          cp -f ${toml-config} ${cfg.data-dir}/config.toml
         '';
       };
     };
