@@ -6,14 +6,6 @@ flake:
   ...
 }:
 let
-  inherit (lib)
-    mkEnableOption
-    mkOption
-    mkIf
-    mkMerge
-    types
-    ;
-
   # Manifest via Cargo.toml
   manifest = (pkgs.lib.importTOML ./Cargo.toml).workspace.package;
 
@@ -29,13 +21,15 @@ let
   # The digesting configuration of server
   toml-config = toml.generate "config.toml" {
     parallel_compression = cfg.parallel-compression;
-    tmp_dir = cfg.data-dir;
+    tmp_dir = cfg.tmp-dir;
+    data_dir = cfg.data-dir;
     nix_config = cfg.nix-config;
     problems_interface = cfg.problems-interface;
+    server = cfg.server;
   };
 
   # Systemd services
-  service = mkIf cfg.enable {
+  service = lib.mkIf cfg.enable {
     ## User for our services
     # users.users = lib.mkIf (cfg.user == manifest.name) {
     #   ${manifest.name} = {
@@ -197,9 +191,9 @@ in
 {
   # Available user options
   options = with lib; {
-    services.${manifest.name} = {
+    services.relago = {
       enable = mkEnableOption ''
-        ${manifest.name}, actix + diesel server on rust.
+        Relago
       '';
 
       parallel-compression = mkOption {
@@ -241,7 +235,7 @@ in
         type = types.str;
         default = "https://cocomelon.uz";
         example = "https://cocomelon.uz";
-        description = "Relago-support server";
+        description = "Relago-daemon server";
       };
 
       user = mkOption {
@@ -260,5 +254,5 @@ in
     };
   };
 
-  config = mkMerge [ service ];
+  config = lib.mkMerge [ service ];
 }
