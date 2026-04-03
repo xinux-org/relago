@@ -10,7 +10,6 @@ members = [
   "crates/nixlog",
   "crates/notify",
   "crates/crash-event",
-  "crates/relago-journal-ext",
 ]
 
 

@@ -619,7 +619,6 @@ version = "0.1.0"
 dependencies = [
  "proc-macro2",
  "quote",
- "relago-journal-ext",
  "syn 2.0.117",
 ]
 
@@ -699,7 +698,6 @@ dependencies = [
  "notify",
  "proc-macro2",
  "quote",
- "relago-journal-ext",
  "serde",
  "serde_json",
  "systemd",
@@ -2139,24 +2137,6 @@ dependencies = [
  "bitflags",
  "cfg-if",
  "libc",
-]
-
-[[package]]
-name = "nixlog"
-version = "0.0.2"
-dependencies = [
- "anyhow",
- "chrono",
- "libsystemd-sys",
- "nom",
- "proc-macro2",
- "quote",
- "serde",
- "serde_json",
- "subprocess",
- "systemd",
- "tracing",
- "tracing-subscriber",
 ]
 
 [[package]]

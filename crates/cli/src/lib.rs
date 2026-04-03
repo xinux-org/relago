@@ -147,7 +147,7 @@ fn cmd_exec(cmd: &str) -> anyhow::Result<()> {
                     }
                 }
 
-                let _ = NixErr::process_nix_error(&collected_output);
+                // let _ = NixErr::process_nix_error(&collected_output);
             }
         }
         Err(e) => {
