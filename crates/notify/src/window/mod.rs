@@ -5,7 +5,6 @@ pub mod report;
 pub use model::Modal;
 
 use adw::prelude::*;
-use gtk::prelude::*;
 use relm4::*;
 
 use messages::{CmdOut, Input, Output};
