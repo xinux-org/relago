@@ -105,7 +105,6 @@ pub fn collect_journal_all(path: &Path) -> Result<()> {
 
     while let Some(entry) = reader.next_entry()? {
         seq.serialize_element(&entry)?;
-        // println!("ENTRY: {:?}", &entry);
         count += 1;
 
         if count % 1000 == 0 {

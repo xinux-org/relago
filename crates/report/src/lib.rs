@@ -5,6 +5,10 @@ use compress as cmp;
 use std::fs::{self, File};
 use std::path::{Path, PathBuf};
 use thiserror::Error;
+<<<<<<< HEAD
+=======
+use utils::config::CONFIG;
+>>>>>>> main
 
 #[derive(Debug, Error)]
 pub enum ReportError {
@@ -19,7 +23,11 @@ pub enum ReportError {
 }
 
 pub struct Report {
+<<<<<<< HEAD
     pub file: PathBuf,
+=======
+    file: PathBuf,
+>>>>>>> main
 }
 
 pub fn run(
@@ -40,7 +48,11 @@ pub fn create_report(
     let report_dir = PathBuf::from(&output_dir).join(format!("report_{}", timestamp));
 
     println!("Creating report directory: {}", report_dir.display());
+<<<<<<< HEAD
     fs::create_dir_all(&report_dir).map_err(|x| ReportError::System(x.to_string()));
+=======
+    let _ = fs::create_dir_all(&report_dir).map_err(|x| ReportError::System(x.to_string()));
+>>>>>>> main
 
     // 1. Collect and save system information
     println!("Collecting system information...");
@@ -55,9 +67,9 @@ pub fn create_report(
     // 2. Collect journal entries
     let journal_path = report_dir.join("journal_report.json");
     if let Some(num) = recent_entries {
-        info::collect_journal_recent(&journal_path, num);
+        let _ = info::collect_journal_recent(&journal_path, num);
     } else {
-        info::collect_journal_all(&journal_path);
+        let _ = info::collect_journal_all(&journal_path);
     }
 
     // Compress .json then remove it
@@ -80,9 +92,9 @@ pub fn create_report(
         }
     }
     if system_info.system_name.to_owned() == Some("XinuxOS".to_string()) {
-        let src = Path::new("/etc/nixos");
-        let dest = report_dir.join("xinux-config");
-        info::copy_dir_recursive(&src, &dest);
+        let src = CONFIG.get().nix_config.clone();
+        let dest = report_dir.join(CONFIG.get().nix_config.clone());
+        let _ = info::copy_dir_recursive(&src, &dest);
     }
 
     // TODO: delete original file after compressed

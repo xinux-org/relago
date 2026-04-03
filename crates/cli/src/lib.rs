@@ -1,10 +1,14 @@
-use clap::{arg, command, Arg, ArgAction, Command, Parser};
+use clap::{arg, command, Arg, ArgAction, Command};
 
 use nixlog::error as NixErr;
-use std::io::BufRead;
+use report;
+use std::{io::BufRead, path::PathBuf};
 use subprocess::Exec;
+use utils::config::CONFIG;
 
 pub fn run() -> anyhow::Result<()> {
+    let tmp_dir: PathBuf = CONFIG.get().tmp_dir.to_path_buf();
+
     tracing_subscriber::fmt()
         .with_env_filter(
             tracing_subscriber::EnvFilter::from_default_env()
@@ -19,7 +23,6 @@ pub fn run() -> anyhow::Result<()> {
                 .arg(Arg::new("exec").action(ArgAction::Append)),
         )
         .subcommand(Command::new("daemon").about("Run daemon").arg(arg!([NAME])))
-        .subcommand(Command::new("notify").about("Run notification"))
         .subcommand(
             Command::new("report")
                 .about("Report journal entries to JSON file")
@@ -29,7 +32,7 @@ pub fn run() -> anyhow::Result<()> {
                         .long("output")
                         .value_name("DIR")
                         .help("Output directory for report")
-                        .default_value("/tmp/relago"),
+                        .default_value(tmp_dir.as_os_str().to_owned()),
                 )
                 .arg(
                     Arg::new("recent")
@@ -43,34 +46,6 @@ pub fn run() -> anyhow::Result<()> {
                         .long("nixos-config")
                         .value_name("PATH")
                         .help("Path to NixOS configuration directory (e.g., ~/nix-conf)"),
-                ),
-        )
-        .subcommand(
-            Command::new("reporter")
-                .about("Launch crash reporter GUI")
-                .arg(
-                    Arg::new("unit")
-                        .short('u')
-                        .long("unit")
-                        .value_name("UNIT")
-                        .help("Unit name")
-                        .default_value("test"),
-                )
-                .arg(
-                    Arg::new("exe")
-                        .short('e')
-                        .long("exe")
-                        .value_name("EXE")
-                        .help("Executable name")
-                        .default_value("test"),
-                )
-                .arg(
-                    Arg::new("message")
-                        .short('m')
-                        .long("message")
-                        .value_name("MESSAGE")
-                        .help("Crash message")
-                        .default_value("Coredump"),
                 ),
         )
         .get_matches();
@@ -88,10 +63,10 @@ pub fn run() -> anyhow::Result<()> {
             }
         }
         Some(("report", sub_matches)) => {
-            let rep = sub_matches
+            let rep: String = sub_matches
                 .get_one::<String>("output")
-                .map(|s| s.as_str())
-                .unwrap_or("/tmp/relago");
+                .unwrap_or(&tmp_dir.into_os_string().into_string().unwrap())
+                .to_owned();
 
             let nixos_config = sub_matches
                 .get_one::<String>("nixos-config")
@@ -103,7 +78,7 @@ pub fn run() -> anyhow::Result<()> {
                 .and_then(|s| s.parse::<usize>().ok());
 
             // report::create_report(rep, nixos_config, recent_entries)?;
-            report::run(rep, nixos_config, recent_entries)?
+            report::run(rep.as_str(), nixos_config, recent_entries)?
         }
         Some(("daemon", _sub_matches)) => {
             // Daemon started
@@ -115,31 +90,6 @@ pub fn run() -> anyhow::Result<()> {
 
             println!("Relago daemon application is started without fuckery!!!");
             let _ = daemon::journal::run();
-        }
-        Some(("reporter", sub_matches)) => {
-            let unit = sub_matches
-                .get_one::<String>("unit")
-                .map(|s| s.to_owned())
-                .unwrap_or("test".to_string());
-            let exe = sub_matches
-                .get_one::<String>("exe")
-                .map(|s| s.to_owned())
-                .unwrap_or("test".to_string());
-            let message = sub_matches
-                .get_one::<String>("message")
-                .map(|s| s.to_owned())
-                .unwrap_or("Coredump".to_string());
-
-            println!("{}", unit);
-            println!("{}", exe);
-            println!("{}", message);
-
-            let modal = notify::window::Modal { unit, exe, message };
-            let app_id = format!("org.relm4.Reporter.p{}", std::process::id());
-
-            relm4::RelmApp::new(&app_id)
-                .with_args(vec![])
-                .run::<notify::window::model::App>(modal);
         }
         _ => println!("`None`"),
     }

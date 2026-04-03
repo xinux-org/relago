@@ -17,6 +17,7 @@ libsystemd-sys = "0.9.4"
 systemd = "0.10.1"
 dbus = { workspace = true }
 utils = { path = "../utils" }
+# cli = { path = "../cli" }
 dbus-crossroads = { workspace = true }
 nom = { workspace = true }
 # nixlog ={ path = "../nixlog"}

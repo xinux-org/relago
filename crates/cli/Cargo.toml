@@ -14,19 +14,18 @@ path = "src/main.rs"
 [dependencies]
 # Relative Dependencies
 # http = { path = "../http" }
-utils = { path = "../utils" }
-nixlog ={ path = "../nixlog"}
-daemon ={ path = "../daemon"}
-notify = { path = "../notify" }
-report ={ path = "../report"}
+utils  = { path = "../utils"  }
+nixlog = { path = "../nixlog" }
+daemon = { path = "../daemon" }
+report = { path = "../report" }
 
 # Third party dependencies
-clap = { version = "4.5.28", features = ["derive", "cargo"] }
+clap = { version = "4.5.28", features = ["derive", "cargo", "string"] }
 anyhow = { workspace = true }
 tracing-subscriber = { workspace = true }
 tracing = { workspace = true }
 subprocess = { workspace = true }
-relm4 = { workspace = true }
+# relm4 = { workspace = true }
 # pprof2 = { version = "0.13.1",  features = ["protobuf-codec", "flamegraph",  "cpp"]}
 
 pprof2 = "0.13.1"

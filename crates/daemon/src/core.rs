@@ -1,9 +1,5 @@
-use dbus::blocking::Connection;
-use dbus::Message;
 use dbus_crossroads as crossroads;
-use std::error::Error;
-use std::time::Duration;
-use utils::notify as Notify;
+use utils::{config::CONFIG, notify as Notify};
 
 pub fn run() -> anyhow::Result<()> {
     let mut cr: crossroads::Crossroads = crossroads::Crossroads::new();
@@ -12,7 +8,7 @@ pub fn run() -> anyhow::Result<()> {
     cr.insert("/", &[token], ());
 
     let conn = dbus::blocking::Connection::new_session()?;
-    conn.request_name("org.freedesktop.problems.daemon", true, true, true)?;
+    conn.request_name(CONFIG.get().problems_interface.clone(), true, true, true)?;
 
     cr.serve(&conn)?;
     Ok(())
