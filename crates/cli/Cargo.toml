@@ -31,6 +31,7 @@ subprocess = { workspace = true }
 pprof2 = "0.13.1"
 # jemalloc_pprof = { version = "0.7", features = ["symbolize"] }
 dhat = "0.3.3"
+relm4.workspace = true
 
 # [features]
 # protobuf-codec=[]

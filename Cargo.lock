@@ -521,6 +521,7 @@ dependencies = [
  "dhat",
  "notify",
  "pprof2",
+ "relm4",
  "report",
  "subprocess",
  "tracing",

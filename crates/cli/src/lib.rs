@@ -1,5 +1,7 @@
 use clap::{arg, command, Arg, ArgAction, Command};
 
+use notify::window::{model::App, Modal};
+use relm4::RelmApp;
 use report;
 use std::{io::BufRead, path::PathBuf};
 use subprocess::Exec;
@@ -118,6 +120,32 @@ pub fn run() -> anyhow::Result<()> {
 
             println!("Relago daemon application is started without fuckery!!!");
             let _ = daemon::journal::run();
+        }
+        Some(("reporter", sub_matches)) => {
+            let options = ["unit", "exe", "message"];
+
+            let vals = options.map(|x| {
+                match sub_matches
+                    .get_one::<String>(x)
+                    .map(|s| s.as_str())
+                    .to_owned()
+                {
+                    Some(y) => y,
+                    None => "None",
+                }
+            });
+
+            let modal = Modal {
+                unit: vals[0].to_string(),
+                exe: vals[1].to_string(),
+                message: vals[2].to_string(),
+            };
+
+            let app_id = format!("org.relm4.Reporter.p{}", std::process::id());
+
+            let app = relm4::RelmApp::new(&app_id)
+                .with_args(vec![])
+                .run::<App>(modal);
         }
         _ => println!("`None`"),
     }
