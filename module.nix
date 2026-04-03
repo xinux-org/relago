@@ -101,7 +101,7 @@ let
       };
     };
 
-    systemd.services."${manifest.name}" = {
+    systemd.services."${manifest.name}-daemon" = {
       description = "${manifest.name} Relago daemon";
 
       after = [
