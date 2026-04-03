@@ -47,7 +47,7 @@ let
     #   };
     # };
 
-    ## Group to join our user
+    # # Group to join our user
     # users.groups = mkIf (cfg.group == manifest.name) {
     #   ${manifest.name} = {};
     # };
@@ -58,6 +58,10 @@ let
       group = cfg.group;
       home = cfg.data-dir;
       useDefaultShell = true;
+    };
+
+    users.groups = {
+      ${cfg.group} = { };
     };
 
     systemd.services."relago-server-config" = {
