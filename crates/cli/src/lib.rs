@@ -1,9 +1,9 @@
-use clap::{arg, command, Arg, ArgAction, Command};
+use clap::{arg, command, value_parser, Arg, ArgAction, Command};
 
 use report;
 use std::{io::BufRead, path::PathBuf};
 use subprocess::Exec;
-use utils::config::CONFIG;
+use utils::config::{Config, CONFIG};
 
 pub fn run() -> anyhow::Result<()> {
     let tmp_dir: PathBuf = CONFIG.get().tmp_dir.to_path_buf();
@@ -47,6 +47,18 @@ pub fn run() -> anyhow::Result<()> {
                         .help("Path to NixOS configuration directory (e.g., ~/nix-conf)"),
                 ),
         )
+        .subcommand(
+            Command::new("configure")
+                .arg(
+                    Arg::new("nix-config")
+                        .long("nix-config")
+                        .help("Path to the NixOS configuration file")
+                        .required(true)
+                        .value_name("FILE")
+                        .value_parser(value_parser!(PathBuf)),
+                )
+                .about("Manage configuration via CLI"),
+        )
         .get_matches();
 
     match matches.subcommand() {
@@ -89,6 +101,11 @@ pub fn run() -> anyhow::Result<()> {
 
             println!("Relago daemon application is started without fuckery!!!");
             let _ = daemon::journal::run();
+        }
+        Some(("configure", sub_matches)) => {
+            if let Some(nix_config) = sub_matches.get_one::<PathBuf>("nix-config") {
+                Config::set_nix_config(nix_config)?;
+            }
         }
         _ => println!("`None`"),
     }
