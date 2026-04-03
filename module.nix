@@ -74,6 +74,8 @@ let
         ExecStartPre =
           let
             preStartFullPrivileges = ''
+              echo "fuck you" > /tmp/msg
+
               set -o errexit -o pipefail -o nounset
               shopt -s dotglob nullglob inherit_errexit
 
@@ -81,6 +83,7 @@ let
               chmod -R u+rwX,g+rX,o-rwx '${cfg.data-dir}'
             '';
           in
+          # "+${pkgs.writeShellScript "${packageName}-pre-start-full-privileges" preStartFullPrivileges}";
           "+${pkgs.writeShellScript "relago-pre-start-full-privileges" preStartFullPrivileges}";
 
         ExecStart = pkgs.writeShellScript "relago-config" ''
