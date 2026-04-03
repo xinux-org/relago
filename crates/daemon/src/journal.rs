@@ -95,26 +95,3 @@ pub fn run() -> anyhow::Result<()> {
         }
     }
 }
-
-// fn handle_crash(ref cr: &Crash) -> anyhow::Result<()> {
-//     match cr {
-//         Crash::Coredump(dump) => {
-//             thread::spawn(|| {
-//                 println!("Handler called inside thread");
-//                 let unit = "".to_string();
-//                 let exe = dump.exe.to_string();
-
-//                 let _ = modal(Modal {
-//                     unit,
-//                     exe,
-//                     message: "Coredump error".to_string(),
-//                 });
-//             });
-//         }
-//         Crash::ServiceFailure(r) => {
-//             println!("Service failed");
-//         }
-//         Crash::Oom(r) => {}
-//     };
-//     Ok(())
-// }

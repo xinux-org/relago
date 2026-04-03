@@ -190,12 +190,14 @@ in
       user = mkOption {
         type = types.str;
         default = "relago-daemon";
+        example = "relago-daemon";
         description = "User for running system + access keys";
       };
 
       group = mkOption {
         type = types.str;
-        default = "relago-server";
+        default = "relago-daemon";
+        example = "relago-daemon";
         description = "Group for running system + acess keys";
       };
     };
