@@ -28,10 +28,10 @@ let
 
   # The digesting configuration of server
   toml-config = toml.generate "config.toml" {
-    port = cfg.port;
-    url = cfg.address;
-    threads = cfg.threads;
-    database_url = "#databaseUrl#";
+    parallel_compression = cfg.parallel-compression;
+    tmp_dir = cfg.data-dir;
+    nix_config = cfg.nix-config;
+    problems_interface = cfg.problems-interface;
   };
 
   # Systemd services
@@ -101,20 +101,33 @@ in
         ${manifest.name}, actix + diesel server on rust.
       '';
 
-      threads = mkOption {
+      parallel-compression = mkOption {
         type = types.int;
-        default = 1;
+        default = 4;
+        example = 4;
         description = "How many cores to use while pooling";
       };
 
-      dataDir = mkOption {
+      data-dir = mkOption {
         type = types.str;
-        default = "/var/lib/${manifest.name}";
-        description = lib.mdDoc ''
-          The path where ${manifest.name} keeps its config, data, and logs.
-        '';
+        default = "/var/lib/${manifest.name}/tmp/";
+        example = "/var/lib/${manifest.name}/tmp/";
+        description = "Temp folder for Relago";
       };
 
+      nix-config = mkOption {
+        type = types.str;
+        default = "/etc/nixos/xinux-config";
+        example = "/etc/nixos/xinux-config";
+        description = "Path of Nixos config";
+      };
+
+      problems-interface = mkOption {
+        type = types.str;
+        default = "org.freedesktop.problems.daemon";
+        example = "org.freedesktop.problems.daemon";
+        description = "Notification daemon";
+      };
     };
   };
 
