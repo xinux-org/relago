@@ -39,6 +39,7 @@ craneLib.devShell {
     openssl
     rustPlatform.bindgenHook
     pprof
+    # pango
   ];
 
   # Set Environment Variables

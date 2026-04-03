@@ -1,7 +1,12 @@
 //! Follow future journal log messages and print up to 100 of them.
 use anyhow::anyhow;
+use notify::modal;
+use std::process::Command;
+use std::sync::mpsc;
 use std::thread;
-use systemd::journal::{self, JournalSeek};
+use std::time::Duration;
+use systemd::journal::{self, Journal, JournalEntryField, JournalSeek};
+use tracing::error;
 
 use crate::crash::{CoredumpCrash, Crash, OomCrash, ServiceFailureCrash};
 use crate::registry::PluginRegistry;
@@ -55,9 +60,16 @@ pub fn run() -> anyhow::Result<()> {
             }
 
             Ok(_) => match registry.run(&mut journal) {
-                Some(ref cr @ Crash::Coredump(ref r)) => {
-                    let _ = handle_crash(cr);
-                    println!("Core dumped: {:?}", r);
+                Some(Crash::Coredump(ref r)) => {
+                    let _ = modal(
+                        r.unit.as_deref().unwrap_or("unknown"),
+                        &r.exe,
+                        "Coredump detected",
+                    );
+                    // Some( ref cr @ Crash::Coredump(ref r)) => {
+
+                    //     handle_crash(cr);
+                    //     println!("Core dumped: {:?}", r);
                 }
 
                 Some(Crash::ServiceFailure(r)) => {
@@ -84,17 +96,25 @@ pub fn run() -> anyhow::Result<()> {
     }
 }
 
-fn handle_crash(cr: &Crash) -> anyhow::Result<()> {
-    match cr {
-        Crash::Coredump(_dump) => {
-            thread::spawn(move || {
-                println!("Handler called inside thread");
-            });
-        }
-        Crash::ServiceFailure(_r) => {
-            println!("Service failed");
-        }
-        Crash::Oom(_r) => {}
-    }
-    Ok(())
-}
+// fn handle_crash(ref cr: &Crash) -> anyhow::Result<()> {
+//     match cr {
+//         Crash::Coredump(dump) => {
+//             thread::spawn(|| {
+//                 println!("Handler called inside thread");
+//                 let unit = "".to_string();
+//                 let exe = dump.exe.to_string();
+
+//                 let _ = modal(Modal {
+//                     unit,
+//                     exe,
+//                     message: "Coredump error".to_string(),
+//                 });
+//             });
+//         }
+//         Crash::ServiceFailure(r) => {
+//             println!("Service failed");
+//         }
+//         Crash::Oom(r) => {}
+//     };
+//     Ok(())
+// }

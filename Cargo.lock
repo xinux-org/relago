@@ -520,6 +520,7 @@ dependencies = [
  "daemon",
  "dhat",
  "nixlog",
+ "notify",
  "pprof2",
  "report",
  "subprocess",

@@ -1,5 +1,6 @@
 use clap::{arg, command, Arg, ArgAction, Command};
 
+use daemon::*;
 use nixlog::error as NixErr;
 use report;
 use std::{io::BufRead, path::PathBuf};
@@ -23,6 +24,7 @@ pub fn run() -> anyhow::Result<()> {
                 .arg(Arg::new("exec").action(ArgAction::Append)),
         )
         .subcommand(Command::new("daemon").about("Run daemon").arg(arg!([NAME])))
+        .subcommand(Command::new("notify").about("Run notification"))
         .subcommand(
             Command::new("report")
                 .about("Report journal entries to JSON file")
@@ -46,6 +48,34 @@ pub fn run() -> anyhow::Result<()> {
                         .long("nixos-config")
                         .value_name("PATH")
                         .help("Path to NixOS configuration directory (e.g., ~/nix-conf)"),
+                ),
+        )
+        .subcommand(
+            Command::new("reporter")
+                .about("Launch crash reporter GUI")
+                .arg(
+                    Arg::new("unit")
+                        .short('u')
+                        .long("unit")
+                        .value_name("UNIT")
+                        .help("Unit name")
+                        .default_value("test"),
+                )
+                .arg(
+                    Arg::new("exe")
+                        .short('e')
+                        .long("exe")
+                        .value_name("EXE")
+                        .help("Executable name")
+                        .default_value("test"),
+                )
+                .arg(
+                    Arg::new("message")
+                        .short('m')
+                        .long("message")
+                        .value_name("MESSAGE")
+                        .help("Crash message")
+                        .default_value("Coredump"),
                 ),
         )
         .get_matches();
@@ -80,7 +110,7 @@ pub fn run() -> anyhow::Result<()> {
             // report::create_report(rep, nixos_config, recent_entries)?;
             report::run(rep.as_str(), nixos_config, recent_entries)?
         }
-        Some(("daemon", _sub_matches)) => {
+        Some(("daemon", sub_matches)) => {
             // Daemon started
             // println!("daemon");
             // dbus-send --system --type=signal /com/example com.example.signal_name string:"hello world"
