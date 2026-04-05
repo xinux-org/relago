@@ -1,9 +1,9 @@
 use clap::{arg, command, value_parser, Arg, ArgAction, Command};
 
 use report;
-use std::{io::BufRead, path::PathBuf};
+use std::{io::BufRead, ops::Deref, path::PathBuf};
 use subprocess::Exec;
-use utils::config::{Config, CONFIG};
+use utils::config::CONFIG;
 
 pub fn run() -> anyhow::Result<()> {
     let tmp_dir: PathBuf = CONFIG.get().tmp_dir.to_path_buf();
@@ -102,11 +102,14 @@ pub fn run() -> anyhow::Result<()> {
             println!("Relago daemon application is started without fuckery!!!");
             let _ = daemon::journal::run();
         }
-        Some(("configure", sub_matches)) => {
-            if let Some(nix_config) = sub_matches.get_one::<PathBuf>("nix-config") {
-                Config::set_nix_config(nix_config)?;
-            }
-        }
+        Some(("configure", sub_matches)) => CONFIG
+            .get()
+            .edit(move |config| {
+                if let Some(nix_config) = sub_matches.get_one::<PathBuf>("nix-config") {
+                    config.nix_config = nix_config.into();
+                }
+            })
+            .save()?,
         _ => println!("`None`"),
     }
 
