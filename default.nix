@@ -110,6 +110,24 @@ craneLib.buildPackage (
 
     nativeBuildInputs = commonNativeBuildInputs;
     buildInputs = commonBuildInputs;
+
+    postInstall = ''
+            install -D -m 644 /dev/stdin $out/share/dbus-1/system.d/org.freedesktop.problems.daemon.conf <<EOF
+      <!DOCTYPE busconfig PUBLIC "-//freedesktop//DTD D-BUS Bus Configuration 1.0//EN"
+       "http://www.freedesktop.org/standards/dbus/1.0/busconfig.dtd">
+      <busconfig>
+        <policy user="relago">
+          <allow own="org.freedesktop.problems.daemon"/>
+          <allow send_destination="org.freedesktop.problems.daemon"/>
+          <allow receive_sender="org.freedesktop.problems.daemon"/>
+        </policy>
+
+        <policy context="default">
+          <allow send_destination="org.freedesktop.problems.daemon"/>
+        </policy>
+      </busconfig>
+      EOF
+    '';
   }
   // common
 )

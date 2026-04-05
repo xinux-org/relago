@@ -24,27 +24,12 @@ let
     tmp_dir = cfg.tmp-dir;
     data_dir = cfg.data-dir;
     nix_config = cfg.nix-config;
-    problems_interface = cfg.problems-interface;
     server = cfg.server;
   };
 
   # Systemd services
   service = lib.mkIf cfg.enable {
-    ## User for our services
-    # users.users = lib.mkIf (cfg.user == manifest.name) {
-    #   ${manifest.name} = {
-    #     description = "${manifest.name} Service";
-    #     home = cfg.dataDir;
-    #     useDefaultShell = true;
-    #     group = cfg.group;
-    #     isSystemUser = true;
-    #   };
-    # };
-
-    # # Group to join our user
-    # users.groups = mkIf (cfg.group == manifest.name) {
-    #   ${manifest.name} = {};
-    # };
+    services.dbus.packages = [ fpkg ];
 
     users.users.${cfg.user} = {
       description = "relago user";
@@ -58,9 +43,12 @@ let
       ${cfg.group} = { };
     };
 
-    systemd.services."relago-daemon-config" = {
-      wantedBy = [ "relago-daemon.target" ];
-      partOf = [ "relago-daemon.target" ];
+    systemd.targets."${manifest.name}" = { };
+
+    systemd.services."${manifest.name}-config" = {
+      wantedBy = [ "multi-user.target" ];
+      partOf = [ "${manifest.name}.target" ];
+      path = with pkgs; [ jq ];
 
       serviceConfig = {
         Type = "oneshot";
@@ -68,25 +56,27 @@ let
         Group = cfg.group;
         TimeoutSec = "infinity";
         Restart = "on-failure";
-        WorkingDirectory = "${cfg.data-dir}";
+        WorkingDirectory = "/tmp";
         RemainAfterExit = true;
+
+        StateDirectory = "relago";
+        StateDirectoryMode = "0750";
 
         ExecStartPre =
           let
             preStartFullPrivileges = ''
-              echo "fuck you" > /tmp/msg
-
               set -o errexit -o pipefail -o nounset
               shopt -s dotglob nullglob inherit_errexit
+
+              mkdir -p '${cfg.data-dir}'
 
               chown -R --no-dereference '${cfg.user}':'${cfg.group}' '${cfg.data-dir}'
               chmod -R u+rwX,g+rX,o-rwx '${cfg.data-dir}'
             '';
           in
-          # "+${pkgs.writeShellScript "${packageName}-pre-start-full-privileges" preStartFullPrivileges}";
-          "+${pkgs.writeShellScript "relago-pre-start-full-privileges" preStartFullPrivileges}";
+          "+${pkgs.writeShellScript "${manifest.name}-pre-start-full-privileges" preStartFullPrivileges}";
 
-        ExecStart = pkgs.writeShellScript "relago-config" ''
+        ExecStart = pkgs.writeShellScript "${manifest.name}-config" ''
           set -o errexit -o pipefail -o nounset
           shopt -s inherit_errexit
 
@@ -98,30 +88,32 @@ let
       };
     };
 
-    systemd.services."relago-daemon" = {
+    systemd.services."${manifest.name}" = {
       description = "Relago daemon";
 
       after = [
-        # "network-online.target"
-        "relago-daemon-config.service"
+        "network.target"
+        "${manifest.name}-config.service"
       ];
-      # wants = [ "network-online.target" ];
+      requires = [ "${manifest.name}-config.service" ];
       wantedBy = [ "multi-user.target" ];
+      wants = [ "network-online.target" ];
+      path = [ fpkg ];
 
       serviceConfig = {
         # Type = "dbus";
         # BusName = "org.freedesktop.problems.daemon";
 
+        Type = "exec";
+
         User = cfg.user;
         Group = cfg.group;
         Restart = "always";
-        ExecStart = ''
-          pwd
-          ls ${toml-config}
-          ${lib.getBin fpkg}/bin/relago
-
-        '';
+        ExecStart = "${lib.getBin fpkg}/bin/relago daemon";
         ExecReload = "${pkgs.coreutils}/bin/kill -s HUP $MAINPID";
+        ReadWritePaths = [
+          cfg.data-dir
+        ];
 
         StateDirectory = cfg.user;
         StateDirectoryMode = "0750";
@@ -147,12 +139,6 @@ let
         ProtectSystem = "strict";
         ReadOnlyPaths = [ "/" ];
         RemoveIPC = true;
-        RestrictAddressFamilies = [
-          "AF_NETLINK"
-          "AF_INET"
-          "AF_INET6"
-          "AF_UNIX"
-        ];
         RestrictNamespaces = true;
         RestrictRealtime = true;
         RestrictSUIDSGID = true;
@@ -213,15 +199,15 @@ in
 
       tmp-dir = mkOption {
         type = types.str;
-        default = "/var/lib/relago-daemon/tmp/";
-        example = "/var/lib/relago-daemon/tmp/";
+        default = "/var/lib/relago/tmp";
+        example = "/var/lib/relago/tmp";
         description = "Temp folder for Relago";
       };
 
       data-dir = mkOption {
         type = types.str;
-        default = "/var/lib/relago-daemon/";
-        example = "/var/lib/relago-daemon/";
+        default = "/var/lib/relago";
+        example = "/var/lib/relago";
         description = "Folder for Relago";
       };
 
@@ -230,13 +216,6 @@ in
         default = "/etc/nixos/xinux-config";
         example = "/etc/nixos/xinux-config";
         description = "Path of Nixos config";
-      };
-
-      problems-interface = mkOption {
-        type = types.str;
-        default = "org.freedesktop.problems.daemon";
-        example = "org.freedesktop.problems.daemon";
-        description = "Notification daemon";
       };
 
       server = mkOption {
@@ -248,15 +227,15 @@ in
 
       user = mkOption {
         type = types.str;
-        default = "relago-daemon";
-        example = "relago-daemon";
+        default = "relago";
+        example = "relago";
         description = "User for running system + access keys";
       };
 
       group = mkOption {
         type = types.str;
-        default = "relago-daemon";
-        example = "relago-daemon";
+        default = "relago";
+        example = "relago";
         description = "Group for running system + acess keys";
       };
     };

@@ -2,14 +2,27 @@ use clap::{arg, command, Arg, ArgAction, Command};
 
 use notify::window::{model::App, Modal};
 use report;
-use std::{env, io::BufRead, path::PathBuf};
+use std::{
+    env, fs,
+    io::{BufRead, ErrorKind},
+    path::PathBuf,
+    process,
+};
 use subprocess::Exec;
 use utils::config::{Config, CONFIG};
 
-const CONFIG_FILE: &str = "/var/lib/relago-daemon/config.toml";
+const CONFIG_FILE: &str = "/var/lib/relago/config.toml";
 
 pub fn run() -> anyhow::Result<()> {
-    CONFIG.set(move || Config::get_config(PathBuf::from(&CONFIG_FILE)));
+    match fs::File::open(&CONFIG_FILE) {
+        Ok(_) => {
+            CONFIG.set(move || Config::get_config(PathBuf::from(&CONFIG_FILE)));
+        }
+        Err(e) => {
+            println!("An error occurred: {}", e);
+            process::exit(1)
+        }
+    }
 
     let tmp_dir = CONFIG.get().tmp_dir.clone();
 
@@ -26,6 +39,7 @@ pub fn run() -> anyhow::Result<()> {
                 .about("Run daemon")
                 .arg(Arg::new("exec").action(ArgAction::Append)),
         )
+        .subcommand(Command::new("daemon").about("Run daemon").arg(arg!([NAME])))
         .subcommand(Command::new("notify").about("Run notification"))
         .subcommand(
             Command::new("report")

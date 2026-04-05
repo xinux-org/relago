@@ -10,7 +10,6 @@ pub struct Config {
     pub tmp_dir: PathBuf,
     pub data_dir: PathBuf,
     pub nix_config: PathBuf,
-    pub problems_interface: String,
     pub server: String,
 }
 
@@ -21,7 +20,6 @@ impl Default for Config {
             tmp_dir: PathBuf::from("tmp"),
             data_dir: PathBuf::from("data"),
             nix_config: PathBuf::from("/etc/nixos/xinux-config"),
-            problems_interface: "org.freedesktop.problems.daemon".to_string(),
             server: "https://cocomelon.uz".to_string(),
         }
     }
@@ -31,6 +29,7 @@ impl Config {
     pub fn get_config(config: PathBuf) -> Self {
         println!("{:?}", config);
         let contents = fs::read_to_string(config).expect("Should have been able to read the file");
+        println!("{:?}", contents);
         let res = toml::from_str(contents.as_str()).unwrap_or(Config::default());
         println!("{:?}", res);
         res

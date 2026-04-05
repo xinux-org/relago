@@ -8,7 +8,7 @@ pub fn run() -> anyhow::Result<()> {
     cr.insert("/", &[token], ());
 
     let conn = dbus::blocking::Connection::new_session()?;
-    conn.request_name(CONFIG.get().problems_interface.clone(), true, true, true)?;
+    conn.request_name("org.freedesktop.problems.daemon", true, true, true)?;
 
     cr.serve(&conn)?;
     Ok(())
