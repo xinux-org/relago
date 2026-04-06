@@ -37,6 +37,9 @@ let
       group = cfg.group;
       home = cfg.data-dir;
       useDefaultShell = true;
+      extraGroups = [
+        "systemd-journal"
+      ];
     };
 
     users.groups = {
