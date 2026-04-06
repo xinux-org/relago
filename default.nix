@@ -49,6 +49,14 @@ let
 
     zlib
     pkg-configUpstream
+
+    gtk4
+    libadwaita
+    glib
+    cairo
+    pango
+    gdk-pixbuf
+    graphene
   ];
 
   src = craneLib.cleanCargoSource ./.;
@@ -66,6 +74,8 @@ let
     RUST_BACKTRACE = 1;
     RUST_SRC_PATH = "${pkgs.rust.packages.stable.rustPlatform.rustLibSrc}";
     RUST_MIN_STACK = 16777216;
+
+    WEBKIT_DISABLE_DMABUF_RENDERER = 0;
 
     # # Compiler LD variables
     NIX_LDFLAGS = "-L${(getLibFolder pkgs.libiconv)} -L${(getLibFolder pkgs.pkg-config)} -L${(getLibFolder pkgs.dbus.dev)}";

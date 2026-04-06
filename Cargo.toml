@@ -7,6 +7,7 @@ members = [
   "crates/daemon",
   "crates/report",
   "crates/utils",
+  "crates/notify",
   "crates/crash-event",
 ]
 
@@ -39,6 +40,7 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 nom = "8.0.0"
 dbus = "0.9.10"
 dbus-crossroads = "0.5.3"
+relm4 = {version = "0.9.1", features=["macros", "libadwaita", "gnome_47"]}
 # codegen-units = 1
 # incremental = true
 # lto = true

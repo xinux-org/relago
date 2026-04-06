@@ -12,17 +12,19 @@ pub static CONFIG: LocalInitCell<Config> = LocalInitCell::new();
 pub struct Config {
     pub parallel_compression: u32,
     pub tmp_dir: PathBuf,
+    pub data_dir: PathBuf,
     pub nix_config: PathBuf,
-    pub problems_interface: String,
+    pub server: String,
 }
 
 impl Default for Config {
     fn default() -> Self {
         Self {
             parallel_compression: 4,
-            tmp_dir: PathBuf::from("/tmp/relago"),
+            tmp_dir: PathBuf::from("tmp"),
+            data_dir: PathBuf::from("data"),
             nix_config: PathBuf::from("/etc/nixos/xinux-config"),
-            problems_interface: "org.freedesktop.problems.daemon".to_string(),
+            server: "https://cocomelon.uz".to_string(),
         }
     }
 }
