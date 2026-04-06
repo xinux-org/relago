@@ -1,12 +1,10 @@
 pub mod window;
 
 use notify_rust::Notification;
-use std::process::Command;
+use std::{env, process::Command};
 
 pub fn modal(unit: &str, exe: &str, message: &str) -> anyhow::Result<()> {
     let exe_path = std::env::current_exe()?;
-
-    println!("{}", exe_path.to_str().unwrap());
 
     Command::new(exe_path.to_str().unwrap())
         .args([

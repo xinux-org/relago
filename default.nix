@@ -75,6 +75,8 @@ let
     RUST_SRC_PATH = "${pkgs.rust.packages.stable.rustPlatform.rustLibSrc}";
     RUST_MIN_STACK = 16777216;
 
+    WEBKIT_DISABLE_DMABUF_RENDERER = 0;
+
     # # Compiler LD variables
     NIX_LDFLAGS = "-L${(getLibFolder pkgs.libiconv)} -L${(getLibFolder pkgs.pkg-config)} -L${(getLibFolder pkgs.dbus.dev)}";
     LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath (
@@ -110,24 +112,6 @@ craneLib.buildPackage (
 
     nativeBuildInputs = commonNativeBuildInputs;
     buildInputs = commonBuildInputs;
-
-    postInstall = ''
-            install -D -m 644 /dev/stdin $out/share/dbus-1/system.d/org.freedesktop.problems.daemon.conf <<EOF
-      <!DOCTYPE busconfig PUBLIC "-//freedesktop//DTD D-BUS Bus Configuration 1.0//EN"
-       "http://www.freedesktop.org/standards/dbus/1.0/busconfig.dtd">
-      <busconfig>
-        <policy user="relago">
-          <allow own="org.freedesktop.problems.daemon"/>
-          <allow send_destination="org.freedesktop.problems.daemon"/>
-          <allow receive_sender="org.freedesktop.problems.daemon"/>
-        </policy>
-
-        <policy context="default">
-          <allow send_destination="org.freedesktop.problems.daemon"/>
-        </policy>
-      </busconfig>
-      EOF
-    '';
   }
   // common
 )

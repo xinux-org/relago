@@ -99,16 +99,20 @@ let
         "${manifest.name}-config.service"
       ];
       requires = [ "${manifest.name}-config.service" ];
-      wantedBy = [ "multi-user.target" ];
-      wants = [ "network-online.target" ];
+      wantedBy = [
+        "multi-user.target"
+
+      ];
+      wants = [
+        "network-online.target"
+        "graphical.target"
+      ];
       path = [ fpkg ];
 
       serviceConfig = {
         # We need to enable dbus later
-        # Type = "dbus";
-        # BusName = "org.freedesktop.problems.daemon";
-
-        Type = "exec";
+        Type = "dbus";
+        BusName = "org.freedesktop.problems.daemon";
 
         User = cfg.user;
         Group = cfg.group;
