@@ -22,5 +22,4 @@ utils = { path = "../utils" }
 dbus-crossroads = { workspace = true }
 nom = { workspace = true }
 crash-event = { path = "../crash-event" }
-# relago-journal-ext ={ path = "../relago-journal-ext"}
 notify ={ path = "../notify"}

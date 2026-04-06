@@ -46,10 +46,6 @@ pub fn run() -> anyhow::Result<()> {
 
     registry.install_filters(&mut journal)?;
 
-    // let (tx, rx) = mpsc::channel();
-
-    // let mut value = tx.send(ReportRes::Done);
-    // let sender = tx.clone();
     loop {
         match journal.next() {
             // 0 means "no new entries yet" — block until journald wakes us.
@@ -66,17 +62,9 @@ pub fn run() -> anyhow::Result<()> {
                         &r.exe,
                         "Coredump detected",
                     );
-                    // Some( ref cr @ Crash::Coredump(ref r)) => {
-
-                    //     handle_crash(cr);
-                    //     println!("Core dumped: {:?}", r);
                 }
 
                 Some(Crash::ServiceFailure(r)) => {
-                    // if r.job_result == "done" {
-                    //     continue;
-                    // }
-
                     println!("Service failed: {:?}", r);
                 }
 

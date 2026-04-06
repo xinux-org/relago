@@ -104,6 +104,7 @@ let
       path = [ fpkg ];
 
       serviceConfig = {
+        # We need to enable dbus later
         # Type = "dbus";
         # BusName = "org.freedesktop.problems.daemon";
 
@@ -128,7 +129,6 @@ let
         ];
         DeviceAllow = [ "/dev/stdin r" ];
         DevicePolicy = "strict";
-        # IPAddressAllow = "localhost";
         LockPersonality = true;
         PrivateDevices = true;
         PrivateTmp = true;
@@ -153,33 +153,6 @@ let
           "@pkey"
         ];
         UMask = "0027";
-
-        # # StandardInput = "null";
-        # # StandardOutput = "journal";
-        # # StandardError = "journal";
-
-        # # Restart = "always";
-
-        # DevicePolicy = "closed";
-        # KeyringMode = "private";
-        # LockPersonality = "yes";
-        # MemoryDenyWriteExecute = "yes";
-        # NoNewPrivileges = "yes";
-        # PrivateDevices = "yes";
-        # PrivateTmp = "true";
-        # ProtectClock = "yes";
-        # ProtectControlGroups = "yes";
-        # # ProtectHome = "read-only";
-        # ProtectHostname = "yes";
-        # ProtectKernelLogs = "yes";
-        # ProtectKernelModules = "yes";
-        # ProtectKernelTunables = "yes";
-        # ProtectProc = "invisible";
-        # ProtectSystem = "full";
-        # RestrictNamespaces = "yes";
-        # RestrictRealtime = "yes";
-        # RestrictSUIDSGID = "yes";
-        # SystemCallArchitectures = "native";
       };
     };
   };

@@ -22,7 +22,7 @@ pub fn run(sender: ComponentSender<App>) {
                 let rep_file = tokio::task::spawn_blocking(|| {
                     create_report(
                         Arc::try_unwrap(tmp_dir).unwrap().as_str(),
-                        Some("~/.config/nix"),
+                        Some(CONFIG.get().nix_config.clone().to_str().unwrap()),
                         None,
                     )
                 })
