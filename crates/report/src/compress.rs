@@ -5,7 +5,6 @@ use std::io::{copy, BufReader};
 use std::path::{Path, PathBuf};
 use utils::config::CONFIG;
 use zip_archive::Archiver;
-
 // TODO: expect will panic, better use `?` or `.context("message")?`
 pub fn compress(path: impl AsRef<Path>, dest: impl AsRef<Path>) -> anyhow::Result<()> {
     let path = path.as_ref();

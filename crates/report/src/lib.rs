@@ -20,7 +20,7 @@ pub enum ReportError {
 }
 
 pub struct Report {
-    file: PathBuf,
+    pub file: PathBuf,
 }
 
 pub fn run(
