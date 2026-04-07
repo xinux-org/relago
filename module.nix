@@ -109,10 +109,16 @@ let
       ];
       path = [ fpkg ];
 
+      environment = {
+        DISPLAY = ":0";
+        WAYLAND_DISPLAY = "wayland-0";
+        XDG_RUNTIME_DIR = "/run/user/1000";
+      };
+
       serviceConfig = {
         # We need to enable dbus later
-        Type = "dbus";
-        BusName = "org.freedesktop.problems.daemon";
+        # Type = "dbus";
+        # BusName = "org.freedesktop.problems.daemon";
 
         User = cfg.user;
         Group = cfg.group;
@@ -134,7 +140,7 @@ let
         DeviceAllow = [ "/dev/stdin r" ];
         DevicePolicy = "strict";
         LockPersonality = true;
-        PrivateDevices = true;
+        PrivateDevices = false;
         PrivateTmp = true;
         PrivateUsers = false;
         ProtectClock = true;
@@ -146,7 +152,7 @@ let
         ProtectSystem = "strict";
         ReadOnlyPaths = [ "/" ];
         RemoveIPC = true;
-        RestrictNamespaces = true;
+        RestrictNamespaces = false;
         RestrictRealtime = true;
         RestrictSUIDSGID = true;
         SystemCallArchitectures = "native";

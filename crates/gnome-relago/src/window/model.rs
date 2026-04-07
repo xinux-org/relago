@@ -1,6 +1,6 @@
 use super::messages::CmdOut;
 use relm4::gtk::{self, prelude::*};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, Serialize)]
 pub struct Modal {

@@ -1,6 +1,9 @@
 use clap::{arg, command, Arg, ArgAction, Command};
 
-use notify::window::{model::App, Modal};
+use gnome_relago::{
+    start_listener,
+    window::{model::App, Modal},
+};
 use report;
 use std::{
     env, fs,
@@ -40,7 +43,7 @@ pub fn run() -> anyhow::Result<()> {
                 .arg(Arg::new("exec").action(ArgAction::Append)),
         )
         .subcommand(Command::new("daemon").about("Run daemon").arg(arg!([NAME])))
-        .subcommand(Command::new("notify").about("Run notification"))
+        .subcommand(Command::new("gnome-relago").about("Run notification"))
         .subcommand(
             Command::new("report")
                 .about("Report journal entries to JSON file")
@@ -63,34 +66,6 @@ pub fn run() -> anyhow::Result<()> {
                         .long("nixos-config")
                         .value_name("PATH")
                         .help("Path to NixOS configuration directory (e.g., ~/nix-conf)"),
-                ),
-        )
-        .subcommand(
-            Command::new("reporter")
-                .about("Launch crash reporter GUI")
-                .arg(
-                    Arg::new("unit")
-                        .short('u')
-                        .long("unit")
-                        .value_name("UNIT")
-                        .help("Unit name")
-                        .default_value("test"),
-                )
-                .arg(
-                    Arg::new("exe")
-                        .short('e')
-                        .long("exe")
-                        .value_name("EXE")
-                        .help("Executable name")
-                        .default_value("test"),
-                )
-                .arg(
-                    Arg::new("message")
-                        .short('m')
-                        .long("message")
-                        .value_name("MESSAGE")
-                        .help("Crash message")
-                        .default_value("Coredump"),
                 ),
         )
         .get_matches();
@@ -126,42 +101,18 @@ pub fn run() -> anyhow::Result<()> {
             report::run(rep.as_str(), nixos_config, recent_entries)?
         }
         Some(("daemon", sub_matches)) => {
-            // Daemon started
-            // println!("daemon");
-            // dbus-send --system --type=signal /com/example com.example.signal_name string:"hello world"
-
-            // let _ = fetcher::run();
-            // let _ = core::run();
-
-            println!("{:?}", sub_matches.try_get_raw("NAME"));
             println!("Relago daemon application is started without fuckery!!!");
             let _ = daemon::journal::run();
         }
-        Some(("reporter", sub_matches)) => {
-            let options = ["unit", "exe", "message"];
+        Some(("gnome-relago", _sub_matches)) => {
+            let runtime = tokio::runtime::Runtime::new()?;
+            runtime.block_on(async {
+                println!("GUI Agent started. Listening for crash signals...");
 
-            let vals = options.map(|x| {
-                match sub_matches
-                    .get_one::<String>(x)
-                    .map(|s| s.as_str())
-                    .to_owned()
-                {
-                    Some(y) => y,
-                    None => "None",
+                if let Err(e) = start_listener().await {
+                    eprintln!("D-Bus Listener Error: {}", e);
                 }
             });
-
-            let modal = Modal {
-                unit: vals[0].to_string(),
-                exe: vals[1].to_string(),
-                message: vals[2].to_string(),
-            };
-
-            let app_id = format!("org.relm4.Reporter.p{}", std::process::id());
-
-            let app = relm4::RelmApp::new(&app_id)
-                .with_args(vec![])
-                .run::<App>(modal);
         }
         _ => println!("`None`"),
     }

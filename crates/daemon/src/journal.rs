@@ -1,6 +1,6 @@
 //! Follow future journal log messages and print up to 100 of them.
 use anyhow::anyhow;
-use notify::modal;
+use gnome_relago::modal;
 use std::process::Command;
 use std::sync::mpsc;
 use std::thread;
