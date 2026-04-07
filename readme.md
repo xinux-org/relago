@@ -52,9 +52,12 @@ cargo run -- daemon myinstance
 
 ### report
 
+#### Default location: /tmp/relago/report_YYYY-MM-DD_HH-MM-SS/
+
 ```bash
 # generate a diagnostic report (saved as ZIP)
 # collects: system info, journal entries, nixos config
+# saves in the default location if you don't specify one
 cargo run -- report
 
 # save report to specific directory
@@ -92,13 +95,6 @@ cargo run -- reporter -u nginx.service -e nginx -m "Segmentation fault"
 cargo run -- notify
 ```
 
-### exec
-
-```bash
-# execute a shell command
-cargo run -- exec "ls -la"
-```
-
 ## Testing crash detection
 
 To manually trigger a crash for testing, use the [crash](https://github.com/xinux-org/crash) project.
@@ -107,13 +103,15 @@ To manually trigger a crash for testing, use the [crash](https://github.com/xinu
 # install crash tool
 git clone https://github.com/xinux-org/crash
 cd crash
-cargo build --release
 
-# first, start relago daemon in one terminal
+# it is used to update the flake.lock file
+nix flake update
+
+# first, start relago daemon in ~/relago project terminal
 cargo run -- daemon
 
-# then, in another terminal, run crash to trigger a test crash
-./target/release/crash
+# then, run this command to force a crash manually in ~/crash project terminal
+nix run .\#segfault
 ```
 
 ## Configuration
