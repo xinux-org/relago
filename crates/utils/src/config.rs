@@ -67,11 +67,7 @@ impl Config {
 
                     io::Result::Ok(contents)
                 }
-                kind => {
-                    println!("{:#}", kind);
-
-                    io::Result::Err(err)
-                }
+                _ => io::Result::Err(err),
             },
         };
 
