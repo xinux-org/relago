@@ -1,22 +1,16 @@
-use clap::{arg, command, value_parser, Arg, ArgAction, Command};
+use clap::{arg, command, Arg, ArgAction, Command, Parser};
 
 use notify::window::{model::App, Modal};
-use report;
-use std::{
-    env, fs,
-    io::{BufRead, ErrorKind},
-    path::PathBuf,
-    process,
-};
+use std::{env, io::BufRead, process};
 use subprocess::Exec;
 use utils::config::{Config, CONFIG};
 
 const CONFIG_FILE: &str = "/var/lib/relago/config.toml";
 
 pub fn run() -> anyhow::Result<()> {
-    match fs::File::open(&CONFIG_FILE) {
-        Ok(_) => {
-            CONFIG.set(move || Config::get_config(PathBuf::from(&CONFIG_FILE)));
+    match Config::get_config(&CONFIG_FILE) {
+        Ok(config) => {
+            CONFIG.set(|| config);
         }
         Err(e) => {
             println!("An error occurred: {}", e);
@@ -65,18 +59,8 @@ pub fn run() -> anyhow::Result<()> {
                         .help("Path to NixOS configuration directory (e.g., ~/nix-conf)"),
                 ),
         )
+        .subcommand(Config::get_command())
         .subcommand(
-            Command::new("configure")
-                .arg(
-                    Arg::new("nix-config")
-                        .long("nix-config")
-                        .help("Path to the NixOS configuration file")
-                        .required(true)
-                        .value_name("FILE")
-                        .value_parser(value_parser!(PathBuf)),
-                )
-                .about("Manage configuration via CLI"),
-        ).subcommand(
             Command::new("reporter")
                 .about("Launch crash reporter GUI")
                 .arg(
@@ -148,14 +132,6 @@ pub fn run() -> anyhow::Result<()> {
             println!("Relago daemon application is started without fuckery!!!");
             let _ = daemon::journal::run();
         }
-        Some(("configure", sub_matches)) => CONFIG
-            .get()
-            .edit(move |config| {
-                if let Some(nix_config) = sub_matches.get_one::<PathBuf>("nix-config") {
-                    config.nix_config = nix_config.into();
-                }
-            })
-            .save()?,
         Some(("reporter", sub_matches)) => {
             let options = ["unit", "exe", "message"];
 
@@ -178,11 +154,17 @@ pub fn run() -> anyhow::Result<()> {
 
             let app_id = format!("org.relm4.Reporter.p{}", std::process::id());
 
-            let app = relm4::RelmApp::new(&app_id)
+            relm4::RelmApp::new(&app_id)
                 .with_args(vec![])
                 .run::<App>(modal);
         }
-        _ => println!("`None`"),
+        _ => {
+            if let Some(submatches) = matches.subcommand_matches(Config::get_command().get_name()) {
+                Config::save_config(CONFIG_FILE, Config::get_from_cli(submatches)?)?
+            } else {
+                println!("`None`")
+            }
+        }
     }
 
     Ok(())
