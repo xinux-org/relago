@@ -1,31 +1,38 @@
-use futures_util::stream::StreamExt;
-use window::model::{App, Modal};
-use zbus::{proxy, Connection};
-
 pub mod window;
+use std::error::Error;
 
-#[proxy(
-    interface = "org.relago.gnome.Report",
-    default_service = "org.relago.gnome",
-    default_path = "/org/relago/gnome"
-)]
-trait GnomeReport {
-    #[zbus(signal)]
-    fn modal_signal(&self, modal: Modal) -> zbus::Result<()>;
+use notify_rust::Notification;
+use window::Modal;
+use zbus::{conn, interface};
+
+use window::model::App;
+
+struct ReportService;
+
+#[interface(name = "org.relago.ReportHandler")]
+impl ReportService {
+    async fn report(&self, data: Modal) {
+        let _notif = Notification::new()
+            .summary("Crash detected")
+            .body(&(data.message))
+            .icon("dialog-error")
+            .show();
+
+        let app_id = format!("org.relm4.Reporter.p{}", std::process::id());
+
+        let _app = relm4::RelmApp::new(&app_id)
+            .with_args(vec![])
+            .run::<App>(data);
+    }
 }
 
-pub async fn start_listener() -> zbus::Result<()> {
-    let connection = Connection::system().await?;
-    let proxy = GnomeReportProxy::new(&connection).await?;
-    let mut modal_stream = proxy.receive_modal_signal().await?;
+pub async fn start_listener() -> Result<conn::Connection, Box<dyn Error>> {
+    let service = ReportService;
 
-    while let Some(msg) = modal_stream.next().await {
-        let args: ModalSignalArgs = msg.args().expect("Error parsing message");
-        let modal = args.modal.clone();
-        println!("{:?}", modal);
-        let app_id = format!("org.relago.Reporter.p{}", std::process::id());
-        relm4::RelmApp::new(&app_id).run::<App>(modal);
-    }
-
-    panic!("Stream ended unexpectedly");
+    let conn = conn::Builder::session()?
+        .name("org.relago.ReportService")?
+        .serve_at("/org/relago/ReportService", service)?
+        .build()
+        .await?;
+    Ok(conn)
 }
