@@ -1,14 +1,16 @@
-use clap::{ArgMatches, Args, CommandFactory, FromArgMatches, Parser};
+use anyhow::Ok;
+use clap::{ArgMatches, Args, FromArgMatches};
 use confique::{Config as Conf, Layer};
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 use state::LocalInitCell;
-use std::fs;
+use std::io::Write;
 use std::path::PathBuf;
+use std::{fs, io, panic};
 
 pub static CONFIG: LocalInitCell<Config> = LocalInitCell::new();
 
 #[derive(Conf, Clone, Debug)]
-#[config(layer_attr(derive(clap::Args)))]
+#[config(layer_attr(derive(clap::Args, Serialize)))]
 pub struct Config {
     #[config(default = 4)]
     #[config(layer_attr(arg(long)))]
@@ -54,7 +56,26 @@ impl Config {
     }
 
     pub fn save_config(path: &str, config: ConfigLayer) -> anyhow::Result<()> {
-        let mut document = str::parse::<toml_edit::DocumentMut>(&fs::read_to_string(path)?)?;
+        let contents: io::Result<String> = match fs::read_to_string(path) {
+            io::Result::Ok(content) => io::Result::Ok(content),
+            io::Result::Err(err) => match err.kind() {
+                io::ErrorKind::NotFound => {
+                    let contents = toml_edit::ser::to_string(&ConfigLayer::default_values())?;
+
+                    fs::create_dir_all(path)?;
+                    fs::File::create_new(path)?.write_all(contents.as_bytes())?;
+
+                    io::Result::Ok(contents)
+                }
+                kind => {
+                    println!("{:#}", kind);
+
+                    io::Result::Err(err)
+                }
+            },
+        };
+
+        let mut document = str::parse::<toml_edit::DocumentMut>(&contents?)?;
 
         set_document_field!(document, config, parallel_compression);
         set_document_field!(document, config, tmp_dir);
