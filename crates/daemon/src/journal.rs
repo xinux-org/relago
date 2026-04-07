@@ -1,6 +1,6 @@
 //! Follow future journal log messages and print up to 100 of them.
 use anyhow::anyhow;
-use gnome_relago::modal;
+use gnome_relago::start_listener;
 use std::process::Command;
 use std::sync::mpsc;
 use std::thread;
@@ -57,11 +57,13 @@ pub fn run() -> anyhow::Result<()> {
 
             Ok(_) => match registry.run(&mut journal) {
                 Some(Crash::Coredump(ref r)) => {
-                    let _ = modal(
-                        r.unit.as_deref().unwrap_or("unknown"),
-                        &r.exe,
-                        "Coredump detected",
-                    );
+                    // let _ = modal(
+                    //     r.unit.as_deref().unwrap_or("unknown"),
+                    //     &r.exe,
+                    //     "Coredump detected",
+                    // );
+                    println!("Yebat, crash");
+                    println!("{:?}", r);
                 }
 
                 Some(Crash::ServiceFailure(r)) => {

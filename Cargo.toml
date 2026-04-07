@@ -42,6 +42,8 @@ dbus = "0.9.10"
 dbus-crossroads = "0.5.3"
 relm4 = {version = "0.9.1", features=["macros", "libadwaita", "gnome_47"]}
 futures-util = "0.3.32"
+proc-macro2 = "1.0"
+quote       = "1"
 # codegen-units = 1
 # incremental = true
 # lto = true

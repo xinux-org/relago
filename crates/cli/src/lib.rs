@@ -106,11 +106,22 @@ pub fn run() -> anyhow::Result<()> {
         }
         Some(("gnome-relago", _sub_matches)) => {
             let runtime = tokio::runtime::Runtime::new()?;
+
             runtime.block_on(async {
                 println!("GUI Agent started. Listening for crash signals...");
 
-                if let Err(e) = start_listener().await {
-                    eprintln!("D-Bus Listener Error: {}", e);
+                match start_listener().await {
+                    Ok(_conn) => {
+                        println!("D-Bus service 'org.relago.ReportService' is active.");
+
+                        // CRITICAL: This keeps the block_on from returning.
+                        // Without this, the program would exit immediately.
+                        std::future::pending::<()>().await;
+                    }
+                    Err(e) => {
+                        eprintln!("Failed to start D-Bus listener: {}", e);
+                        std::process::exit(1);
+                    }
                 }
             });
         }
