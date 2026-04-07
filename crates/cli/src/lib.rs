@@ -10,7 +10,7 @@ const CONFIG_FILE: &str = "/var/lib/relago/config.toml";
 pub fn run() -> anyhow::Result<()> {
     match Config::get_config(&CONFIG_FILE) {
         Ok(config) => {
-            CONFIG.set(|| config);
+            CONFIG.set(move || config.clone());
         }
         Err(e) => {
             println!("An error occurred: {}", e);

@@ -7,7 +7,7 @@ use std::path::PathBuf;
 
 pub static CONFIG: LocalInitCell<Config> = LocalInitCell::new();
 
-#[derive(Conf, Debug)]
+#[derive(Conf, Clone, Debug)]
 #[config(layer_attr(derive(clap::Args)))]
 pub struct Config {
     #[config(default = 4)]
@@ -41,7 +41,7 @@ macro_rules! set_document_field {
 }
 
 impl Config {
-    pub fn get_config(path: impl Into<PathBuf>) -> anyhow::Result<Config> {
+    pub fn get_config(path: &str) -> anyhow::Result<Config> {
         Config::from_file(path).map_err(|e| anyhow::anyhow!(e))
     }
 
@@ -53,7 +53,7 @@ impl Config {
         ConfigLayer::from_arg_matches(args).map_err(|e| anyhow::anyhow!(e))
     }
 
-    pub fn save_config(path: &impl Into<PathBuf>, config: ConfigLayer) -> anyhow::Result<()> {
+    pub fn save_config(path: &str, config: ConfigLayer) -> anyhow::Result<()> {
         let mut document = str::parse::<toml_edit::DocumentMut>(&fs::read_to_string(path)?)?;
 
         set_document_field!(document, config, parallel_compression);
