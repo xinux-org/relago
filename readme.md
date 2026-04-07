@@ -80,7 +80,7 @@ cargo run -- report -o ./my-report -r 500 --nixos-config ~/nixos-config
 # shows crash details, send button, upload progress
 cargo run -- reporter
 
-# specify crash details (usually called automatically by daemon)
+# specify crash details (usually caused by a daemon)
 cargo run -- reporter -u nginx.service -e nginx -m "Segmentation fault"
 
 # -u : systemd unit name
