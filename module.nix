@@ -94,6 +94,10 @@ let
           let
             preStartFullPrivileges = ''
               set -o errexit -o pipefail -o nounset
+
+              ${pkgs.coreutils}/bin/mkdir -p ${cfg.data-dir}
+              ${pkgs.coreutils}/bin/mkdir -p ${cfg.tmp-dir}
+
               ${pkgs.coreutils}/bin/install -d -m 0755 -o ${cfg.user} -g ${cfg.group} ${cfg.data-dir}
               ${pkgs.coreutils}/bin/install -d -m 0755 -o ${cfg.user} -g ${cfg.group} ${cfg.tmp-dir}
               ${pkgs.coreutils}/bin/install -m 0644 ${toml-config} ${cfg.data-dir}/config.toml
