@@ -29,20 +29,14 @@ let
           <allow send_destination="org.relago.DaemonService"/>
           <allow receive_sender="org.relago.DaemonService"/>
         </policy>
-
-        <policy context="default">
-          <allow send_destination="org.relago.DaemonService"/>
-          <allow receive_sender="org.relago.DaemonService"/>
-        </policy>
       </busconfig>
     '')
 
-    # Policy for Gnome Agent
-    (pkgs.writeTextDir "share/dbus-1/services/org.relago.ReportService.service" ''
+    (pkgs.writeTextDir "share/dbus-1/system-services/org.relago.DaemonService.service" ''
       [D-BUS Service]
-      Name=org.relago.ReportService
-      Exec=${lib.getBin fpkg}/bin/relago gnome-relago
-      SystemdService=relago-gnome.service
+      Name=org.relago.DaemonService
+      Exec=${fpkg}/bin/relago daemon
+      User=relago
     '')
   ];
 
@@ -126,7 +120,11 @@ let
       description = "Relago GNOME UI Agent";
       wantedBy = [ "default.target" ];
       partOf = [ "graphical-session.target" ];
-      after = [ "${manifest.name}-daemon.service" ];
+      after = [
+        "network.target"
+        "graphical-session.target"
+      ];
+      restartTriggers = [ fpkg ];
 
       serviceConfig = {
         # Type = "dbus";
@@ -134,6 +132,7 @@ let
         Type = "simple";
         ExecStart = "${lib.getBin fpkg}/bin/relago gnome-relago";
         Restart = "on-failure";
+        RestartSec = 5;
 
         StateDirectory = cfg.user;
         StateDirectoryMode = "0755";

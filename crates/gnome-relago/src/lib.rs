@@ -1,9 +1,10 @@
 pub mod window;
-use std::{error::Error, time::Duration};
 
+use futures_util::StreamExt;
 use notify_rust::Notification;
+use std::error::Error;
 use window::Modal;
-use zbus::{conn, proxy};
+use zbus::{conn::Connection, proxy};
 
 use window::model::App;
 
@@ -13,47 +14,53 @@ use window::model::App;
     default_path = "/org/relago/DaemonService"
 )]
 trait DaemonService {
+    #[zbus(signal)]
+    fn crash_detected(&self, modal: Modal) -> zbus::Result<()>;
     async fn pop_crash(&self) -> zbus::Result<Option<Modal>>;
     async fn has_pending(&self) -> zbus::Result<bool>;
 }
 
-pub async fn start_listener() -> Result<conn::Connection, Box<dyn Error>> {
-    let conn = zbus::Connection::system().await?;
+pub async fn start_listener() -> Result<(), Box<dyn Error>> {
+    let conn = Connection::system().await?;
     let proxy = DaemonServiceProxy::new(&conn).await?;
 
-    loop {
-        match proxy.has_pending().await {
-            Ok(true) => {
-                match proxy.pop_crash().await {
-                    // show notification
-                    Ok(m) => match m {
-                        Some(modal_data) => {
-                            let _notif = Notification::new()
-                                .summary("Crash detected")
-                                .body(&(modal_data.message))
-                                .icon("dialog-error")
-                                .show();
+    let mut stream = proxy.receive_crash_detected().await?;
 
-                            println!("Showing crash notification: {:?}", modal_data);
+    println!("Agent is idling nax");
 
-                            let app_id = format!("org.relm4.Reporter.p{}", std::process::id());
+    while let Some(signal) = stream.next().await {
+        match signal.args() {
+            Ok(args) => {
+                let modal_data = args.modal;
 
-                            let _app = relm4::RelmApp::new(&app_id)
-                                .with_args(vec![])
-                                .run::<App>(modal_data);
-                        }
-                        _ => {
-                            println!("Mana yana Option error");
-                        }
-                    },
-                    Err(_e) => {
-                        println!("Ma naxuy error");
-                    } // call your existing notification/window code here
-                }
+                println!("Signal received! Crash in unit: {}", modal_data.unit);
+
+                // Trigger your notification and UI
+                let _notif = Notification::new()
+                    .summary("Crash detected")
+                    .body(&modal_data.message)
+                    .icon("dialog-error")
+                    .show();
+
+                let app_id = format!("org.relm4.Reporter.p{}", std::process::id());
+
+                // Note: If you want multiple windows, spawn this in a thread/task
+                // or ensure the app handles multiple instances.
+                let _app = relm4::RelmApp::new(&app_id)
+                    .with_args(vec![])
+                    .run::<App>(modal_data);
             }
-            Ok(false) => {}
-            Err(e) => eprintln!("Failed to poll daemon: {}", e),
+            Err(e) => eprintln!("Failed to parse signal arguments: {}", e),
         }
-        tokio::time::sleep(Duration::from_secs(2)).await;
     }
+
+    Ok(())
+}
+
+fn spawn_ui(modal_data: Modal) {
+    let app_id = format!("org.relm4.Reporter.p{}", std::process::id());
+
+    let _app = relm4::RelmApp::new(&app_id)
+        .with_args(vec![])
+        .run::<App>(modal_data);
 }

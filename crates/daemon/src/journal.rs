@@ -6,6 +6,7 @@ use gnome_relago::window::Modal;
 use systemd::journal::{self, JournalSeek};
 use tokio::sync::Mutex;
 use zbus::interface;
+use zbus::object_server::SignalEmitter;
 
 use crate::crash::{CoredumpCrash, Crash, OomCrash, ServiceFailureCrash};
 use crate::registry::PluginRegistry;
@@ -24,6 +25,9 @@ impl Clone for CrashQueue {
 
 #[interface(name = "org.relago.DaemonService")]
 impl CrashQueue {
+    #[zbus(signal)]
+    async fn crash_detected(signal_emitter: &SignalEmitter<'_>, modal: Modal) -> zbus::Result<()>;
+
     async fn pop_crash(&self) -> Option<Modal> {
         self.pending.lock().await.pop()
     }
@@ -59,11 +63,13 @@ pub async fn run() -> anyhow::Result<()> {
         pending: Arc::clone(&shared_pending),
     };
 
-    let _conn = zbus::connection::Builder::system()?
+    let conn = zbus::connection::Builder::system()?
         .name("org.relago.DaemonService")?
         .serve_at("/org/relago/DaemonService", queue_for_dbus)?
         .build()
         .await?;
+
+    let emitter = SignalEmitter::new(&conn, "/org/relago/DaemonService")?;
 
     // ── Open journal ──────────────────────────────────────────────────────────
 
@@ -97,7 +103,8 @@ pub async fn run() -> anyhow::Result<()> {
                         message: format!("Process crashed with a coredump."),
                     };
 
-                    shared_pending.lock().await.push(modal_data);
+                    emitter.crash_detected(modal_data).await?;
+
                     println!("Crash queued for gnome agent.");
                 }
 
