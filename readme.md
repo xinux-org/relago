@@ -81,18 +81,11 @@ cargo run -- report -o ./my-report -r 500 --nixos-config ~/nixos-config
 cargo run -- reporter
 
 # specify crash details (usually called by a daemon)
-cargo run -- reporter -u nginx.service -e nginx -m "Segmentation fault"
+cargo run -- reporter -u firefox.service -e firefox -m "Segmentation fault"
 
 # -u : systemd unit name
 # -e : executable name
 # -m : crash message
-```
-
-### notify
-
-```bash
-# run the notification system component
-cargo run -- notify
 ```
 
 ## Testing crash detection
