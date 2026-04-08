@@ -84,8 +84,12 @@ let
         Group = cfg.group;
         TimeoutSec = "infinity";
         Restart = "on-failure";
-        WorkingDirectory = cfg.tmp-dir;
+        # WorkingDirectory = cfg.tmp-dir;
         RemainAfterExit = true;
+        ReadWritePaths = [
+          cfg.data-dir
+          cfg.tmp-dir
+        ];
 
         StateDirectory = cfg.user;
         StateDirectoryMode = "0755";
@@ -95,8 +99,8 @@ let
             preStartFullPrivileges = ''
               set -o errexit -o pipefail -o nounset
 
-              ${pkgs.coreutils}/bin/mkdir -p ${cfg.data-dir}
-              ${pkgs.coreutils}/bin/mkdir -p ${cfg.tmp-dir}
+              mkdir -p ${cfg.data-dir}
+              mkdir -p ${cfg.tmp-dir}
 
               ${pkgs.coreutils}/bin/install -d -m 0755 -o ${cfg.user} -g ${cfg.group} ${cfg.data-dir}
               ${pkgs.coreutils}/bin/install -d -m 0755 -o ${cfg.user} -g ${cfg.group} ${cfg.tmp-dir}
