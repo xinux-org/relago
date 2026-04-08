@@ -65,3 +65,26 @@ cargo run -- report -r 50 -o /var/reports
 # Quick diagnostic with last 10 entries
 cargo run -- report -r 10
 ```
+
+### Configure Command
+
+Persist settings to the configuration file.
+
+#### Basic Usage
+
+```bash
+# Set the default report output base directory
+cargo run -- configure --tmp-dir /tmp/relago
+
+# Change the default NixOS configuration path
+cargo run -- configure --nix-config /etc/nixos/xinux-config
+
+# Update the upload server endpoint
+cargo run -- configure --server https://cocomelon.uz
+
+# Set multiple values in one command
+cargo run -- configure \
+  --tmp-dir /tmp/relago \
+  --parallel-compression 4 \
+  --server https://cocomelon.uz
+```
