@@ -1,11 +1,11 @@
 use anyhow::Ok;
-use clap::{ArgMatches, Args, FromArgMatches};
+use clap::{ArgMatches, FromArgMatches};
 use confique::{Config as Conf, Layer};
 use serde::Serialize;
 use state::LocalInitCell;
 use std::io::Write;
 use std::path::PathBuf;
-use std::{fs, io, panic};
+use std::{fs, io};
 
 pub static CONFIG: LocalInitCell<Config> = LocalInitCell::new();
 
@@ -29,7 +29,7 @@ pub struct Config {
     pub server: String,
 }
 
-type ConfigLayer = <Config as Conf>::Layer;
+pub type ConfigLayer = <Config as Conf>::Layer;
 
 macro_rules! set_document_field {
     ($document:expr, $config:expr, $field:ident) => {
@@ -45,10 +45,6 @@ macro_rules! set_document_field {
 impl Config {
     pub fn get_config(path: &str) -> anyhow::Result<Config> {
         Config::from_file(path).map_err(|e| anyhow::anyhow!(e))
-    }
-
-    pub fn get_command() -> clap::Command {
-        ConfigLayer::augment_args(clap::Command::new("configure"))
     }
 
     pub fn get_from_cli(args: &ArgMatches) -> anyhow::Result<ConfigLayer> {

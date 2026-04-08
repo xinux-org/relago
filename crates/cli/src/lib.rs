@@ -1,14 +1,14 @@
-use clap::{arg, command, Arg, ArgAction, Command, Parser};
+use clap::{arg, command, Arg, ArgAction, Args, Command};
 
 use notify::window::{model::App, Modal};
 use std::{env, io::BufRead, process};
 use subprocess::Exec;
-use utils::config::{Config, CONFIG};
+use utils::config::{Config, ConfigLayer, CONFIG};
 
 const CONFIG_FILE: &str = "/var/lib/relago/config.toml";
 
 pub fn run() -> anyhow::Result<()> {
-    match Config::get_config(&CONFIG_FILE) {
+    match Config::get_config(CONFIG_FILE) {
         Ok(config) => {
             CONFIG.set(move || config.clone());
         }
@@ -59,7 +59,9 @@ pub fn run() -> anyhow::Result<()> {
                         .help("Path to NixOS configuration directory (e.g., ~/nix-conf)"),
                 ),
         )
-        .subcommand(Config::get_command())
+        .subcommand(ConfigLayer::augment_args(
+            Command::new("configure").about("Manage configuration via CLI"),
+        ))
         .subcommand(
             Command::new("reporter")
                 .about("Launch crash reporter GUI")
@@ -158,12 +160,11 @@ pub fn run() -> anyhow::Result<()> {
                 .with_args(vec![])
                 .run::<App>(modal);
         }
+        Some(("configure", sub_matches)) => {
+            Config::save_config(CONFIG_FILE, Config::get_from_cli(sub_matches)?)?
+        }
         _ => {
-            if let Some(submatches) = matches.subcommand_matches(Config::get_command().get_name()) {
-                Config::save_config(CONFIG_FILE, Config::get_from_cli(submatches)?)?
-            } else {
-                println!("`None`")
-            }
+            println!("`None`")
         }
     }
 
