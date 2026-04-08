@@ -1,5 +1,4 @@
 use anyhow::Ok;
-use clap::{ArgMatches, FromArgMatches};
 use confique::{Config as Conf, Layer};
 use serde::Serialize;
 use state::LocalInitCell;
@@ -45,10 +44,6 @@ macro_rules! set_document_field {
 impl Config {
     pub fn get_config(path: &str) -> anyhow::Result<Config> {
         Config::from_file(path).map_err(|e| anyhow::anyhow!(e))
-    }
-
-    pub fn get_from_cli(args: &ArgMatches) -> anyhow::Result<ConfigLayer> {
-        ConfigLayer::from_arg_matches(args).map_err(|e| anyhow::anyhow!(e))
     }
 
     pub fn save_config(path: &str, config: ConfigLayer) -> anyhow::Result<()> {

@@ -1,4 +1,4 @@
-use clap::{arg, command, Arg, ArgAction, Args, Command};
+use clap::{arg, command, Arg, ArgAction, Args, Command, FromArgMatches};
 
 use notify::window::{model::App, Modal};
 use std::{env, io::BufRead, process};
@@ -161,7 +161,7 @@ pub fn run() -> anyhow::Result<()> {
                 .run::<App>(modal);
         }
         Some(("configure", sub_matches)) => {
-            Config::save_config(CONFIG_FILE, Config::get_from_cli(sub_matches)?)?
+            Config::save_config(CONFIG_FILE, ConfigLayer::from_arg_matches(sub_matches)?)?
         }
         _ => {
             println!("`None`")
