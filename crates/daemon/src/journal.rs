@@ -1,22 +1,27 @@
 //! Follow future journal log messages and print up to 100 of them.
 use anyhow::anyhow;
-use gnome_relago::start_listener;
-use std::process::Command;
-use std::sync::mpsc;
-use std::thread;
-use std::time::Duration;
-use systemd::journal::{self, Journal, JournalEntryField, JournalSeek};
-use tracing::error;
+use gnome_relago::window::Modal;
+use systemd::journal::{self, JournalSeek};
+use zbus::{conn, proxy};
 
 use crate::crash::{CoredumpCrash, Crash, OomCrash, ServiceFailureCrash};
 use crate::registry::PluginRegistry;
+
+#[proxy(
+    interface = "org.relago.ReportHandler",
+    default_service = "org.relago.ReportService",
+    default_path = "/org/relago/ReportService"
+)]
+trait ReportService {
+    async fn report(&self, data: Modal) -> zbus::Result<()>;
+}
 
 #[derive(Debug)]
 enum ReportRes {
     Done,
 }
 
-pub fn run() -> anyhow::Result<()> {
+pub async fn run() -> anyhow::Result<()> {
     let mut registry = PluginRegistry::new();
     registry
         .register(
@@ -42,7 +47,7 @@ pub fn run() -> anyhow::Result<()> {
         .seek(JournalSeek::Tail)
         .map_err(|e| anyhow!("journal seek failed: {e}"))?;
 
-    journal.previous()?;
+    // journal.previous()?;
 
     registry.install_filters(&mut journal)?;
 
@@ -57,13 +62,27 @@ pub fn run() -> anyhow::Result<()> {
 
             Ok(_) => match registry.run(&mut journal) {
                 Some(Crash::Coredump(ref r)) => {
-                    // let _ = modal(
-                    //     r.unit.as_deref().unwrap_or("unknown"),
-                    //     &r.exe,
-                    //     "Coredump detected",
-                    // );
-                    println!("Yebat, crash");
-                    println!("{:?}", r);
+                    let modal_data = Modal {
+                        unit: r.unit.as_deref().unwrap_or("unknown").to_string(),
+                        exe: r.exe.clone(),
+                        message: format!("Process crashed with a coredump."),
+                    };
+
+                    tokio::spawn(async move {
+                        match zbus::Connection::session().await {
+                            Ok(conn) => {
+                                let proxy = ReportServiceProxy::new(&conn).await.unwrap();
+                                if let Err(e) = proxy.report(modal_data).await {
+                                    eprintln!("Failed to send crash report to GUI: {}", e);
+                                } else {
+                                    println!("Crash report sent to Gnome service.");
+                                }
+                            }
+                            Err(e) => {
+                                eprintln!("Could not connect to Session Bus: {}. Is a GUI session running?", e);
+                            }
+                        }
+                    });
                 }
 
                 Some(Crash::ServiceFailure(r)) => {
@@ -84,4 +103,6 @@ pub fn run() -> anyhow::Result<()> {
             }
         }
     }
+
+    // Ok(())
 }

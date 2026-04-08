@@ -15,6 +15,32 @@ let
   # Flake shipped default binary
   fpkg = flake.packages.${pkgs.stdenv.hostPlatform.system}.default;
 
+  dpkgs = [
+    # Policy for daemon
+    (pkgs.writeTextDir "share/dbus-1/system.d/org.relago.DaemonService.conf" ''
+      <!DOCTYPE busconfig PUBLIC "-//freedesktop//DTD D-BUS Bus Configuration 1.0//EN"
+       "http://www.freedesktop.org/standards/dbus/1.0/busconfig.dtd">
+      <busconfig>
+        <policy user="${cfg.user}">
+          <allow own="org.relago.DaemonService"/>
+          <allow send_destination="org.relago.DaemonService"/>
+        </policy>
+        <policy context="default">
+          <allow send_destination="org.relago.DaemonService"/>
+          <allow receive_sender="org.relago.DaemonService"/>
+        </policy>
+      </busconfig>
+    '')
+
+    # Policy for Gnome Agent
+    (pkgs.writeTextDir "share/dbus-1/services/org.relago.ReportService.service" ''
+      [D-BUS Service]
+      Name=org.relago.ReportService
+      Exec=${lib.getBin fpkg}/bin/relago gnome-relago
+      SystemdService=relago-gnome.service
+    '')
+  ];
+
   # Toml management
   toml = pkgs.formats.toml { };
 
@@ -29,7 +55,7 @@ let
 
   # Systemd services
   service = lib.mkIf cfg.enable {
-    services.dbus.packages = [ fpkg ];
+    services.dbus.packages = dpkgs;
 
     users.users.${cfg.user} = {
       description = "relago user";
@@ -50,7 +76,7 @@ let
 
     systemd.services."${manifest.name}-config" = {
       wantedBy = [ "multi-user.target" ];
-      partOf = [ "${manifest.name}.target" ];
+      partOf = [ "${manifest.name}-daemon.target" ];
       path = with pkgs; [ jq ];
 
       serviceConfig = {
@@ -59,22 +85,22 @@ let
         Group = cfg.group;
         TimeoutSec = "infinity";
         Restart = "on-failure";
-        WorkingDirectory = "/tmp";
+        WorkingDirectory = cfg.tmp-dir;
         RemainAfterExit = true;
 
-        StateDirectory = "relago";
-        StateDirectoryMode = "0750";
+        StateDirectory = cfg.user;
+        StateDirectoryMode = "0755";
 
         ExecStartPre =
           let
             preStartFullPrivileges = ''
               set -o errexit -o pipefail -o nounset
-              shopt -s dotglob nullglob inherit_errexit
+              ${pkgs.coreutils}/bin/install -d -m 0755 -o ${cfg.user} -g ${cfg.group} ${cfg.data-dir}
+              ${pkgs.coreutils}/bin/install -d -m 0755 -o ${cfg.user} -g ${cfg.group} ${cfg.tmp-dir}
+              ${pkgs.coreutils}/bin/install -m 0644 ${toml-config} ${cfg.data-dir}/config.toml
 
-              mkdir -p '${cfg.data-dir}'
-
-              chown -R --no-dereference '${cfg.user}':'${cfg.group}' '${cfg.data-dir}'
-              chmod -R u+rwX,g+rX,o-rwx '${cfg.data-dir}'
+              chmod 0640 ${cfg.data-dir}/config.toml
+              chgrp ${cfg.group} ${cfg.data-dir}/config.toml
             '';
           in
           "+${pkgs.writeShellScript "${manifest.name}-pre-start-full-privileges" preStartFullPrivileges}";
@@ -91,7 +117,46 @@ let
       };
     };
 
-    systemd.services."${manifest.name}" = {
+    systemd.user.services."${manifest.name}-gnome" = {
+      description = "Relago GNOME UI Agent";
+      wantedBy = [ "default.target" ];
+      partOf = [ "graphical-session.target" ];
+      after = [ "${manifest.name}-daemon.service" ];
+
+      serviceConfig = {
+        Type = "dbus";
+        BusName = "org.relago.ReportService";
+        ExecStart = "${lib.getBin fpkg}/bin/relago gnome-relago";
+        Restart = "on-failure";
+
+        StateDirectory = cfg.user;
+        StateDirectoryMode = "0755";
+
+        PrivateDevices = false;
+        PrivateTmp = true;
+        PrivateUsers = false;
+        ProtectClock = false;
+        ProtectControlGroups = false;
+        ProtectHome = false;
+        ProtectHostname = false;
+        ProtectKernelLogs = false;
+        ProtectKernelTunables = false;
+        ProtectSystem = "no";
+        ReadOnlyPaths = [ "/" ];
+        ReadWritePaths = [
+          cfg.data-dir
+          cfg.tmp-dir
+        ];
+        RemoveIPC = true;
+        RestrictNamespaces = false;
+        RestrictRealtime = false;
+        RestrictSUIDSGID = true;
+        SystemCallArchitectures = "native";
+        UMask = "0022";
+      };
+    };
+
+    systemd.services."${manifest.name}-daemon" = {
       description = "Relago daemon";
 
       after = [
@@ -101,24 +166,16 @@ let
       requires = [ "${manifest.name}-config.service" ];
       wantedBy = [
         "multi-user.target"
-
       ];
       wants = [
         "network-online.target"
-        "graphical.target"
       ];
       path = [ fpkg ];
 
-      environment = {
-        DISPLAY = ":0";
-        WAYLAND_DISPLAY = "wayland-0";
-        XDG_RUNTIME_DIR = "/run/user/1000";
-      };
-
       serviceConfig = {
-        # We need to enable dbus later
         # Type = "dbus";
         # BusName = "org.freedesktop.problems.daemon";
+        Type = "simple";
 
         User = cfg.user;
         Group = cfg.group;
@@ -127,42 +184,29 @@ let
         ExecReload = "${pkgs.coreutils}/bin/kill -s HUP $MAINPID";
         ReadWritePaths = [
           cfg.data-dir
+          cfg.tmp-dir
         ];
 
         StateDirectory = cfg.user;
-        StateDirectoryMode = "0750";
+        StateDirectoryMode = "0755";
 
-        CapabilityBoundingSet = [
-          "AF_NETLINK"
-          "AF_INET"
-          "AF_INET6"
-        ];
-        DeviceAllow = [ "/dev/stdin r" ];
-        DevicePolicy = "strict";
-        LockPersonality = true;
         PrivateDevices = false;
         PrivateTmp = true;
         PrivateUsers = false;
-        ProtectClock = true;
-        ProtectControlGroups = true;
-        ProtectHome = true;
-        ProtectHostname = true;
-        ProtectKernelLogs = true;
-        ProtectKernelTunables = true;
-        ProtectSystem = "strict";
+        ProtectClock = false;
+        ProtectControlGroups = false;
+        ProtectHome = false;
+        ProtectHostname = false;
+        ProtectKernelLogs = false;
+        ProtectKernelTunables = false;
+        ProtectSystem = "no";
         ReadOnlyPaths = [ "/" ];
         RemoveIPC = true;
         RestrictNamespaces = false;
-        RestrictRealtime = true;
+        RestrictRealtime = false;
         RestrictSUIDSGID = true;
         SystemCallArchitectures = "native";
-        SystemCallFilter = [
-          "@system-service"
-          "~@privileged"
-          "~@resources"
-          "@pkey"
-        ];
-        UMask = "0027";
+        UMask = "0022";
       };
     };
   };

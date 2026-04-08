@@ -21,6 +21,6 @@ anyhow.workspace = true
 report = { path = "../report" }
 utils = { path = "../utils" }
 tokio = "1.50.0"
-zbus = { version = "5.14.0", features = [ "bus-impl" ] }
+zbus.workspace = true
 futures-util.workspace = true
 notify-rust = "4.14.0"

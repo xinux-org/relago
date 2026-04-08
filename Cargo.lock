@@ -704,9 +704,11 @@ dependencies = [
  "serde",
  "serde_json",
  "systemd",
+ "tokio",
  "tracing",
  "tracing-subscriber",
  "utils",
+ "zbus",
 ]
 
 [[package]]

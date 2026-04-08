@@ -44,6 +44,7 @@ relm4 = {version = "0.9.1", features=["macros", "libadwaita", "gnome_47"]}
 futures-util = "0.3.32"
 proc-macro2 = "1.0"
 quote       = "1"
+zbus = { version = "5.14.0", features = [ "bus-impl" ] }
 # codegen-units = 1
 # incremental = true
 # lto = true

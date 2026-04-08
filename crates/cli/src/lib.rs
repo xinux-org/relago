@@ -1,5 +1,6 @@
 use clap::{arg, command, Arg, ArgAction, Command};
 
+use daemon::journal;
 use gnome_relago::{
     start_listener,
     window::{model::App, Modal},
@@ -102,7 +103,18 @@ pub fn run() -> anyhow::Result<()> {
         }
         Some(("daemon", sub_matches)) => {
             println!("Relago daemon application is started without fuckery!!!");
-            let _ = daemon::journal::run();
+            let runtime = tokio::runtime::Runtime::new()?;
+
+            runtime.block_on(async {
+                match journal::run().await {
+                    Ok(_) => {
+                        println!("Started");
+                    }
+                    Err(e) => {
+                        eprintln!("Daemon error: {}", e);
+                    }
+                }
+            });
         }
         Some(("gnome-relago", _sub_matches)) => {
             let runtime = tokio::runtime::Runtime::new()?;
