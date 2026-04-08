@@ -7,7 +7,7 @@ members = [
   "crates/daemon",
   "crates/report",
   "crates/utils",
-  "crates/gnome-relago",
+  "crates/gui",
   "crates/crash-event",
 ]
 

@@ -26,7 +26,7 @@ pub async fn start_listener() -> Result<(), Box<dyn Error>> {
 
     let mut stream = proxy.receive_crash_detected().await?;
 
-    println!("Agent is idling nax");
+    println!("Agent is idling");
 
     while let Some(signal) = stream.next().await {
         match signal.args() {

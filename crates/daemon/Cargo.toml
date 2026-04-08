@@ -22,6 +22,6 @@ utils = { path = "../utils" }
 dbus-crossroads = { workspace = true }
 nom = { workspace = true }
 crash-event = { path = "../crash-event" }
-gnome_relago ={ path = "../gnome-relago"}
+gui ={ path = "../gui"}
 zbus.workspace = true
 tokio = "1.51.0"

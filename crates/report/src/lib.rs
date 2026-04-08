@@ -37,9 +37,6 @@ pub fn create_report(
     nixos_config_path: Option<&str>,
     recent_entries: Option<usize>,
 ) -> Result<Report, ReportError> {
-    println!("jaaalaaaaaab");
-    println!("{:?}", output_dir);
-    println!("Jalaaaaaaab2");
     let timestamp = chrono::Local::now().format("%Y-%m-%d_%H-%M-%S");
     let report_dir = PathBuf::from(&output_dir).join(format!("report_{}", timestamp));
 

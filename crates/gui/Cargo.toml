@@ -1,5 +1,5 @@
 [package]
-name = "gnome_relago"
+name = "gui"
 authors.workspace = true
 edition.workspace = true
 version.workspace = true
@@ -8,7 +8,7 @@ homepage.workspace = true
 repository.workspace = true
 
 [lib]
-name = "gnome_relago"
+name = "gui"
 path = "src/lib.rs"
 
 [dependencies]

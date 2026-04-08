@@ -1,7 +1,7 @@
 use clap::{arg, command, Arg, ArgAction, Command};
 
 use daemon::journal;
-use gnome_relago::start_listener;
+use gui::start_listener;
 use report;
 use std::{env, fs, io::BufRead, path::PathBuf, process};
 use subprocess::Exec;
@@ -36,7 +36,7 @@ pub fn run() -> anyhow::Result<()> {
                 .arg(Arg::new("exec").action(ArgAction::Append)),
         )
         .subcommand(Command::new("daemon").about("Run daemon").arg(arg!([NAME])))
-        .subcommand(Command::new("gnome-relago").about("Run notification"))
+        .subcommand(Command::new("gui").about("Run notification-report"))
         .subcommand(
             Command::new("report")
                 .about("Report journal entries to JSON file")
@@ -108,7 +108,7 @@ pub fn run() -> anyhow::Result<()> {
                 }
             });
         }
-        Some(("gnome-relago", _sub_matches)) => {
+        Some(("gui", _sub_matches)) => {
             let runtime = tokio::runtime::Runtime::new()?;
 
             runtime.block_on(async {

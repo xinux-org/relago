@@ -130,7 +130,7 @@ let
         # Type = "dbus";
         # BusName = "org.relago.ReportService";
         Type = "simple";
-        ExecStart = "${lib.getBin fpkg}/bin/relago gnome-relago";
+        ExecStart = "${lib.getBin fpkg}/bin/relago gui";
         Restart = "on-failure";
         RestartSec = 5;
 

@@ -2,7 +2,7 @@
 use std::sync::Arc;
 
 use anyhow::anyhow;
-use gnome_relago::window::Modal;
+use gui::window::Modal;
 use systemd::journal::{self, JournalSeek};
 use tokio::sync::Mutex;
 use zbus::interface;

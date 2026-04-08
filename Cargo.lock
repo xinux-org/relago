@@ -520,7 +520,7 @@ dependencies = [
  "daemon",
  "dhat",
  "futures-util",
- "gnome_relago",
+ "gui",
  "pprof2",
  "relm4",
  "report",
@@ -696,7 +696,7 @@ dependencies = [
  "crash-event",
  "dbus",
  "dbus-crossroads",
- "gnome_relago",
+ "gui",
  "libsystemd-sys",
  "nom",
  "proc-macro2",
@@ -1362,24 +1362,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "gnome_relago"
-version = "0.0.2"
-dependencies = [
- "anyhow",
- "futures-util",
- "notify-rust",
- "relm4",
- "relm4-components",
- "report",
- "reqwest",
- "serde",
- "serde_json",
- "tokio",
- "utils",
- "zbus",
-]
-
-[[package]]
 name = "gobject-sys"
 version = "0.20.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1494,6 +1476,24 @@ dependencies = [
  "libc",
  "pango-sys",
  "system-deps",
+]
+
+[[package]]
+name = "gui"
+version = "0.0.2"
+dependencies = [
+ "anyhow",
+ "futures-util",
+ "notify-rust",
+ "relm4",
+ "relm4-components",
+ "report",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "tokio",
+ "utils",
+ "zbus",
 ]
 
 [[package]]
