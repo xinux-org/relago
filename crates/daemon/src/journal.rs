@@ -1,19 +1,36 @@
 //! Follow future journal log messages and print up to 100 of them.
+use std::sync::Arc;
+
 use anyhow::anyhow;
 use gnome_relago::window::Modal;
 use systemd::journal::{self, JournalSeek};
-use zbus::{conn, proxy};
+use tokio::sync::Mutex;
+use zbus::{conn, interface, proxy};
 
 use crate::crash::{CoredumpCrash, Crash, OomCrash, ServiceFailureCrash};
 use crate::registry::PluginRegistry;
 
-#[proxy(
-    interface = "org.relago.ReportHandler",
-    default_service = "org.relago.ReportService",
-    default_path = "/org/relago/ReportService"
-)]
-trait ReportService {
-    async fn report(&self, data: Modal) -> zbus::Result<()>;
+pub struct CrashQueue {
+    pub pending: Arc<Mutex<Vec<Modal>>>,
+}
+
+impl Clone for CrashQueue {
+    fn clone(&self) -> Self {
+        Self {
+            pending: Arc::clone(&self.pending),
+        }
+    }
+}
+
+#[interface(name = "org.relago.DaemonService")]
+impl CrashQueue {
+    async fn pop_crash(&self) -> Option<Modal> {
+        self.pending.lock().await.pop()
+    }
+
+    async fn has_pending(&self) -> bool {
+        !self.pending.lock().await.is_empty()
+    }
 }
 
 #[derive(Debug)]
@@ -36,6 +53,18 @@ pub async fn run() -> anyhow::Result<()> {
         )
         .register(OomCrash::filters(), OomCrash::detect, Crash::Oom);
 
+    let shared_pending: Arc<Mutex<Vec<Modal>>> = Arc::new(Mutex::new(vec![]));
+
+    let queue_for_dbus = CrashQueue {
+        pending: Arc::clone(&shared_pending),
+    };
+
+    let _conn = zbus::connection::Builder::system()?
+        .name("org.relago.DaemonService")?
+        .serve_at("/org/relago/DaemonService", queue_for_dbus)?
+        .build()
+        .await?;
+
     // ── Open journal ──────────────────────────────────────────────────────────
 
     let mut journal = journal::OpenOptions::default()
@@ -47,7 +76,7 @@ pub async fn run() -> anyhow::Result<()> {
         .seek(JournalSeek::Tail)
         .map_err(|e| anyhow!("journal seek failed: {e}"))?;
 
-    // journal.previous()?;
+    journal.previous()?;
 
     registry.install_filters(&mut journal)?;
 
@@ -68,21 +97,8 @@ pub async fn run() -> anyhow::Result<()> {
                         message: format!("Process crashed with a coredump."),
                     };
 
-                    tokio::spawn(async move {
-                        match zbus::Connection::session().await {
-                            Ok(conn) => {
-                                let proxy = ReportServiceProxy::new(&conn).await.unwrap();
-                                if let Err(e) = proxy.report(modal_data).await {
-                                    eprintln!("Failed to send crash report to GUI: {}", e);
-                                } else {
-                                    println!("Crash report sent to Gnome service.");
-                                }
-                            }
-                            Err(e) => {
-                                eprintln!("Could not connect to Session Bus: {}. Is a GUI session running?", e);
-                            }
-                        }
-                    });
+                    shared_pending.lock().await.push(modal_data);
+                    println!("Crash queued for gnome agent.");
                 }
 
                 Some(Crash::ServiceFailure(r)) => {

@@ -1,10 +1,7 @@
 use clap::{arg, command, Arg, ArgAction, Command};
 
 use daemon::journal;
-use gnome_relago::{
-    start_listener,
-    window::{model::App, Modal},
-};
+use gnome_relago::start_listener;
 use report;
 use std::{
     env, fs,
@@ -124,8 +121,6 @@ pub fn run() -> anyhow::Result<()> {
 
                 match start_listener().await {
                     Ok(_conn) => {
-                        println!("D-Bus service 'org.relago.ReportService' is active.");
-
                         // CRITICAL: This keeps the block_on from returning.
                         // Without this, the program would exit immediately.
                         std::future::pending::<()>().await;

@@ -23,8 +23,13 @@ let
       <busconfig>
         <policy user="${cfg.user}">
           <allow own="org.relago.DaemonService"/>
-          <allow send_destination="org.relago.DaemonService"/>
         </policy>
+
+        <policy group="${cfg.group}">
+          <allow send_destination="org.relago.DaemonService"/>
+          <allow receive_sender="org.relago.DaemonService"/>
+        </policy>
+
         <policy context="default">
           <allow send_destination="org.relago.DaemonService"/>
           <allow receive_sender="org.relago.DaemonService"/>
@@ -124,8 +129,9 @@ let
       after = [ "${manifest.name}-daemon.service" ];
 
       serviceConfig = {
-        Type = "dbus";
-        BusName = "org.relago.ReportService";
+        # Type = "dbus";
+        # BusName = "org.relago.ReportService";
+        Type = "simple";
         ExecStart = "${lib.getBin fpkg}/bin/relago gnome-relago";
         Restart = "on-failure";
 
@@ -173,9 +179,9 @@ let
       path = [ fpkg ];
 
       serviceConfig = {
-        # Type = "dbus";
-        # BusName = "org.freedesktop.problems.daemon";
-        Type = "simple";
+        Type = "dbus";
+        BusName = "org.relago.DaemonService";
+        # Type = "simple";
 
         User = cfg.user;
         Group = cfg.group;
