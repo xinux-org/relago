@@ -3,7 +3,7 @@ pub mod info;
 
 use compress as cmp;
 use std::fs::{self, File};
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use thiserror::Error;
 use utils::config::CONFIG;
 
@@ -79,7 +79,7 @@ pub fn create_report(
         } else {
             println!("Copying NixOS configuration from: {}", src.display());
             let dest = report_dir.join("nixos-config");
-            info::copy_dir_recursive(&src, &dest);
+            let _ = info::copy_dir_recursive(&src, &dest);
             println!("NixOS config copied: {}", dest.display());
         }
     }

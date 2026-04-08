@@ -1,5 +1,5 @@
 use super::messages::CmdOut;
-use relm4::gtk::{self, prelude::*};
+use relm4::gtk::{self};
 use serde::{Deserialize, Serialize};
 use zbus::zvariant::Type;
 

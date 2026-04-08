@@ -5,7 +5,7 @@ use anyhow::anyhow;
 use gnome_relago::window::Modal;
 use systemd::journal::{self, JournalSeek};
 use tokio::sync::Mutex;
-use zbus::{conn, interface, proxy};
+use zbus::interface;
 
 use crate::crash::{CoredumpCrash, Crash, OomCrash, ServiceFailureCrash};
 use crate::registry::PluginRegistry;

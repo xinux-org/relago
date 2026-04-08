@@ -3,12 +3,7 @@ use clap::{arg, command, Arg, ArgAction, Command};
 use daemon::journal;
 use gnome_relago::start_listener;
 use report;
-use std::{
-    env, fs,
-    io::{BufRead, ErrorKind},
-    path::PathBuf,
-    process,
-};
+use std::{env, fs, io::BufRead, path::PathBuf, process};
 use subprocess::Exec;
 use utils::config::{Config, CONFIG};
 
@@ -98,7 +93,7 @@ pub fn run() -> anyhow::Result<()> {
             // report::create_report(rep, nixos_config, recent_entries)?;
             report::run(rep.as_str(), nixos_config, recent_entries)?
         }
-        Some(("daemon", sub_matches)) => {
+        Some(("daemon", _sub_matches)) => {
             println!("Relago daemon application is started without fuckery!!!");
             let runtime = tokio::runtime::Runtime::new()?;
 

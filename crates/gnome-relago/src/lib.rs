@@ -46,7 +46,7 @@ pub async fn start_listener() -> Result<conn::Connection, Box<dyn Error>> {
                             println!("Mana yana Option error");
                         }
                     },
-                    Err(e) => {
+                    Err(_e) => {
                         println!("Ma naxuy error");
                     } // call your existing notification/window code here
                 }
