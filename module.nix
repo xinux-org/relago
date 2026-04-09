@@ -71,43 +71,37 @@ let
       ${cfg.group} = { };
     };
 
+    systemd.tmpfiles.rules = [
+      "d ${cfg.data-dir} 0770 ${cfg.user} ${cfg.group} -"
+      "d ${cfg.tmp-dir}  0770 ${cfg.user} ${cfg.group} -"
+    ];
+
     systemd.targets."${manifest.name}" = { };
 
     systemd.services."${manifest.name}-config" = {
       wantedBy = [ "multi-user.target" ];
-      partOf = [ "${manifest.name}-daemon.target" ];
-      path = with pkgs; [ jq ];
+      after = [ "systemd-tmpfiles-setup.service" ];
+      requires = [ "systemd-tmpfiles-setup.service" ];
 
       serviceConfig = {
         Type = "oneshot";
         User = cfg.user;
         Group = cfg.group;
-        TimeoutSec = "infinity";
         Restart = "on-failure";
-        # WorkingDirectory = cfg.tmp-dir;
+        RestartSec = "2s";
         RemainAfterExit = true;
+
         ReadWritePaths = [
           cfg.data-dir
-          cfg.tmp-dir
         ];
-
-        StateDirectory = cfg.user;
-        StateDirectoryMode = "0755";
 
         ExecStartPre =
           let
             preStartFullPrivileges = ''
               set -o errexit -o pipefail -o nounset
-
-              mkdir -p ${cfg.data-dir}
-              mkdir -p ${cfg.tmp-dir}
-
-              ${pkgs.coreutils}/bin/install -d -m 0755 -o ${cfg.user} -g ${cfg.group} ${cfg.data-dir}
-              ${pkgs.coreutils}/bin/install -d -m 0755 -o ${cfg.user} -g ${cfg.group} ${cfg.tmp-dir}
-              ${pkgs.coreutils}/bin/install -m 0644 ${toml-config} ${cfg.data-dir}/config.toml
-
-              chmod 0640 ${cfg.data-dir}/config.toml
-              chgrp ${cfg.group} ${cfg.data-dir}/config.toml
+              mkdir -p ${cfg.data-dir} ${cfg.tmp-dir}
+              ${pkgs.coreutils}/bin/install -d -m 0770 -o ${cfg.user} -g ${cfg.group} ${cfg.data-dir}
+              ${pkgs.coreutils}/bin/install -d -m 0770 -o ${cfg.user} -g ${cfg.group} ${cfg.tmp-dir}
             '';
           in
           "+${pkgs.writeShellScript "${manifest.name}-pre-start-full-privileges" preStartFullPrivileges}";
@@ -115,22 +109,21 @@ let
         ExecStart = pkgs.writeShellScript "${manifest.name}-config" ''
           set -o errexit -o pipefail -o nounset
           shopt -s inherit_errexit
-
           umask u=rwx,g=rx,o=
-
-          # Write configuration file for server
-          cp -f ${toml-config} ${cfg.data-dir}/config.toml
+          ${pkgs.coreutils}/bin/install -m 0640 -o ${cfg.user} -g ${cfg.group} \
+            ${toml-config} ${cfg.data-dir}/config.toml
         '';
       };
     };
 
-    systemd.user.services."${manifest.name}-gnome" = {
+    systemd.user.services."${manifest.name}-gui" = {
       description = "Relago GNOME UI Agent";
       wantedBy = [ "default.target" ];
       partOf = [ "graphical-session.target" ];
       after = [
-        "network.target"
         "graphical-session.target"
+        "network.target"
+        "dbus.socket"
       ];
       restartTriggers = [ fpkg ];
 
@@ -141,9 +134,12 @@ let
         ExecStart = "${lib.getBin fpkg}/bin/relago gui";
         Restart = "on-failure";
         RestartSec = 5;
+        TimeoutStartSec = 30;
 
-        StateDirectory = cfg.user;
-        StateDirectoryMode = "0755";
+        ReadWritePaths = [
+          cfg.data-dir
+          cfg.tmp-dir
+        ];
 
         PrivateDevices = false;
         PrivateTmp = true;
@@ -156,22 +152,18 @@ let
         ProtectKernelTunables = false;
         ProtectSystem = "no";
         ReadOnlyPaths = [ "/" ];
-        ReadWritePaths = [
-          cfg.data-dir
-          cfg.tmp-dir
-        ];
         RemoveIPC = true;
         RestrictNamespaces = false;
         RestrictRealtime = false;
         RestrictSUIDSGID = true;
         SystemCallArchitectures = "native";
+        # FIXME: change to whatever you think needeed
         UMask = "0022";
       };
     };
 
     systemd.services."${manifest.name}-daemon" = {
       description = "Relago daemon";
-
       after = [
         "network.target"
         "${manifest.name}-config.service"
@@ -184,6 +176,10 @@ let
         "network-online.target"
       ];
       path = [ fpkg ];
+      restartTriggers = [
+        fpkg
+        toml-config
+      ];
 
       serviceConfig = {
         Type = "dbus";
@@ -192,16 +188,14 @@ let
 
         User = cfg.user;
         Group = cfg.group;
-        Restart = "always";
+        Restart = "on-failure";
+        RestartSec = "5s";
         ExecStart = "${lib.getBin fpkg}/bin/relago daemon";
         ExecReload = "${pkgs.coreutils}/bin/kill -s HUP $MAINPID";
         ReadWritePaths = [
           cfg.data-dir
           cfg.tmp-dir
         ];
-
-        StateDirectory = cfg.user;
-        StateDirectoryMode = "0755";
 
         PrivateDevices = false;
         PrivateTmp = true;
