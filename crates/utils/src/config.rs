@@ -1,4 +1,4 @@
-use confique::{Config as Conf, Layer};
+use confique::Layer;
 use serde::Serialize;
 use state::LocalInitCell;
 use std::io::Write;
@@ -7,7 +7,7 @@ use std::{fs, io};
 
 pub static CONFIG: LocalInitCell<Config> = LocalInitCell::new();
 
-#[derive(Conf, Clone, Debug)]
+#[derive(confique::Config, Clone, Debug)]
 #[config(layer_attr(derive(clap::Args, Serialize)))]
 pub struct Config {
     #[config(default = 4)]
@@ -27,7 +27,7 @@ pub struct Config {
     pub server: String,
 }
 
-pub type ConfigLayer = <Config as Conf>::Layer;
+pub type ConfigLayer = <Config as confique::Config>::Layer;
 
 macro_rules! set_document_field {
     ($document:expr, $config:expr, $field:ident) => {
@@ -42,7 +42,7 @@ macro_rules! set_document_field {
 
 impl Config {
     pub fn get_config(path: impl Into<PathBuf>) -> anyhow::Result<Config> {
-        Config::from_file(path).map_err(|e| anyhow::anyhow!(e))
+        <Config as confique::Config>::from_file(path).map_err(|e| anyhow::anyhow!(e))
     }
 
     pub fn save_config(path: impl AsRef<Path>, config: ConfigLayer) -> anyhow::Result<()> {
