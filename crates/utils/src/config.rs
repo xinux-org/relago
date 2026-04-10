@@ -1,9 +1,8 @@
-use anyhow::Ok;
 use confique::{Config as Conf, Layer};
 use serde::Serialize;
 use state::LocalInitCell;
 use std::io::Write;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::{fs, io};
 
 pub static CONFIG: LocalInitCell<Config> = LocalInitCell::new();
@@ -42,18 +41,22 @@ macro_rules! set_document_field {
 }
 
 impl Config {
-    pub fn get_config(path: &str) -> anyhow::Result<Config> {
+    pub fn get_config(path: impl Into<PathBuf>) -> anyhow::Result<Config> {
         Config::from_file(path).map_err(|e| anyhow::anyhow!(e))
     }
 
-    pub fn save_config(path: &str, config: ConfigLayer) -> anyhow::Result<()> {
+    pub fn save_config(path: impl AsRef<Path>, config: ConfigLayer) -> anyhow::Result<()> {
+        let path = &PathBuf::from(path.as_ref());
         let contents: io::Result<String> = match fs::read_to_string(path) {
             io::Result::Ok(content) => io::Result::Ok(content),
             io::Result::Err(err) => match err.kind() {
                 io::ErrorKind::NotFound => {
                     let contents = toml_edit::ser::to_string(&ConfigLayer::default_values())?;
 
-                    fs::create_dir_all(path)?;
+                    if let Some(parent) = path.parent() {
+                        fs::create_dir_all(parent)?;
+                    }
+
                     fs::File::create_new(path)?.write_all(contents.as_bytes())?;
 
                     io::Result::Ok(contents)
