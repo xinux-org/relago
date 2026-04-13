@@ -3505,7 +3505,7 @@ checksum = "385a6cb71ab9ab790c5fe8d67f1645e6c450a7ce006a33de03daa956cf70a496"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.117",
+ "syn",
 ]
 
 [[package]]
@@ -3821,8 +3821,11 @@ dependencies = [
  "confique",
  "dbus",
  "dbus-crossroads",
+ "proc-macro2",
+ "quote",
  "serde",
  "state",
+ "syn",
  "systemd",
  "toml_edit",
 ]

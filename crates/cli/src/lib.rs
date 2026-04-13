@@ -4,7 +4,6 @@ use daemon::journal;
 use gui::start_listener;
 use report;
 use std::{env, fs, io::BufRead, path::PathBuf, process};
-use notify::window::{model::App, Modal};
 use subprocess::Exec;
 use utils::config::{Config, ConfigLayer, CONFIG};
 
