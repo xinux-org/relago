@@ -1,18 +1,19 @@
-use clap::{arg, command, Arg, ArgAction, Command};
+use clap::{arg, command, Arg, ArgAction, Args, Command, FromArgMatches};
 
 use daemon::journal;
 use gui::start_listener;
 use report;
 use std::{env, fs, io::BufRead, path::PathBuf, process};
+use notify::window::{model::App, Modal};
 use subprocess::Exec;
-use utils::config::{Config, CONFIG};
+use utils::config::{Config, ConfigLayer, CONFIG};
 
 const CONFIG_FILE: &str = "/var/lib/relago/config.toml";
 
 pub fn run() -> anyhow::Result<()> {
-    match fs::File::open(&CONFIG_FILE) {
-        Ok(_) => {
-            CONFIG.set(move || Config::get_config(PathBuf::from(&CONFIG_FILE)));
+    match Config::get_config(CONFIG_FILE) {
+        Ok(config) => {
+            CONFIG.set(move || config.clone());
         }
         Err(e) => {
             println!("An error occurred: {}", e);
@@ -59,6 +60,37 @@ pub fn run() -> anyhow::Result<()> {
                         .long("nixos-config")
                         .value_name("PATH")
                         .help("Path to NixOS configuration directory (e.g., ~/nix-conf)"),
+                ),
+        )
+        .subcommand(ConfigLayer::augment_args(
+            Command::new("configure").about("Manage configuration via CLI"),
+        ))
+        .subcommand(
+            Command::new("reporter")
+                .about("Launch crash reporter GUI")
+                .arg(
+                    Arg::new("unit")
+                        .short('u')
+                        .long("unit")
+                        .value_name("UNIT")
+                        .help("Unit name")
+                        .default_value("test"),
+                )
+                .arg(
+                    Arg::new("exe")
+                        .short('e')
+                        .long("exe")
+                        .value_name("EXE")
+                        .help("Executable name")
+                        .default_value("test"),
+                )
+                .arg(
+                    Arg::new("message")
+                        .short('m')
+                        .long("message")
+                        .value_name("MESSAGE")
+                        .help("Crash message")
+                        .default_value("Coredump"),
                 ),
         )
         .get_matches();
@@ -127,7 +159,12 @@ pub fn run() -> anyhow::Result<()> {
                 }
             });
         }
-        _ => println!("`None`"),
+        Some(("configure", sub_matches)) => {
+            Config::save_config(CONFIG_FILE, ConfigLayer::from_arg_matches(sub_matches)?)?
+        }
+        _ => {
+            println!("`None`")
+        }
     }
 
     Ok(())
