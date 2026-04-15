@@ -30,6 +30,8 @@ craneLib.devShell {
     pkg-config
     dbus.dev
     systemd.dev
+    nettle
+    sqlite
 
     gtk4
     libadwaita

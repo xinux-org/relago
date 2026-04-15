@@ -28,10 +28,6 @@ authors = ["Xinux Developers <support@oss.uzinfocom.uz>"]
 # Shared dependencies across crates
 [workspace.dependencies]
 serde = { version = "1", features = ["derive"] }
-# tokio = { version = "1.38.0", features = ["macros", "rt-multi-thread"] }
-# actix-web = "4"
-# dotenvy = "0.15.7"
-toml = { version = "0.8.20", features = ["display"] }
 thiserror = "1"
 anyhow = "1"
 subprocess = "0.2.9"

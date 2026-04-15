@@ -3,9 +3,9 @@ use clap::{arg, command, Arg, ArgAction, Args, Command, FromArgMatches};
 use daemon::journal;
 use gui::start_listener;
 use report;
-use std::{env, fs, io::BufRead, path::PathBuf, process};
+use std::{env, io::BufRead, process};
 use subprocess::Exec;
-use utils::config::{Config, ConfigLayer, CONFIG};
+use utils::{config::{CONFIG, Config, ConfigLayer}, setup_key};
 
 const CONFIG_FILE: &str = "/var/lib/relago/config.toml";
 
@@ -92,6 +92,7 @@ pub fn run() -> anyhow::Result<()> {
                         .default_value("Coredump"),
                 ),
         )
+        .subcommand(Command::new("setup-key").about("Setup GPG keys"))
         .get_matches();
 
     match matches.subcommand() {
@@ -160,6 +161,9 @@ pub fn run() -> anyhow::Result<()> {
         }
         Some(("configure", sub_matches)) => {
             Config::save_config(CONFIG_FILE, ConfigLayer::from_arg_matches(sub_matches)?)?
+        }
+        Some(("setup-key", _sub_matches)) => {
+            setup_key::init();
         }
         _ => {
             println!("`None`")
