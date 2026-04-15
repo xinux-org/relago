@@ -22,16 +22,3 @@ clap = { version = "4.5.28", features = ["derive"] }
 confique = { version = "0.4.0", features = ["toml"] }
 pgp = "0.19.0"
 rand = "0.8.5"
-sequoia-openpgp = {version = "2.2.0", default-features = false }
-sequoia-sop = "0.37.3"
-
-[features]
-default = ["sequoia-openpgp/default"]
-crypto-nettle = ["sequoia-openpgp/crypto-nettle"]
-crypto-openssl = ["sequoia-openpgp/crypto-openssl"]
-crypto-botan = ["sequoia-openpgp/crypto-botan"]
-crypto-botan2 = ["sequoia-openpgp/crypto-botan2"]
-crypto-rust = ["sequoia-openpgp/crypto-rust"]
-crypto-cng = ["sequoia-openpgp/crypto-cng"]
-allow-experimental-crypto = ["sequoia-openpgp/allow-experimental-crypto"]
-allow-variable-time-crypto = ["sequoia-openpgp/allow-variable-time-crypto"]
