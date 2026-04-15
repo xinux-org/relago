@@ -7,6 +7,7 @@ use encrypt as enc;
 use std::fs::{self, File};
 use std::path::{Path, PathBuf};
 use thiserror::Error;
+use utils::config::CONFIG;
 
 #[derive(Debug, Error)]
 pub enum ReportError {
@@ -20,8 +21,8 @@ pub enum ReportError {
     System(String),
 }
 
-struct Report {
-    file: PathBuf,
+pub struct Report {
+    pub file: PathBuf,
 }
 
 pub fn run(
@@ -44,7 +45,7 @@ pub fn create_report(
     let report_dir = PathBuf::from(&output_dir).join(format!("report_{}", timestamp));
 
     println!("Creating report directory: {}", report_dir.display());
-    fs::create_dir_all(&report_dir).map_err(|x| ReportError::System(x.to_string()));
+    let _ = fs::create_dir_all(&report_dir).map_err(|x| ReportError::System(x.to_string()));
 
     // 1. Collect and save system information
     println!("Collecting system information...");
@@ -59,9 +60,9 @@ pub fn create_report(
     // 2. Collect journal entries
     let journal_path = report_dir.join("journal_report.json");
     if let Some(num) = recent_entries {
-        info::collect_journal_recent(&journal_path, num);
+        let _ = info::collect_journal_recent(&journal_path, num);
     } else {
-        info::collect_journal_all(&journal_path);
+        let _ = info::collect_journal_all(&journal_path);
     }
 
     // Compress .json then remove it
@@ -86,16 +87,17 @@ pub fn create_report(
     let mut key_path = public_key_path.map(|p| shellexpand::tilde(p).to_string());
 
     if system_info.system_name == Some("XinuxOS".to_string()) {
-        let src = Path::new("/etc/nixos");
-        let dest = report_dir.join("xinux-config");
-        info::copy_dir_recursive(&src, &dest);
+        let src = CONFIG.get().nix_config.clone();
+        let dest = report_dir.join(CONFIG.get().nix_config.clone());
+        let _ = info::copy_dir_recursive(&src, &dest);
 
         if key_path.is_none() {
             key_path = Some("/etc/xinux/keys/public.asc".to_string());
         }
     }
 
-    cmp::compress_zip(&report_dir, &output_dir).expect("Zip compression failed");
+    // TODO: delete original file after compressed
+    let _ = cmp::compress_zip(&report_dir, &output_dir);
     let zip_path = report_dir.with_extension("zip");
 
     let final_path = if let Some(key_path) = key_path {
@@ -119,6 +121,6 @@ pub fn create_report(
     println!("Location: {}", final_path.display());
 
     Ok(Report {
-        file: final_path,
+        file: report_dir.to_owned(),
     })
 }

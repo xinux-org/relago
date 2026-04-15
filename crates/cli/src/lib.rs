@@ -1,12 +1,27 @@
-use clap::{arg, command, Arg, ArgAction, Command, Parser, Subcommand};
+use clap::{arg, command, Arg, ArgAction, Args, Command, FromArgMatches};
 
-use daemon::*;
-use nixlog::error as NixErr;
-use std::io::{BufRead, Read};
-use subprocess::Exec;
+use daemon::journal;
+use gui::start_listener;
 use report;
+use std::{env, fs, io::{BufRead, Read}, path::PathBuf, process};
+use subprocess::Exec;
+use utils::config::{Config, ConfigLayer, CONFIG};
+
+const CONFIG_FILE: &str = "/var/lib/relago/config.toml";
 
 pub fn run() -> anyhow::Result<()> {
+    match Config::get_config(CONFIG_FILE) {
+        Ok(config) => {
+            CONFIG.set(move || config.clone());
+        }
+        Err(e) => {
+            println!("An error occurred: {}", e);
+            process::exit(1)
+        }
+    }
+
+    let tmp_dir = CONFIG.get().tmp_dir.clone();
+
     tracing_subscriber::fmt()
         .with_env_filter(
             tracing_subscriber::EnvFilter::from_default_env()
@@ -21,6 +36,7 @@ pub fn run() -> anyhow::Result<()> {
                 .arg(Arg::new("exec").action(ArgAction::Append)),
         )
         .subcommand(Command::new("daemon").about("Run daemon").arg(arg!([NAME])))
+        .subcommand(Command::new("gui").about("Run notification-report"))
         .subcommand(
             Command::new("report")
                 .about("Report journal entries to JSON file")
@@ -29,8 +45,7 @@ pub fn run() -> anyhow::Result<()> {
                         .short('o')
                         .long("output")
                         .value_name("DIR")
-                        .help("Output directory for report")
-                        .default_value("/tmp/relago"),
+                        .help("Output directory for report"), // .default_value(CONFIG.get().tmp_dir.as_os_str().to_owned()),
                 )
                 .arg(
                     Arg::new("recent")
@@ -53,6 +68,37 @@ pub fn run() -> anyhow::Result<()> {
                         .help("Path to PGP public key file for encrypting the report"),
                 ),
         )
+        .subcommand(ConfigLayer::augment_args(
+            Command::new("configure").about("Manage configuration via CLI"),
+        ))
+        .subcommand(
+            Command::new("reporter")
+                .about("Launch crash reporter GUI")
+                .arg(
+                    Arg::new("unit")
+                        .short('u')
+                        .long("unit")
+                        .value_name("UNIT")
+                        .help("Unit name")
+                        .default_value("test"),
+                )
+                .arg(
+                    Arg::new("exe")
+                        .short('e')
+                        .long("exe")
+                        .value_name("EXE")
+                        .help("Executable name")
+                        .default_value("test"),
+                )
+                .arg(
+                    Arg::new("message")
+                        .short('m')
+                        .long("message")
+                        .value_name("MESSAGE")
+                        .help("Crash message")
+                        .default_value("Coredump"),
+                ),
+        )
         .get_matches();
 
     match matches.subcommand() {
@@ -62,16 +108,16 @@ pub fn run() -> anyhow::Result<()> {
                 .unwrap_or_default()
                 .map(|v| v.as_str())
                 .collect::<Vec<_>>();
-            match cmd_exec(&r[0]) {
+            match cmd_exec(r[0]) {
                 Err(_) => println!("Cooked"),
                 Ok(_)  => println!("exec"),
             }
         }
         Some(("report", sub_matches)) => {
-            let rep = sub_matches
+            let rep: String = sub_matches
                 .get_one::<String>("output")
-                .map(|s| s.as_str())
-                .unwrap_or("/tmp/relago");
+                .unwrap_or(&tmp_dir.into_os_string().into_string().unwrap())
+                .to_owned();
 
             let nixos_config = sub_matches
                 .get_one::<String>("nixos-config")
@@ -86,21 +132,49 @@ pub fn run() -> anyhow::Result<()> {
                 .get_one::<String>("encrypt-key")
                 .map(|s| s.as_str());
 
-            report::run(rep, nixos_config, recent_entries, encrypt_key)?
+            // report::create_report(rep, nixos_config, recent_entries)?;
+            report::run(rep.as_str(), nixos_config, recent_entries, encrypt_key)?
         }
-        Some(("daemon", sub_matches)) => {
-            // Daemon started
-            // println!("daemon");
-            // dbus-send --system --type=signal /com/example com.example.signal_name string:"hello world"
-
-            // let _ = fetcher::run();
-            // let _ = core::run();
-
+        Some(("daemon", _sub_matches)) => {
             println!("Relago daemon application is started without fuckery!!!");
-            let _ = daemon::journal::run();
+            let runtime = tokio::runtime::Runtime::new()?;
 
+            runtime.block_on(async {
+                match journal::run().await {
+                    Ok(_) => {
+                        println!("Started");
+                    }
+                    Err(e) => {
+                        eprintln!("Daemon error: {}", e);
+                    }
+                }
+            });
         }
-        _ => println!("`None`"),
+        Some(("gui", _sub_matches)) => {
+            let runtime = tokio::runtime::Runtime::new()?;
+
+            runtime.block_on(async {
+                println!("GUI Agent started. Listening for crash signals...");
+
+                match start_listener().await {
+                    Ok(_conn) => {
+                        // CRITICAL: This keeps the block_on from returning.
+                        // Without this, the program would exit immediately.
+                        std::future::pending::<()>().await;
+                    }
+                    Err(e) => {
+                        eprintln!("Failed to start D-Bus listener: {}", e);
+                        std::process::exit(1);
+                    }
+                }
+            });
+        }
+        Some(("configure", sub_matches)) => {
+            Config::save_config(CONFIG_FILE, ConfigLayer::from_arg_matches(sub_matches)?)?
+        }
+        _ => {
+            println!("`None`")
+        }
     }
 
     Ok(())
@@ -126,7 +200,7 @@ fn cmd_exec(cmd: &str) -> anyhow::Result<()> {
                     }
                 }
 
-                let _ = NixErr::process_nix_error(&collected_output);
+                // let _ = NixErr::process_nix_error(&collected_output);
             }
         }
         Err(e) => {

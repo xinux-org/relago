@@ -1,8 +1,4 @@
-use dbus::blocking::Connection;
-use dbus::Message;
 use dbus_crossroads as crossroads;
-use std::error::Error;
-use std::time::Duration;
 use utils::notify as Notify;
 
 pub fn run() -> anyhow::Result<()> {
