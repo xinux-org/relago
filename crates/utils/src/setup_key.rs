@@ -3,9 +3,7 @@ use pgp::{
         EncryptionCaps, KeyType, SecretKeyParamsBuilder, SignedPublicKey, SignedSecretKey,
         SubkeyParamsBuilder, SubkeyParamsBuilderError,
     },
-    crypto::ecc_curve::ECCCurve,
-    ser::Serialize,
-    types::KeyDetails,
+    crypto::ecc_curve::ECCCurve
 };
 use rand::thread_rng;
 
