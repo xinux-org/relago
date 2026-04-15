@@ -1,4 +1,5 @@
 //! Follow future journal log messages and print up to 100 of them.
+use std::thread;
 use std::sync::Arc;
 
 use anyhow::anyhow;

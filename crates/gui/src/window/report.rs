@@ -24,6 +24,8 @@ pub fn run(sender: ComponentSender<App>) {
                         Arc::try_unwrap(tmp_dir).unwrap().as_str(),
                         Some(CONFIG.get().nix_config.clone().to_str().unwrap()),
                         None,
+                        // Some(CONFIG.get().public_key)
+                        Some("~/keys/gpg-pub.asc")
                     )
                 })
                 .await
