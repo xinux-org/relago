@@ -25,6 +25,9 @@ pub struct Config {
     #[config(default = "https://cocomelon.uz")]
     #[config(layer_attr(arg(long)))]
     pub server: String,
+    #[config(default = "/var/lib/relago/keys")]
+    #[config(layer_attr(arg(long)))]
+    pub keys: PathBuf,
 }
 
 pub type ConfigLayer = <Config as confique::Config>::Layer;
@@ -72,6 +75,7 @@ impl Config {
         set_document_field!(document, config, data_dir);
         set_document_field!(document, config, nix_config);
         set_document_field!(document, config, server);
+        set_document_field!(document, config, keys);
 
         fs::write(path, document.to_string())?;
 

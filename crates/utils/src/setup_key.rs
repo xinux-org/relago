@@ -1,3 +1,5 @@
+use std::path::Path;
+
 use pgp::{
     composed::{
         EncryptionCaps, KeyType, SecretKeyParamsBuilder, SignedPublicKey, SignedSecretKey,
@@ -6,10 +8,11 @@ use pgp::{
     crypto::ecc_curve::ECCCurve
 };
 use rand::thread_rng;
-
-const WRITE_PATH: &str = "/var/lib/relago/keys";
+use crate::config::CONFIG;
 
 pub fn init() {
+    let write_path = CONFIG.get().keys.to_str().unwrap();
+
     let secret_key = keygen(
         KeyType::Ed25519Legacy,
         KeyType::Ed25519Legacy,
@@ -20,7 +23,7 @@ pub fn init() {
     .expect("failed during keygen");
 
     let mut priv_file =
-        std::fs::File::create(format!("{}/key.priv", WRITE_PATH)).expect("failed to create 'example-key.priv'");
+        std::fs::File::create(format!("{}/key.priv", write_path)).expect("failed to create 'example-key.priv'");
     secret_key
         .to_armored_writer(&mut priv_file, None.into())
         .expect("failed to write to 'example-key.priv'");
@@ -28,7 +31,7 @@ pub fn init() {
     let public_key = SignedPublicKey::from(secret_key.clone());
 
     let mut pub_file =
-        std::fs::File::create(format!("{}/key.pub", WRITE_PATH)).expect("failed to create 'example-key.pub'");
+        std::fs::File::create(format!("{}/key.pub", write_path)).expect("failed to create 'example-key.pub'");
     public_key
         .to_armored_writer (&mut pub_file, None.into())
         .expect("failed to write to 'example-key.pub'");
