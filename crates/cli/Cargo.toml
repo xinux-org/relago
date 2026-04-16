@@ -14,7 +14,7 @@ path = "src/main.rs"
 [dependencies]
 utils = { path = "../utils" }
 daemon ={ path = "../daemon"}
-notify = { path = "../notify" }
+gui = { path = "../gui" }
 report ={ path = "../report"}
 
 clap = { version = "4.5.28", features = ["derive", "cargo", "string"] }
@@ -27,3 +27,5 @@ pprof2 = "0.13.1"
 dhat = "0.3.3"
 relm4.workspace = true
 struct_iterable = "0.1.1"
+tokio = {version = "1.51.0", features = [ "full" ]}
+futures-util.workspace = true

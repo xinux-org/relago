@@ -1,14 +1,12 @@
 use super::messages::CmdOut;
-use relm4::gtk::{self, prelude::*};
-use serde::Serialize;
+use relm4::gtk::{self};
+use serde::{Deserialize, Serialize};
+use zbus::zvariant::Type;
 
-#[derive(Clone, Debug, Serialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, Type)]
 pub struct Modal {
-    #[serde(rename = "Unit")]
     pub unit: String,
-    #[serde(rename = "Executable")]
     pub exe: String,
-    #[serde(rename = "Message")]
     pub message: String,
 }
 

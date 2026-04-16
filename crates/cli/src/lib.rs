@@ -1,8 +1,9 @@
 use clap::{arg, command, Arg, ArgAction, Args, Command, FromArgMatches};
 
-use anyhow::Context;
-use notify::window::{model::App, Modal};
-use std::{env, io::BufRead, process};
+use daemon::journal;
+use gui::start_listener;
+use report;
+use std::{env, fs, io::BufRead, path::PathBuf, process};
 use subprocess::Exec;
 use utils::config::{Config, ConfigLayer, CONFIG};
 
@@ -35,7 +36,7 @@ pub fn run() -> anyhow::Result<()> {
                 .arg(Arg::new("exec").action(ArgAction::Append)),
         )
         .subcommand(Command::new("daemon").about("Run daemon").arg(arg!([NAME])))
-        .subcommand(Command::new("notify").about("Run notification"))
+        .subcommand(Command::new("gui").about("Run notification-report"))
         .subcommand(
             Command::new("report")
                 .about("Report journal entries to JSON file")
@@ -121,43 +122,39 @@ pub fn run() -> anyhow::Result<()> {
             // report::create_report(rep, nixos_config, recent_entries)?;
             report::run(rep.as_str(), nixos_config, recent_entries)?
         }
-        Some(("daemon", sub_matches)) => {
-            // Daemon started
-            // println!("daemon");
-            // dbus-send --system --type=signal /com/example com.example.signal_name string:"hello world"
-
-            // let _ = fetcher::run();
-            // let _ = core::run();
-
-            println!("{:?}", sub_matches.try_get_raw("NAME"));
+        Some(("daemon", _sub_matches)) => {
             println!("Relago daemon application is started without fuckery!!!");
-            daemon::journal::run()?;
-        }
-        Some(("reporter", sub_matches)) => {
-            let options = ["unit", "exe", "message"];
+            let runtime = tokio::runtime::Runtime::new()?;
 
-            let vals = options.map(|x| {
-                match sub_matches
-                    .get_one::<String>(x)
-                    .map(|s| s.as_str())
-                    .to_owned()
-                {
-                    Some(y) => y,
-                    None => "None",
+            runtime.block_on(async {
+                match journal::run().await {
+                    Ok(_) => {
+                        println!("Started");
+                    }
+                    Err(e) => {
+                        eprintln!("Daemon error: {}", e);
+                    }
                 }
             });
+        }
+        Some(("gui", _sub_matches)) => {
+            let runtime = tokio::runtime::Runtime::new()?;
 
-            let modal = Modal {
-                unit: vals[0].to_string(),
-                exe: vals[1].to_string(),
-                message: vals[2].to_string(),
-            };
+            runtime.block_on(async {
+                println!("GUI Agent started. Listening for crash signals...");
 
-            let app_id = format!("org.relm4.Reporter.p{}", std::process::id());
-
-            relm4::RelmApp::new(&app_id)
-                .with_args(vec![])
-                .run::<App>(modal);
+                match start_listener().await {
+                    Ok(_conn) => {
+                        // CRITICAL: This keeps the block_on from returning.
+                        // Without this, the program would exit immediately.
+                        std::future::pending::<()>().await;
+                    }
+                    Err(e) => {
+                        eprintln!("Failed to start D-Bus listener: {}", e);
+                        std::process::exit(1);
+                    }
+                }
+            });
         }
         Some(("configure", sub_matches)) => {
             Config::save_config(CONFIG_FILE, ConfigLayer::from_arg_matches(sub_matches)?)?

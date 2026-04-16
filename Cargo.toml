@@ -7,7 +7,7 @@ members = [
   "crates/daemon",
   "crates/report",
   "crates/utils",
-  "crates/notify",
+  "crates/gui",
   "crates/crash-event",
 ]
 
@@ -41,6 +41,10 @@ nom = "8.0.0"
 dbus = "0.9.10"
 dbus-crossroads = "0.5.3"
 relm4 = {version = "0.9.1", features=["macros", "libadwaita", "gnome_47"]}
+futures-util = "0.3.32"
+proc-macro2 = "1.0"
+quote       = "1"
+zbus = { version = "5.14.0", features = [ "bus-impl", "option-as-array" ] }
 # codegen-units = 1
 # incremental = true
 # lto = true

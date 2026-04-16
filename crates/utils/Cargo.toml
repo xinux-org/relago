@@ -13,7 +13,10 @@ toml_edit = { version = "0.25.10+spec-1.1.0", features = ["serde"] }
 serde = { workspace = true }
 dbus = { workspace = true }
 dbus-crossroads = { workspace = true }
-state = { version = "0.6.0", features = ["tls"] }
+syn = { version = "2.0", features = ["derive", "full"] }
+quote.workspace = true
+proc-macro2.workspace = true
+state = {version = "0.6.0", features = [ "tls" ]}
 systemd = "0.10"
 clap = { version = "4.5.28", features = ["derive"] }
 confique = { version = "0.4.0", features = ["toml"] }

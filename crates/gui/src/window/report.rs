@@ -1,6 +1,6 @@
 use super::messages::CmdOut;
 use super::model::App;
-use futures::FutureExt;
+use futures_util::FutureExt;
 use relm4::ComponentSender;
 use report::create_report;
 use reqwest::blocking::multipart;

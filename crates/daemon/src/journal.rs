@@ -1,22 +1,48 @@
 //! Follow future journal log messages and print up to 100 of them.
-use anyhow::Context;
-use notify::modal;
-use std::process::Command;
-use std::sync::mpsc;
-use std::thread;
-use std::time::Duration;
-use systemd::journal::{self, Journal, JournalEntryField, JournalSeek};
-use tracing::error;
+use std::sync::Arc;
+
+use anyhow::anyhow;
+use gui::window::Modal;
+use systemd::journal::{self, JournalSeek};
+use tokio::sync::Mutex;
+use zbus::interface;
+use zbus::object_server::SignalEmitter;
 
 use crate::crash::{CoredumpCrash, Crash, OomCrash, ServiceFailureCrash};
 use crate::registry::PluginRegistry;
+
+pub struct CrashQueue {
+    pub pending: Arc<Mutex<Vec<Modal>>>,
+}
+
+impl Clone for CrashQueue {
+    fn clone(&self) -> Self {
+        Self {
+            pending: Arc::clone(&self.pending),
+        }
+    }
+}
+
+#[interface(name = "org.relago.DaemonService")]
+impl CrashQueue {
+    #[zbus(signal)]
+    async fn crash_detected(signal_emitter: &SignalEmitter<'_>, modal: Modal) -> zbus::Result<()>;
+
+    async fn pop_crash(&self) -> Option<Modal> {
+        self.pending.lock().await.pop()
+    }
+
+    async fn has_pending(&self) -> bool {
+        !self.pending.lock().await.is_empty()
+    }
+}
 
 #[derive(Debug)]
 enum ReportRes {
     Done,
 }
 
-pub fn run() -> anyhow::Result<()> {
+pub async fn run() -> anyhow::Result<()> {
     let mut registry = PluginRegistry::new();
     registry
         .register(
@@ -30,6 +56,20 @@ pub fn run() -> anyhow::Result<()> {
             Crash::ServiceFailure,
         )
         .register(OomCrash::filters(), OomCrash::detect, Crash::Oom);
+
+    let shared_pending: Arc<Mutex<Vec<Modal>>> = Arc::new(Mutex::new(vec![]));
+
+    let queue_for_dbus = CrashQueue {
+        pending: Arc::clone(&shared_pending),
+    };
+
+    let conn = zbus::connection::Builder::system()?
+        .name("org.relago.DaemonService")?
+        .serve_at("/org/relago/DaemonService", queue_for_dbus)?
+        .build()
+        .await?;
+
+    let emitter = SignalEmitter::new(&conn, "/org/relago/DaemonService")?;
 
     // ── Open journal ──────────────────────────────────────────────────────────
 
@@ -57,12 +97,15 @@ pub fn run() -> anyhow::Result<()> {
 
             Ok(_) => match registry.run(&mut journal) {
                 Some(Crash::Coredump(ref r)) => {
-                    // QUESTION: how to handle error? break look or ignore?
-                    let _ = modal(
-                        r.unit.as_deref().unwrap_or("unknown"),
-                        &r.exe,
-                        "Coredump detected",
-                    );
+                    let modal_data = Modal {
+                        unit: r.unit.as_deref().unwrap_or("unknown").to_string(),
+                        exe: r.exe.clone(),
+                        message: format!("Process crashed with a coredump."),
+                    };
+
+                    emitter.crash_detected(modal_data).await?;
+
+                    println!("Crash queued for gnome agent.");
                 }
 
                 Some(Crash::ServiceFailure(r)) => {
@@ -83,4 +126,6 @@ pub fn run() -> anyhow::Result<()> {
             }
         }
     }
+
+    // Ok(())
 }

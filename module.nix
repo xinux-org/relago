@@ -15,6 +15,31 @@ let
   # Flake shipped default binary
   fpkg = flake.packages.${pkgs.stdenv.hostPlatform.system}.default;
 
+  dpkgs = [
+    # Policy for daemon
+    (pkgs.writeTextDir "share/dbus-1/system.d/org.relago.DaemonService.conf" ''
+      <!DOCTYPE busconfig PUBLIC "-//freedesktop//DTD D-BUS Bus Configuration 1.0//EN"
+       "http://www.freedesktop.org/standards/dbus/1.0/busconfig.dtd">
+      <busconfig>
+        <policy user="${cfg.user}">
+          <allow own="org.relago.DaemonService"/>
+        </policy>
+
+        <policy group="${cfg.group}">
+          <allow send_destination="org.relago.DaemonService"/>
+          <allow receive_sender="org.relago.DaemonService"/>
+        </policy>
+      </busconfig>
+    '')
+
+    (pkgs.writeTextDir "share/dbus-1/system-services/org.relago.DaemonService.service" ''
+      [D-BUS Service]
+      Name=org.relago.DaemonService
+      Exec=${fpkg}/bin/relago daemon
+      User=relago
+    '')
+  ];
+
   # Toml management
   toml = pkgs.formats.toml { };
 
@@ -29,7 +54,7 @@ let
 
   # Systemd services
   service = lib.mkIf cfg.enable {
-    services.dbus.packages = [ fpkg ];
+    services.dbus.packages = dpkgs;
 
     users.users.${cfg.user} = {
       description = "relago user";
@@ -46,35 +71,37 @@ let
       ${cfg.group} = { };
     };
 
+    systemd.tmpfiles.rules = [
+      "d ${cfg.data-dir} 0770 ${cfg.user} ${cfg.group} -"
+      "d ${cfg.tmp-dir}  0770 ${cfg.user} ${cfg.group} -"
+    ];
+
     systemd.targets."${manifest.name}" = { };
 
     systemd.services."${manifest.name}-config" = {
       wantedBy = [ "multi-user.target" ];
-      partOf = [ "${manifest.name}.target" ];
-      path = with pkgs; [ jq ];
+      after = [ "systemd-tmpfiles-setup.service" ];
+      requires = [ "systemd-tmpfiles-setup.service" ];
 
       serviceConfig = {
         Type = "oneshot";
         User = cfg.user;
         Group = cfg.group;
-        TimeoutSec = "infinity";
         Restart = "on-failure";
-        WorkingDirectory = "/tmp";
+        RestartSec = "2s";
         RemainAfterExit = true;
 
-        StateDirectory = "relago";
-        StateDirectoryMode = "0750";
+        ReadWritePaths = [
+          cfg.data-dir
+        ];
 
         ExecStartPre =
           let
             preStartFullPrivileges = ''
               set -o errexit -o pipefail -o nounset
-              shopt -s dotglob nullglob inherit_errexit
-
-              mkdir -p '${cfg.data-dir}'
-
-              chown -R --no-dereference '${cfg.user}':'${cfg.group}' '${cfg.data-dir}'
-              chmod -R u+rwX,g+rX,o-rwx '${cfg.data-dir}'
+              mkdir -p ${cfg.data-dir} ${cfg.tmp-dir}
+              ${pkgs.coreutils}/bin/install -d -m 0770 -o ${cfg.user} -g ${cfg.group} ${cfg.data-dir}
+              ${pkgs.coreutils}/bin/install -d -m 0770 -o ${cfg.user} -g ${cfg.group} ${cfg.tmp-dir}
             '';
           in
           "+${pkgs.writeShellScript "${manifest.name}-pre-start-full-privileges" preStartFullPrivileges}";
@@ -82,18 +109,61 @@ let
         ExecStart = pkgs.writeShellScript "${manifest.name}-config" ''
           set -o errexit -o pipefail -o nounset
           shopt -s inherit_errexit
-
           umask u=rwx,g=rx,o=
-
-          # Write configuration file for server
-          cp -f ${toml-config} ${cfg.data-dir}/config.toml
+          ${pkgs.coreutils}/bin/install -m 0640 -o ${cfg.user} -g ${cfg.group} \
+            ${toml-config} ${cfg.data-dir}/config.toml
         '';
       };
     };
 
-    systemd.services."${manifest.name}" = {
-      description = "Relago daemon";
+    systemd.user.services."${manifest.name}-gui" = {
+      description = "Relago GNOME UI Agent";
+      wantedBy = [ "default.target" ];
+      partOf = [ "graphical-session.target" ];
+      after = [
+        "graphical-session.target"
+        "network.target"
+        "dbus.socket"
+      ];
+      restartTriggers = [ fpkg ];
 
+      serviceConfig = {
+        # Type = "dbus";
+        # BusName = "org.relago.ReportService";
+        Type = "simple";
+        ExecStart = "${lib.getBin fpkg}/bin/relago gui";
+        Restart = "on-failure";
+        RestartSec = 5;
+        TimeoutStartSec = 30;
+
+        ReadWritePaths = [
+          cfg.data-dir
+          cfg.tmp-dir
+        ];
+
+        PrivateDevices = false;
+        PrivateTmp = true;
+        PrivateUsers = false;
+        ProtectClock = false;
+        ProtectControlGroups = false;
+        ProtectHome = false;
+        ProtectHostname = false;
+        ProtectKernelLogs = false;
+        ProtectKernelTunables = false;
+        ProtectSystem = "no";
+        ReadOnlyPaths = [ "/" ];
+        RemoveIPC = true;
+        RestrictNamespaces = false;
+        RestrictRealtime = false;
+        RestrictSUIDSGID = true;
+        SystemCallArchitectures = "native";
+        # FIXME: change to whatever you think needeed
+        UMask = "0022";
+      };
+    };
+
+    systemd.services."${manifest.name}-daemon" = {
+      description = "Relago daemon";
       after = [
         "network.target"
         "${manifest.name}-config.service"
@@ -101,62 +171,50 @@ let
       requires = [ "${manifest.name}-config.service" ];
       wantedBy = [
         "multi-user.target"
-
       ];
       wants = [
         "network-online.target"
-        "graphical.target"
       ];
       path = [ fpkg ];
+      restartTriggers = [
+        fpkg
+        toml-config
+      ];
 
       serviceConfig = {
-        # We need to enable dbus later
         Type = "dbus";
-        BusName = "org.freedesktop.problems.daemon";
+        BusName = "org.relago.DaemonService";
+        # Type = "simple";
 
         User = cfg.user;
         Group = cfg.group;
-        Restart = "always";
+        Restart = "on-failure";
+        RestartSec = "5s";
         ExecStart = "${lib.getBin fpkg}/bin/relago daemon";
         ExecReload = "${pkgs.coreutils}/bin/kill -s HUP $MAINPID";
         ReadWritePaths = [
           cfg.data-dir
+          cfg.tmp-dir
         ];
 
-        StateDirectory = cfg.user;
-        StateDirectoryMode = "0750";
-
-        CapabilityBoundingSet = [
-          "AF_NETLINK"
-          "AF_INET"
-          "AF_INET6"
-        ];
-        DeviceAllow = [ "/dev/stdin r" ];
-        DevicePolicy = "strict";
-        LockPersonality = true;
-        PrivateDevices = true;
+        PrivateDevices = false;
         PrivateTmp = true;
         PrivateUsers = false;
-        ProtectClock = true;
-        ProtectControlGroups = true;
-        ProtectHome = true;
-        ProtectHostname = true;
-        ProtectKernelLogs = true;
-        ProtectKernelTunables = true;
-        ProtectSystem = "strict";
+        ProtectClock = false;
+        ProtectControlGroups = false;
+        ProtectHome = false;
+        ProtectHostname = false;
+        ProtectKernelLogs = false;
+        ProtectKernelTunables = false;
+        ProtectSystem = "no";
         ReadOnlyPaths = [ "/" ];
         RemoveIPC = true;
-        RestrictNamespaces = true;
-        RestrictRealtime = true;
+        RestrictNamespaces = false;
+        RestrictRealtime = false;
         RestrictSUIDSGID = true;
         SystemCallArchitectures = "native";
-        SystemCallFilter = [
-          "@system-service"
-          "~@privileged"
-          "~@resources"
-          "@pkey"
-        ];
-        UMask = "0027";
+        # FIXME: check UMask later
+        UMask = "0022";
       };
     };
   };

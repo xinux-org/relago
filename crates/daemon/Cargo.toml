@@ -9,8 +9,8 @@ repository.workspace = true
 
 [dependencies]
 serde = { workspace = true }
-quote = "1.0"
-proc-macro2 = "1.0"
+quote.workspace = true
+proc-macro2.workspace = true
 anyhow = { workspace = true }
 tracing-subscriber = { workspace = true }
 tracing = { workspace = true }
@@ -22,4 +22,6 @@ utils = { path = "../utils" }
 dbus-crossroads = { workspace = true }
 nom = { workspace = true }
 crash-event = { path = "../crash-event" }
-notify ={ path = "../notify"}
+gui ={ path = "../gui"}
+zbus.workspace = true
+tokio = "1.51.0"

@@ -4,8 +4,6 @@ use dbus;
 use dbus::arg;
 use dbus_crossroads as crossroads;
 
-use crate::config::CONFIG;
-
 pub trait OrgFreedesktopXinuxRelago {}
 
 #[derive(Debug)]
