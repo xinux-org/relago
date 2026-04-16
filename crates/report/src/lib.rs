@@ -5,7 +5,7 @@ pub mod info;
 use compress as cmp;
 use encrypt as enc;
 use std::fs::{self, File};
-use std::path::{PathBuf};
+use std::path::PathBuf;
 use thiserror::Error;
 use utils::config::CONFIG;
 
@@ -19,6 +19,9 @@ pub enum ReportError {
 
     #[error("Something wrong: {0}")]
     System(String),
+
+    #[error("PathBuf error")]
+    PathBufErr,
 }
 
 pub struct Report {
@@ -31,7 +34,12 @@ pub fn run(
     recent_entries: Option<usize>,
     public_key_path: Option<&str>,
 ) -> anyhow::Result<()> {
-    let _ = create_report(output_dir, nixos_config_path, recent_entries, public_key_path);
+    let _ = create_report(
+        output_dir,
+        nixos_config_path,
+        recent_entries,
+        public_key_path,
+    );
     Ok(())
 }
 
@@ -97,30 +105,27 @@ pub fn create_report(
     fs::remove_dir_all(&report_dir).ok();
     let zip_path = report_dir.with_extension("zip");
 
-    let final_path = if let Some(key_path) = key_path {
-        println!("Encrypting report with PGP...");
-        match enc::encrypt_file(&zip_path, &key_path) {
-            Ok(encrypted_path) => {
-                // Remove unencrypted zip after successful encryption
-                fs::remove_file(&zip_path).ok();
-                encrypted_path
-            }
-            Err(e) => {
-                eprintln!("Encryption failed: {}", e);
-                // FIXME: research better option
-                PathBuf::new()
+    // FIXME: research for better solution
+    match key_path {
+        Some(key_path) => {
+            match enc::encrypt_file(&zip_path, &key_path) {
+                Ok(encrypted_path) => {
+                    fs::remove_file(&zip_path).ok();
+                    Ok(Report {
+                        file: encrypted_path,
+                    })
+                }
+                Err(e) => {
+                    eprintln!("Encryption failed: {}", e);
+                    fs::remove_file(&zip_path).ok();
+
+                    Err(ReportError::PathBufErr)
+                }
             }
         }
-    } else {
-        // FIXME: research better option
-        PathBuf::new()
-    };
-
-    fs::remove_file(&zip_path).ok();
-
-    println!("Location: {}", final_path.display());
-
-    Ok(Report {
-        file: final_path.to_owned(),
-    })
+        None => {
+            fs::remove_file(&zip_path).ok();
+            Err(ReportError::PathBufErr)
+        }
+    }
 }
