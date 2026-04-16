@@ -1,5 +1,4 @@
 //! Follow future journal log messages and print up to 100 of them.
-use std::thread;
 use std::sync::Arc;
 
 use anyhow::anyhow;
@@ -129,19 +128,4 @@ pub async fn run() -> anyhow::Result<()> {
     }
 
     // Ok(())
-}
-
-fn handle_crash(cr: &Crash) -> anyhow::Result<()> {
-    match cr {
-        Crash::Coredump(dump) => {
-            thread::spawn(move || {
-                println!("Handler called inside thread");
-            });
-        }
-        Crash::ServiceFailure(r) => {
-            println!("Service failed");
-        }
-        Crash::Oom(r) => {}
-    }
-    Ok(())
 }
