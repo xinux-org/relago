@@ -5,7 +5,7 @@ pub mod info;
 use compress as cmp;
 use encrypt as enc;
 use std::fs::{self, File};
-use std::path::{Path, PathBuf};
+use std::path::{PathBuf};
 use thiserror::Error;
 use utils::config::CONFIG;
 
