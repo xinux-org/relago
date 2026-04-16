@@ -25,7 +25,8 @@ pub fn run(sender: ComponentSender<App>) {
                         Some(CONFIG.get().nix_config.clone().to_str().unwrap()),
                         None,
                         // Some(CONFIG.get().public_key)
-                        Some("~/keys/gpg-pub.asc")
+                        // Some("~/keys/gpg-pub.asc")
+                        Some("")
                     )
                 })
                 .await

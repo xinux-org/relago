@@ -84,20 +84,17 @@ pub fn create_report(
             println!("NixOS config copied: {}", dest.display());
         }
     }
-    let mut key_path = public_key_path.map(|p| shellexpand::tilde(p).to_string());
+    let key_path = public_key_path.map(|p| shellexpand::tilde(p).to_string());
 
     if system_info.system_name == Some("XinuxOS".to_string()) {
         let src = CONFIG.get().nix_config.clone();
         let dest = report_dir.join(CONFIG.get().nix_config.clone());
         let _ = info::copy_dir_recursive(&src, &dest);
-
-        if key_path.is_none() {
-            key_path = Some("/etc/xinux/keys/public.asc".to_string());
-        }
     }
 
     // TODO: delete original file after compressed
     let _ = cmp::compress_zip(&report_dir, &output_dir);
+    fs::remove_dir_all(&report_dir).ok();
     let zip_path = report_dir.with_extension("zip");
 
     let final_path = if let Some(key_path) = key_path {
@@ -109,18 +106,21 @@ pub fn create_report(
                 encrypted_path
             }
             Err(e) => {
-                eprintln!("Warning: Encryption failed: {}. Keeping unencrypted zip.", e);
-                zip_path
+                eprintln!("Encryption failed: {}", e);
+                // FIXME: research better option
+                PathBuf::new()
             }
         }
     } else {
-        zip_path
+        // FIXME: research better option
+        PathBuf::new()
     };
 
-    println!("Report created successfully!");
+    fs::remove_file(&zip_path).ok();
+
     println!("Location: {}", final_path.display());
 
     Ok(Report {
-        file: report_dir.to_owned(),
+        file: final_path.to_owned(),
     })
 }
