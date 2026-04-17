@@ -3,7 +3,7 @@ use clap::{arg, command, Arg, ArgAction, Args, Command, FromArgMatches};
 use daemon::journal;
 use gui::start_listener;
 use report;
-use std::{env, fs, io::BufRead, path::PathBuf, process};
+use std::{env, fs, io::{BufRead, Read}, path::PathBuf, process};
 use subprocess::Exec;
 use utils::config::{Config, ConfigLayer, CONFIG};
 
@@ -59,6 +59,13 @@ pub fn run() -> anyhow::Result<()> {
                         .long("nixos-config")
                         .value_name("PATH")
                         .help("Path to NixOS configuration directory (e.g., ~/nix-conf)"),
+                )
+                .arg(
+                    Arg::new("encrypt-key")
+                        .short('e')
+                        .long("encrypt-key")
+                        .value_name("PATH")
+                        .help("Path to PGP public key file for encrypting the report"),
                 ),
         )
         .subcommand(ConfigLayer::augment_args(
@@ -103,7 +110,7 @@ pub fn run() -> anyhow::Result<()> {
                 .collect::<Vec<_>>();
             match cmd_exec(r[0]) {
                 Err(_) => println!("Cooked"),
-                Ok(_) => println!("exec"),
+                Ok(_)  => println!("exec"),
             }
         }
         Some(("report", sub_matches)) => {
@@ -121,8 +128,12 @@ pub fn run() -> anyhow::Result<()> {
                 .get_one::<String>("recent")
                 .and_then(|s| s.parse::<usize>().ok());
 
+            let encrypt_key = sub_matches
+                .get_one::<String>("encrypt-key")
+                .map(|s| s.as_str());
+
             // report::create_report(rep, nixos_config, recent_entries)?;
-            report::run(rep.as_str(), nixos_config, recent_entries)?
+            report::run(rep.as_str(), nixos_config, recent_entries, encrypt_key)?
         }
         Some(("daemon", _sub_matches)) => {
             println!("Relago daemon application is started without fuckery!!!");

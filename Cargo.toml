@@ -35,6 +35,10 @@ toml = { version = "0.8.20", features = ["display"] }
 thiserror = "1"
 anyhow = "1"
 subprocess = "0.2.9"
+sha2 = "0.10"
+hex = "0.4"
+pgp = "0.19"
+rand = "0.8"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 nom = "8.0.0"

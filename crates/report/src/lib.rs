@@ -1,7 +1,9 @@
 pub mod compress;
+pub mod encrypt;
 pub mod info;
 
 use compress as cmp;
+use encrypt as enc;
 use std::fs::{self, File};
 use std::path::PathBuf;
 use thiserror::Error;
@@ -17,6 +19,9 @@ pub enum ReportError {
 
     #[error("Something wrong: {0}")]
     System(String),
+
+    #[error("PathBuf error")]
+    PathBufErr,
 }
 
 pub struct Report {
@@ -27,8 +32,14 @@ pub fn run(
     output_dir: &str,
     nixos_config_path: Option<&str>,
     recent_entries: Option<usize>,
+    public_key_path: Option<&str>,
 ) -> anyhow::Result<()> {
-    let _ = create_report(output_dir, nixos_config_path, recent_entries);
+    let _ = create_report(
+        output_dir,
+        nixos_config_path,
+        recent_entries,
+        public_key_path,
+    );
     Ok(())
 }
 
@@ -36,6 +47,7 @@ pub fn create_report(
     output_dir: &str,
     nixos_config_path: Option<&str>,
     recent_entries: Option<usize>,
+    public_key_path: Option<&str>,
 ) -> Result<Report, ReportError> {
     let timestamp = chrono::Local::now().format("%Y-%m-%d_%H-%M-%S");
     let report_dir = PathBuf::from(&output_dir).join(format!("report_{}", timestamp));
@@ -76,11 +88,13 @@ pub fn create_report(
         } else {
             println!("Copying NixOS configuration from: {}", src.display());
             let dest = report_dir.join("nixos-config");
-            let _ = info::copy_dir_recursive(&src, &dest);
+            info::copy_dir_recursive(&src, &dest);
             println!("NixOS config copied: {}", dest.display());
         }
     }
-    if system_info.system_name.to_owned() == Some("XinuxOS".to_string()) {
+    let key_path = public_key_path.map(|p| shellexpand::tilde(p).to_string());
+
+    if system_info.system_name == Some("XinuxOS".to_string()) {
         let src = CONFIG.get().nix_config.clone();
         let dest = report_dir.join(CONFIG.get().nix_config.clone());
         let _ = info::copy_dir_recursive(&src, &dest);
@@ -88,11 +102,30 @@ pub fn create_report(
 
     // TODO: delete original file after compressed
     let _ = cmp::compress_zip(&report_dir, &output_dir);
+    fs::remove_dir_all(&report_dir).ok();
+    let zip_path = report_dir.with_extension("zip");
 
-    println!("Report created successfully!");
-    println!("Location: {}", report_dir.display());
+    // FIXME: research for better solution
+    match key_path {
+        Some(key_path) => {
+            match enc::encrypt_file(&zip_path, &key_path) {
+                Ok(encrypted_path) => {
+                    fs::remove_file(&zip_path).ok();
+                    Ok(Report {
+                        file: encrypted_path,
+                    })
+                }
+                Err(e) => {
+                    eprintln!("Encryption failed: {}", e);
+                    fs::remove_file(&zip_path).ok();
 
-    Ok(Report {
-        file: report_dir.to_owned(),
-    })
+                    Err(ReportError::PathBufErr)
+                }
+            }
+        }
+        None => {
+            fs::remove_file(&zip_path).ok();
+            Err(ReportError::PathBufErr)
+        }
+    }
 }
