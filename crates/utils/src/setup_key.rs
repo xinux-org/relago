@@ -1,5 +1,3 @@
-use std::path::Path;
-
 use crate::config::CONFIG;
 use pgp::{
     composed::{

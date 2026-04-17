@@ -3635,6 +3635,8 @@ dependencies = [
  "ignore",
  "libsystemd-sys",
  "nom",
+ "pgp",
+ "rand 0.8.5",
  "serde",
  "serde_json",
  "shellexpand",

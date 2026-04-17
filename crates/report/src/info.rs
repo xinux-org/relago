@@ -1,12 +1,9 @@
 use anyhow::{anyhow, Result};
 use ignore::WalkBuilder;
-use serde::ser::SerializeSeq;
 use serde::Serialize;
-use serde::Serializer as _;
-use serde_json::Serializer;
 use std::collections::BTreeMap;
 use std::fs::{self, File};
-use std::io::BufWriter;
+use std::io::{BufWriter, Write};
 use std::path::Path;
 use sysinfo::{Disks, Networks, System};
 use systemd::journal::{self, JournalSeek};
@@ -89,9 +86,7 @@ pub fn collect_journal_all(path: &Path) -> Result<()> {
     }
 
     let file = File::create(path)?;
-    let writer = BufWriter::new(file);
-    let mut ser = Serializer::pretty(writer);
-    let mut seq = ser.serialize_seq(None)?;
+    let mut writer = BufWriter::new(file);
 
     let mut reader = journal::OpenOptions::default()
         .open()
@@ -104,7 +99,8 @@ pub fn collect_journal_all(path: &Path) -> Result<()> {
     let mut count: usize = 0;
 
     while let Some(entry) = reader.next_entry()? {
-        seq.serialize_element(&entry)?;
+        serde_json::to_writer(&mut writer, &entry)?;
+        writeln!(writer)?;
         count += 1;
 
         if count % 1000 == 0 {
@@ -112,7 +108,7 @@ pub fn collect_journal_all(path: &Path) -> Result<()> {
         }
     }
 
-    seq.end()?;
+    writer.flush()?;
     println!("\nCollected {} journal entries", count);
 
     Ok(())

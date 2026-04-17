@@ -19,11 +19,16 @@ pub fn run(sender: ComponentSender<App>) {
                 })
                 .unwrap();
 
-                let rep_file = tokio::task::spawn_blocking(|| {
+                let keys = format!("{}/key.pub", CONFIG.get().keys.display());
+
+                let rep_file = tokio::task::spawn_blocking(move || {
                     create_report(
                         Arc::try_unwrap(tmp_dir).unwrap().as_str(),
                         Some(CONFIG.get().nix_config.clone().to_str().unwrap()),
                         None,
+                        // Some(CONFIG.get().public_key)
+                        // Some("~/keys/gpg-pub.asc")
+                        Some(&keys.clone()),
                     )
                 })
                 .await
