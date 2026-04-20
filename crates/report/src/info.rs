@@ -98,7 +98,9 @@ pub fn collect_journal_all(path: &Path) -> Result<()> {
 
     let mut count: usize = 0;
 
-    while let Some(entry) = reader.next_entry()? {
+    while let Some(mut entry) = reader.next_entry()? {
+        let time = &reader.timestamp_usec()?.to_string();
+        entry.insert("_TIMESTAMP".to_string(), time.to_owned());
         serde_json::to_writer(&mut writer, &entry)?;
         writeln!(writer)?;
         count += 1;
@@ -106,6 +108,8 @@ pub fn collect_journal_all(path: &Path) -> Result<()> {
         if count % 1000 == 0 {
             eprint!("\rProcessed {} entries...", count);
         }
+
+        println!("{:?}", &entry);
     }
 
     writer.flush()?;
