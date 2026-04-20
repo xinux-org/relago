@@ -1,4 +1,4 @@
-use anyhow::Context;
+use anyhow::anyhow;
 use systemd::journal::Journal;
 
 use crate::crash::Crash;
@@ -41,15 +41,17 @@ impl PluginRegistry {
             }
 
             if !first_group {
-                journal.match_or().context("match_or failed")?;
+                journal
+                    .match_or()
+                    .map_err(|e| anyhow!("match_or failed: {e}"))?;
             }
 
             for &(field, value) in group {
                 println!("journal fields: {:?}, {:?}", field, value);
-
+                
                 journal
                     .match_add(field, value)
-                    .with_context(|| format!("match_add({}={}) failed", field, value))?;
+                    .map_err(|e| anyhow!("match_add({field}={value}) failed: {e}"))?;
             }
 
             first_group = false;
