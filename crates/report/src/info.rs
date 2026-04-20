@@ -8,6 +8,8 @@ use std::path::Path;
 use sysinfo::{Disks, Networks, System};
 use systemd::journal::{self, JournalSeek};
 
+const TIMESTAMP_FIELD: &str = "timestamp";
+
 #[derive(Serialize)]
 pub struct SystemInfo {
     pub total_memory: u64,
@@ -104,7 +106,7 @@ pub fn collect_journal_all(path: &Path) -> Result<()> {
         // Because default Journal.timestamp() uses EPOCH standard in SystemTime struct.
         // Though we're sending it via API, we decided to use u64 version to not to load client application
         let time = &reader.timestamp_usec()?.to_string();
-        entry.insert("_TIMESTAMP".to_string(), time.to_owned());
+        entry.insert(TIMESTAMP_FIELD.to_string(), time.to_owned());
 
         serde_json::to_writer(&mut writer, &entry)?;
         writeln!(writer)?;
@@ -113,8 +115,6 @@ pub fn collect_journal_all(path: &Path) -> Result<()> {
         if count % 1000 == 0 {
             eprint!("\rProcessed {} entries...", count);
         }
-
-        println!("{:?}", &entry);
     }
 
     writer.flush()?;
@@ -147,7 +147,7 @@ pub fn collect_journal_recent(path: &Path, num_entries: usize) -> Result<()> {
         // Because default Journal.timestamp() uses EPOCH standard in SystemTime struct.
         // Though we're sending it via API, we decided to use u64 version to not to load client application
         let time = reader.timestamp_usec()?.to_string();
-        entry_map.insert("_TIMESTAMP".to_string(), time.to_owned());
+        entry_map.insert(TIMESTAMP_FIELD.to_string(), time.to_owned());
 
         reader.restart_data();
         while let Some(field) = reader.enumerate_data()? {
