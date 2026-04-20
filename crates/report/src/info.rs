@@ -116,6 +116,7 @@ pub fn collect_journal_all(path: &Path) -> Result<()> {
 
         serde_json::to_writer(&mut writer, &writable)?;
         writeln!(writer)?;
+
         count += 1;
 
         if count % 1000 == 0 {
@@ -130,7 +131,6 @@ pub fn collect_journal_all(path: &Path) -> Result<()> {
 }
 
 pub fn collect_journal_recent(path: &Path, num_entries: usize) -> Result<()> {
-    println!("FUCKED");
     if let Some(parent) = path.parent() {
         fs::create_dir_all(parent)?;
     }
@@ -148,7 +148,7 @@ pub fn collect_journal_recent(path: &Path, num_entries: usize) -> Result<()> {
         .seek(JournalSeek::Tail)
         .map_err(|e| anyhow!("Could not seek to tail: {e}"))?;
 
-    let mut entries: HashSet<String> = HashSet::new();
+    let mut entries: HashSet<Log> = HashSet::new();
 
     for _count in 0..num_entries {
         if reader.previous()? == 0 {
@@ -165,14 +165,15 @@ pub fn collect_journal_recent(path: &Path, num_entries: usize) -> Result<()> {
                 entry: entry,
             };
 
-            let json = serde_json::to_string_pretty(&writable)?;
-
-            entries.insert(json);
+            entries.insert(writable.clone());
+            println!("{:?}", &writable);
         };
     }
 
     serde_json::to_writer(&mut writer, &entries)?;
     writeln!(writer)?;
+
+    writer.flush()?;
 
     println!("Collected {} journal entries", entries.len());
 
