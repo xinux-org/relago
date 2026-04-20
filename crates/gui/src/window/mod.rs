@@ -77,6 +77,24 @@ impl Component for App {
             .build();
         scroll.add_css_class("card");
 
+        let context_view = gtk::TextView::builder()
+            .wrap_mode(gtk::WrapMode::Word)
+            .top_margin(8)
+            .bottom_margin(8)
+            .left_margin(8)
+            .right_margin(8)
+            .accepts_tab(false)
+            .build();
+
+        let context_scroll = gtk::ScrolledWindow::builder()
+            .margin_start(16)
+            .margin_end(16)
+            .margin_bottom(4)
+            .min_content_height(80)
+            .child(&context_view)
+            .build();
+        context_scroll.add_css_class("card");
+
         relm4::view! {
             toolbar_view = adw::ToolbarView {
                 add_top_bar = &adw::HeaderBar {},
@@ -97,6 +115,19 @@ impl Component for App {
                     },
 
                     append: &scroll,
+
+                    gtk::Label {
+                        set_label: "Additional context (optional)",
+                        set_xalign: 0.0,
+                        set_margin_start: 16,
+                        set_margin_end: 16,
+                        set_margin_top: 4,
+                        set_margin_bottom: 4,
+                        add_css_class: "caption",
+                        add_css_class: "dim-label",
+                    },
+
+                    append: &context_scroll,
 
                     append: progress = &gtk::ProgressBar {
                         set_visible: false,
@@ -133,7 +164,6 @@ impl Component for App {
                         set_margin_top: 8,
                         add_css_class: "suggested-action",
                         add_css_class: "pill",
-                        connect_clicked => Input::Report,
                     },
 
                     append: button_close = &gtk::Button {
@@ -149,6 +179,20 @@ impl Component for App {
             }
         }
 
+        // button click da context o'qib yuborish
+        let sender_clone = sender.clone();
+        let ctx = context_view.clone();
+        button.connect_clicked(move |_| {
+            let buf = ctx.buffer();
+            let text = buf.text(&buf.start_iter(), &buf.end_iter(), false);
+            let context = text.trim().to_string();
+            sender_clone.input(Input::Report(if context.is_empty() {
+                None
+            } else {
+                Some(context)
+            }));
+        });
+
         root.set_content(Some(&toolbar_view));
 
         ComponentParts {
@@ -160,6 +204,7 @@ impl Component for App {
                 label,
                 label_pct,
                 scroll,
+                context_view,
             },
         }
     }
@@ -167,9 +212,9 @@ impl Component for App {
     fn update(&mut self, message: Self::Input, sender: ComponentSender<Self>, root: &Self::Root) {
         match message {
             Input::Dismiss => root.close(),
-            Input::Report => {
+            Input::Report(context) => {
                 self.computing = true;
-                report::run(sender);
+                report::run(sender, context);
             }
         }
     }
