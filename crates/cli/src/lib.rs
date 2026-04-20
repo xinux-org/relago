@@ -1,4 +1,3 @@
-use anyhow::Context;
 use clap::{arg, command, Arg, ArgAction, Args, Command, FromArgMatches};
 
 use daemon::journal;
@@ -113,8 +112,10 @@ pub fn run() -> anyhow::Result<()> {
                 .unwrap_or_default()
                 .map(|v| v.as_str())
                 .collect::<Vec<_>>();
-
-            cmd_exec(r[0])?
+            match cmd_exec(r[0]) {
+                Err(_) => println!("Cooked"),
+                Ok(_) => println!("exec"),
+            }
         }
         Some(("report", sub_matches)) => {
             let rep: String = sub_matches
@@ -189,22 +190,29 @@ pub fn run() -> anyhow::Result<()> {
 fn cmd_exec(cmd: &str) -> anyhow::Result<()> {
     let cm = Exec::shell(cmd);
 
-    let capture = cm
-        .clone()
-        .capture()
-        .context("Failed to capture command output")?;
+    match cm.clone().capture() {
+        Ok(capture) => {
+            if !capture.success() {
+                let mut collected_output = String::new();
 
-    if !capture.success() {
-        let mut collected_output = String::new();
+                let v = cm.stream_stderr()?;
+                let reader = std::io::BufReader::new(v);
+                for line in reader.lines() {
+                    match line {
+                        Ok(l) => {
+                            // println!("Line :{}", l);
+                            collected_output.push_str(&l);
+                        }
+                        Err(e) => print!("Error:{}", e),
+                    }
+                }
 
-        let v = cm.stream_stderr()?;
-        let reader = std::io::BufReader::new(v);
-        for line in reader.lines() {
-            let l = line.context("Failed to read stderr line")?;
-            collected_output.push_str(&l);
+                // let _ = NixErr::process_nix_error(&collected_output);
+            }
         }
-
-        // let _ = NixErr::process_nix_error(&collected_output);
+        Err(e) => {
+            print!("{}", e)
+        }
     }
 
     Ok(())
