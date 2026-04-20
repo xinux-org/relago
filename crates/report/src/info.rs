@@ -136,22 +136,21 @@ pub fn collect_journal_recent(path: &Path, num_entries: usize) -> Result<()> {
     let mut entries: Vec<BTreeMap<String, String>> = Vec::with_capacity(num_entries);
 
     for _ in 0..num_entries {
-        // NOTE:
-        // We're using timestamp as u64.
-        // Because default Journal.timestamp() uses EPOCH standard in SystemTime struct.
-        // Though we're sending it via API, we decided to use u64 version to not to load client application
-        let time = reader.timestamp_usec()?.to_string();
-
         if reader.previous()? == 0 {
             break;
         }
 
         let mut entry_map: BTreeMap<String, String> = BTreeMap::new();
 
+        // NOTE:
+        // We're using timestamp as u64.
+        // Because default Journal.timestamp() uses EPOCH standard in SystemTime struct.
+        // Though we're sending it via API, we decided to use u64 version to not to load client application
+        let time = reader.timestamp_usec()?.to_string();
+        entry_map.insert("_TIMESTAMP".to_string(), time.to_owned());
+
         reader.restart_data();
         while let Some(field) = reader.enumerate_data()? {
-            entry_map.insert("_TIMESTAMP".to_string(), time.to_owned());
-
             let name = String::from_utf8_lossy(field.name()).into_owned();
             if let Some(value) = field.value() {
                 let value_str = String::from_utf8_lossy(value).into_owned();
