@@ -131,6 +131,8 @@ pub fn collect_journal_recent(path: &Path, num_entries: usize) -> Result<()> {
     let mut entries: Vec<BTreeMap<String, String>> = Vec::with_capacity(num_entries);
 
     for _ in 0..num_entries {
+        let time = reader.timestamp_usec()?.to_string();
+
         if reader.previous()? == 0 {
             break;
         }
@@ -139,6 +141,8 @@ pub fn collect_journal_recent(path: &Path, num_entries: usize) -> Result<()> {
 
         reader.restart_data();
         while let Some(field) = reader.enumerate_data()? {
+            entry_map.insert("_TIMESTAMP".to_string(), time.to_owned());
+
             let name = String::from_utf8_lossy(field.name()).into_owned();
             if let Some(value) = field.value() {
                 let value_str = String::from_utf8_lossy(value).into_owned();
