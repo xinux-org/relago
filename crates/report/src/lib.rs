@@ -111,10 +111,28 @@ pub fn create_report(
     cmp::compress_zip(&report_dir, output_dir)
         .map_err(|e| ReportError::Compression(e.to_string()))?;
 
-    println!("Report created successfully!");
-    println!("Location: {}", report_dir.display());
+    fs::remove_dir_all(&report_dir).ok();
+    let zip_path = report_dir.with_extension("zip");
 
-    Ok(Report {
-        file: report_dir.to_owned(),
-    })
+    // FIXME: research for better solution
+    match key_path {
+        Some(key_path) => match enc::encrypt_file(&zip_path, &key_path) {
+            Ok(encrypted_path) => {
+                fs::remove_file(&zip_path).ok();
+                Ok(Report {
+                    file: encrypted_path,
+                })
+            }
+            Err(e) => {
+                eprintln!("Encryption failed: {}", e);
+                fs::remove_file(&zip_path).ok();
+
+                Err(ReportError::PathBufErr)
+            }
+        },
+        None => {
+            fs::remove_file(&zip_path).ok();
+            Err(ReportError::PathBufErr)
+        }
+    }
 }
