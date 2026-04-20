@@ -9,7 +9,7 @@ use sysinfo::{Disks, Networks, System};
 use systemd::journal::{self, JournalSeek};
 
 #[derive(Serialize, Debug, Clone, Hash, PartialEq, Eq)]
-struct Log {
+struct JournalLog {
     timestamp: String,
     entry: BTreeMap<String, String>,
 }
@@ -105,7 +105,7 @@ pub fn collect_journal_all(path: &Path) -> Result<()> {
     let mut count: usize = 0;
 
     while let Some(entry) = reader.next_entry()? {
-        let writable: Log = Log {
+        let writable: JournalLog = JournalLog {
             // NOTE:
             // We're using timestamp as u64.
             // Because default Journal.timestamp() uses EPOCH standard in SystemTime struct.
@@ -148,7 +148,7 @@ pub fn collect_journal_recent(path: &Path, num_entries: usize) -> Result<()> {
         .seek(JournalSeek::Tail)
         .map_err(|e| anyhow!("Could not seek to tail: {e}"))?;
 
-    let mut entries: HashSet<Log> = HashSet::new();
+    let mut entries: HashSet<JournalLog> = HashSet::new();
 
     for _count in 0..num_entries {
         if reader.previous()? == 0 {
@@ -156,7 +156,7 @@ pub fn collect_journal_recent(path: &Path, num_entries: usize) -> Result<()> {
         }
 
         if let Some(entry) = reader.previous_entry()? {
-            let writable: Log = Log {
+            let writable: JournalLog = JournalLog {
                 // NOTE:
                 // We're using timestamp as u64.
                 // Because default Journal.timestamp() uses EPOCH standard in SystemTime struct.
