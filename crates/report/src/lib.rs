@@ -88,7 +88,7 @@ pub fn create_report(
         } else {
             println!("Copying NixOS configuration from: {}", src.display());
             let dest = report_dir.join("nixos-config");
-            info::copy_dir_recursive(&src, &dest);
+            let _recursed_dir = info::copy_dir_recursive(&src, &dest);
             println!("NixOS config copied: {}", dest.display());
         }
     }
@@ -107,22 +107,20 @@ pub fn create_report(
 
     // FIXME: research for better solution
     match key_path {
-        Some(key_path) => {
-            match enc::encrypt_file(&zip_path, &key_path) {
-                Ok(encrypted_path) => {
-                    fs::remove_file(&zip_path).ok();
-                    Ok(Report {
-                        file: encrypted_path,
-                    })
-                }
-                Err(e) => {
-                    eprintln!("Encryption failed: {}", e);
-                    fs::remove_file(&zip_path).ok();
-
-                    Err(ReportError::PathBufErr)
-                }
+        Some(key_path) => match enc::encrypt_file(&zip_path, &key_path) {
+            Ok(encrypted_path) => {
+                fs::remove_file(&zip_path).ok();
+                Ok(Report {
+                    file: encrypted_path,
+                })
             }
-        }
+            Err(e) => {
+                eprintln!("Encryption failed: {}", e);
+                fs::remove_file(&zip_path).ok();
+
+                Err(ReportError::PathBufErr)
+            }
+        },
         None => {
             fs::remove_file(&zip_path).ok();
             Err(ReportError::PathBufErr)

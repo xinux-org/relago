@@ -42,13 +42,7 @@ pub async fn start_listener() -> Result<(), Box<dyn Error>> {
                     .icon("dialog-error")
                     .show();
 
-                let app_id = format!("org.relm4.Reporter.p{}", std::process::id());
-
-                // Note: If you want multiple windows, spawn this in a thread/task
-                // or ensure the app handles multiple instances.
-                let _app = relm4::RelmApp::new(&app_id)
-                    .with_args(vec![])
-                    .run::<App>(modal_data);
+                spawn_ui(modal_data);
             }
             Err(e) => eprintln!("Failed to parse signal arguments: {}", e),
         }
@@ -57,6 +51,7 @@ pub async fn start_listener() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
+// Note: It creates new UI with new process id
 fn spawn_ui(modal_data: Modal) {
     let app_id = format!("org.relm4.Reporter.p{}", std::process::id());
 
