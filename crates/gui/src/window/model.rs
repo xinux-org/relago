@@ -23,4 +23,5 @@ pub struct Widgets {
     pub label: gtk::Label,
     pub label_pct: gtk::Label,
     pub scroll: gtk::ScrolledWindow,
+    pub context_box: gtk::Box,
 }
