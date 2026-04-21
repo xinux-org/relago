@@ -98,6 +98,40 @@ impl Component for App {
 
                     append: &scroll,
 
+                    append: context_box = &gtk::Box {
+                        set_orientation: gtk::Orientation::Vertical,
+                        set_margin_start: 16,
+                        set_margin_end: 16,
+                        set_margin_bottom: 8,
+                        set_spacing: 4,
+
+                        gtk::Label {
+                            set_label: "Additional context (optional)",
+                            set_xalign: 0.0,
+                            add_css_class: "caption",
+                            add_css_class: "dim-label",
+                        },
+
+                        gtk::Frame {
+                            set_hexpand: true,
+                            gtk::ScrolledWindow {
+                                set_hexpand: true,
+                                set_height_request: 80,
+                                add_css_class: "card",
+
+                                #[wrap(Some)]
+                                set_child: context_text_view = &gtk::TextView {
+                                    set_wrap_mode: gtk::WrapMode::Word,
+                                    set_top_margin: 8,
+                                    set_left_margin: 8,
+                                    set_right_margin: 8,
+                                    set_bottom_margin: 8,
+                                    set_accepts_tab: false,
+                                },
+                            },
+                        }
+                    },
+
                     append: progress = &gtk::ProgressBar {
                         set_visible: false,
                         set_margin_start: 16,
@@ -126,25 +160,34 @@ impl Component for App {
                         },
                     },
 
-                    append: button = &gtk::Button {
-                        set_label: "Send Report",
+                    gtk::Box {
+                        set_orientation: gtk::Orientation::Horizontal,
+                        set_spacing: 8,
+                        set_homogeneous: true,
                         set_margin_start: 16,
                         set_margin_end: 16,
                         set_margin_top: 8,
-                        add_css_class: "suggested-action",
-                        add_css_class: "pill",
-                        connect_clicked => Input::Report,
-                    },
-
-                    append: button_close = &gtk::Button {
-                        set_label: "Close",
-                        set_margin_start: 16,
-                        set_margin_end: 16,
-                        set_margin_top: 4,
                         set_margin_bottom: 16,
-                        add_css_class: "pill",
-                        connect_clicked => Input::Dismiss,
-                    },
+
+                        append: button_close = &gtk::Button {
+                            set_label: "Close",
+                            add_css_class: "pill",
+                            connect_clicked => Input::Dismiss,
+                        },
+
+                        append: button = &gtk::Button {
+                            set_label: "Send Report",
+                            set_hexpand: true,
+                            add_css_class: "suggested-action",
+                            add_css_class: "pill",
+                            connect_clicked[sender, context_text_view] => move |_| {
+                                let buf = context_text_view.buffer();
+                                let text = buf.text(&buf.start_iter(), &buf.end_iter(), false);
+                                let ctx = if text.is_empty() { None } else { Some(text.to_string()) };
+                                sender.input(Input::Report(ctx));
+                            },
+                        },
+                    }
                 },
             }
         }
@@ -160,6 +203,7 @@ impl Component for App {
                 label,
                 label_pct,
                 scroll,
+                context_box,
             },
         }
     }
@@ -167,9 +211,9 @@ impl Component for App {
     fn update(&mut self, message: Self::Input, sender: ComponentSender<Self>, root: &Self::Root) {
         match message {
             Input::Dismiss => root.close(),
-            Input::Report => {
+            Input::Report(ctx) => {
                 self.computing = true;
-                report::run(sender);
+                report::run(sender, ctx);
             }
         }
     }
@@ -197,6 +241,7 @@ impl Component for App {
                     widgets.scroll.set_visible(false);
                     widgets.button.set_visible(false);
                     widgets.progress.set_visible(true);
+                    widgets.context_box.set_visible(false);
                     widgets.progress.set_fraction(*fraction);
                     widgets.label.set_label(message);
                     widgets
@@ -207,6 +252,7 @@ impl Component for App {
                 CmdOut::Finished { bytes } => {
                     widgets.scroll.set_visible(false);
                     widgets.progress.set_fraction(1.0);
+                    widgets.context_box.set_visible(false);
                     widgets.label.set_label("Sent successfully");
                     widgets
                         .label_pct
@@ -215,6 +261,7 @@ impl Component for App {
                     widgets.button_close.set_label("Close");
                 }
                 CmdOut::Error(e) => {
+                    widgets.context_box.set_visible(true);
                     widgets.scroll.set_visible(true);
                     widgets.progress.set_visible(false);
                     widgets.label.set_label(&format!("Error: {e}"));

@@ -1,6 +1,7 @@
 #[derive(Debug)]
 pub enum Input {
-    Report,
+    // Report with user provided context
+    Report(Option<String>),
     Dismiss,
 }
 
