@@ -1,3 +1,5 @@
+use std::{error::Error, fs::File, io::Read};
+
 use crate::config::CONFIG;
 use pgp::{
     composed::{
@@ -7,20 +9,21 @@ use pgp::{
     crypto::ecc_curve::ECCCurve,
 };
 use rand::thread_rng;
+use reqwest::blocking::multipart;
 
 pub fn init() {
     let write_path = CONFIG.get().keys.to_str().unwrap();
 
     let secret_key = keygen(
+        KeyType::Ed25519,
+        KeyType::Ed25519,
         KeyType::ECDH(ECCCurve::Curve25519),
-        KeyType::ECDH(ECCCurve::Curve25519),
-        KeyType::ECDH(ECCCurve::Curve25519),
-        KeyType::ECDH(ECCCurve::Curve25519),
+        KeyType::Ed25519,
         "",
     )
     .expect("failed during keygen");
 
-    let mut priv_file = std::fs::File::create(format!("{}/key.priv", write_path))
+    let mut priv_file = std::fs::File::create(format!("{}/user.priv", write_path))
         .expect("failed to create 'example-key.priv'");
     secret_key
         .to_armored_writer(&mut priv_file, None.into())
@@ -28,11 +31,15 @@ pub fn init() {
 
     let public_key = SignedPublicKey::from(secret_key.clone());
 
-    let mut pub_file = std::fs::File::create(format!("{}/key.pub", write_path))
-        .expect("failed to create 'example-key.pub'");
+    let pub_file_path = format!("{}/user.pub", write_path);
+
+    let mut pub_file =
+        std::fs::File::create(&pub_file_path).expect("failed to create 'example-key.pub'");
     public_key
         .to_armored_writer(&mut pub_file, None.into())
         .expect("failed to write to 'example-key.pub'");
+
+    send_key(pub_file_path.clone());
 }
 
 fn keygen(
@@ -81,4 +88,20 @@ fn keygen(
         .expect("Generate plain key");
 
     Ok(signed)
+}
+
+async fn send_key(key: String) -> Result<(), Box<dyn Error + Send + Sync>> {
+    let server = CONFIG.get().server.clone();
+
+    let server = "http://localhost:4242";
+
+    let form = multipart::Form::new().file("publicKey", key)?;
+    let mut res = reqwest::blocking::Client::new()
+        .post(format!("{}/keys/exchange", &server))
+        .multipart(form)
+        .send()?;
+
+    println!();
+
+    Ok(())
 }

@@ -12,11 +12,11 @@ name = "gui"
 path = "src/lib.rs"
 
 [dependencies]
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
+serde.workspace = true
+serde_json.workspace = true
 relm4.workspace = true
 relm4-components = "0.9.1"
-reqwest = { version = "0.13.2", features = [ "multipart", "blocking" ]}
+reqwest.workspace = true
 anyhow.workspace = true
 report = { path = "../report" }
 utils = { path = "../utils" }
