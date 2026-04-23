@@ -9,7 +9,7 @@ use pgp::{
     crypto::ecc_curve::ECCCurve,
 };
 use rand::thread_rng;
-use reqwest::blocking::multipart;
+use reqwest::blocking::{multipart, Client};
 
 pub fn init() {
     let write_path = CONFIG.get().keys.to_str().unwrap();
@@ -90,18 +90,29 @@ fn keygen(
     Ok(signed)
 }
 
-async fn send_key(key: String) -> Result<(), Box<dyn Error + Send + Sync>> {
+fn send_key(key: String) -> Result<(), Box<dyn Error>> {
     let server = CONFIG.get().server.clone();
 
-    let server = "http://localhost:4242";
-
     let form = multipart::Form::new().file("publicKey", key)?;
-    let mut res = reqwest::blocking::Client::new()
+
+    let client = Client::new();
+
+    let mut res = client
         .post(format!("{}/keys/exchange", &server))
         .multipart(form)
-        .send()?;
+        .send()?
+        .error_for_status()?;
 
-    println!();
+    let file_name = format!(
+        "{}/server.pub",
+        CONFIG.get().keys.to_str().expect("Path is not valid UTF-8")
+    );
+
+    let mut file = File::create(file_name)?;
+
+    res.copy_to(&mut file)?;
+
+    println!("{:?}", res.bytes()?.to_vec());
 
     Ok(())
 }
