@@ -9,7 +9,7 @@ use pgp::{
     crypto::ecc_curve::ECCCurve,
 };
 use rand::thread_rng;
-use reqwest::blocking::{multipart, Client};
+use reqwest::blocking::{multipart, Client, Response};
 
 pub fn init() {
     let write_path = CONFIG.get().keys.to_str().unwrap();
@@ -39,7 +39,11 @@ pub fn init() {
         .to_armored_writer(&mut pub_file, None.into())
         .expect("failed to write to 'example-key.pub'");
 
-    send_key(pub_file_path.clone());
+    let server_key = exchange_keys(pub_file_path.clone()).unwrap();
+
+    let server_key_path = CONFIG.get().keys.to_string_lossy().into_owned();
+
+    let _saved_server_key = save_key(server_key, server_key_path);
 }
 
 fn keygen(
@@ -90,29 +94,29 @@ fn keygen(
     Ok(signed)
 }
 
-fn send_key(key: String) -> Result<(), Box<dyn Error>> {
+fn exchange_keys(key: String) -> Result<Response, Box<dyn Error>> {
     let server = CONFIG.get().server.clone();
+
+    let server = "http://localhost:5678";
 
     let form = multipart::Form::new().file("publicKey", key)?;
 
     let client = Client::new();
 
-    let mut res = client
+    let res = client
         .post(format!("{}/keys/exchange", &server))
         .multipart(form)
-        .send()?
-        .error_for_status()?;
+        .send()?;
 
-    let file_name = format!(
-        "{}/server.pub",
-        CONFIG.get().keys.to_str().expect("Path is not valid UTF-8")
-    );
+    Ok(res)
+}
+
+fn save_key(mut res: Response, path: String) -> Result<(), Box<dyn Error>> {
+    let file_name = format!("{}/server.pub", path);
 
     let mut file = File::create(file_name)?;
 
     res.copy_to(&mut file)?;
-
-    println!("{:?}", res.bytes()?.to_vec());
 
     Ok(())
 }
