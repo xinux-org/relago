@@ -97,8 +97,6 @@ fn keygen(
 fn exchange_keys(key: String) -> Result<Response, Box<dyn Error>> {
     let server = CONFIG.get().server.clone();
 
-    let server = "http://localhost:5678";
-
     let form = multipart::Form::new().file("publicKey", key)?;
 
     let client = Client::new();
