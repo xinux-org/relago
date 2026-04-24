@@ -1,4 +1,9 @@
-use std::{error::Error, fs::File, io::Read};
+use std::{
+    error::Error,
+    fs::{self, File},
+    io::Read,
+    path::{Path, PathBuf},
+};
 
 use crate::config::CONFIG;
 use pgp::{
@@ -10,6 +15,7 @@ use pgp::{
 };
 use rand::thread_rng;
 use reqwest::blocking::{multipart, Client, Response};
+use zip::ZipArchive;
 
 pub fn init() {
     let write_path = CONFIG.get().keys.to_str().unwrap();
@@ -97,6 +103,8 @@ fn keygen(
 fn exchange_keys(key: String) -> Result<Response, Box<dyn Error>> {
     let server = CONFIG.get().server.clone();
 
+    let server = "http://localhost:5678";
+
     let form = multipart::Form::new().file("publicKey", key)?;
 
     let client = Client::new();
@@ -109,12 +117,48 @@ fn exchange_keys(key: String) -> Result<Response, Box<dyn Error>> {
     Ok(res)
 }
 
-fn save_key(mut res: Response, path: String) -> Result<(), Box<dyn Error>> {
-    let file_name = format!("{}/server.pub", path);
+fn save_key(mut res: Response, keys_path: String) -> Result<(), Box<dyn Error>> {
+    // /var/lib/relago
+    let data_dir = CONFIG
+        .get()
+        .data_dir
+        .clone()
+        .into_os_string()
+        .into_string()
+        .unwrap();
 
-    let mut file = File::create(file_name)?;
+    // Extraction
 
-    res.copy_to(&mut file)?;
+    let zip_file_path = PathBuf::from(format!("{}/res.zip", &keys_path));
+
+    let mut created_file = File::create(&zip_file_path)?;
+
+    res.copy_to(&mut created_file)?;
+
+    let opened_file = File::open(&zip_file_path)?;
+
+    let mut zip = ZipArchive::new(&opened_file)?;
+
+    let mut _extracted = ZipArchive::extract(&mut zip, &keys_path);
+
+    // Moving id file
+
+    let from_id_path = PathBuf::from(format!("{}/idfile", &keys_path));
+
+    let to_id_path = PathBuf::from(format!("{}/user", &data_dir));
+
+    let _is_id_copied = fs::copy(from_id_path, to_id_path);
+
+    // Moving key file
+
+    let from_key_path = PathBuf::from(format!("{}/public.asc", &keys_path));
+
+    let to_key_path = PathBuf::from(format!("{}/server.pub", &keys_path));
+
+    let _is_key_renamed = fs::rename(&from_key_path, &to_key_path);
+
+    // Deleting garbage
+    let _is_deleted = fs::remove_file(&zip_file_path);
 
     Ok(())
 }

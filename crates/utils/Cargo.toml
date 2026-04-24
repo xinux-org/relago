@@ -24,3 +24,4 @@ confique = { version = "0.4.0", features = ["toml"] }
 pgp.workspace = true
 rand.workspace = true
 reqwest.workspace = true
+zip = "8.5.1"

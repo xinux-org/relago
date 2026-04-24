@@ -30,6 +30,8 @@ craneLib.devShell {
     pkg-config
     dbus.dev
     systemd.dev
+    xz
+    dbus
 
     gtk4
     libadwaita
