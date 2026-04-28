@@ -12,7 +12,7 @@ serde = { workspace = true }
 anyhow = { workspace = true }
 tracing-subscriber = { workspace = true }
 tracing = { workspace = true }
-serde_json = "1"
+serde_json.workspace = true
 libsystemd-sys = "0.9.4"
 systemd = "0.10.1"
 dbus = { workspace = true }
@@ -24,7 +24,7 @@ flate2 = "1.1.9"
 sysinfo = "0.38.4"
 chrono = "0.4"
 shellexpand = "3.1"
-zip_archive="1.2.2"
+zip_archive.workspace = true
 thiserror = {workspace = true}
 ignore = "0.4"
 pgp = { workspace = true }
