@@ -45,11 +45,11 @@ pub fn init() {
         .to_armored_writer(&mut pub_file, None.into())
         .expect("failed to write to 'example-key.pub'");
 
-    let server_key = exchange_keys(pub_file_path.clone()).unwrap();
+    let server_key = exchange_keys(pub_file_path.clone()).expect("Couldn't get server key");
 
     let server_key_path = CONFIG.get().keys.to_string_lossy().into_owned();
 
-    let _saved_server_key = save_key(server_key, server_key_path);
+    let _saved_server_key = save_key(server_key, server_key_path).expect("Server key didn't save");
 }
 
 fn keygen(
@@ -100,12 +100,12 @@ fn keygen(
     Ok(signed)
 }
 
-fn exchange_keys(key: String) -> Result<Response, Box<dyn Error>> {
+fn exchange_keys(key: impl AsRef<str>) -> anyhow::Result<Response> {
     let server = CONFIG.get().server.clone();
 
     let server = "http://localhost:5678";
 
-    let form = multipart::Form::new().file("publicKey", key)?;
+    let form = multipart::Form::new().file("publicKey", key.as_ref())?;
 
     let client = Client::new();
 
@@ -117,7 +117,7 @@ fn exchange_keys(key: String) -> Result<Response, Box<dyn Error>> {
     Ok(res)
 }
 
-fn save_key(mut res: Response, keys_path: String) -> Result<(), Box<dyn Error>> {
+fn save_key(mut res: Response, keys_path: impl AsRef<str>) -> anyhow::Result<()> {
     // /var/lib/relago
     let data_dir = CONFIG
         .get()
@@ -127,9 +127,11 @@ fn save_key(mut res: Response, keys_path: String) -> Result<(), Box<dyn Error>> 
         .into_string()
         .unwrap();
 
+    let keys_path = keys_path.as_ref();
+
     // Extraction
 
-    let zip_file_path = PathBuf::from(format!("{}/res.zip", &keys_path));
+    let zip_file_path = PathBuf::from(format!("{}/res.zip", keys_path));
 
     let mut created_file = File::create(&zip_file_path)?;
 
@@ -142,8 +144,7 @@ fn save_key(mut res: Response, keys_path: String) -> Result<(), Box<dyn Error>> 
     let mut _extracted = ZipArchive::extract(&mut zip, &keys_path);
 
     // Moving id file
-
-    let from_id_path = PathBuf::from(format!("{}/idfile", &keys_path));
+    let from_id_path = PathBuf::from(format!("{}/idfile", keys_path));
 
     let to_id_path = PathBuf::from(format!("{}/user", &data_dir));
 
@@ -151,9 +152,9 @@ fn save_key(mut res: Response, keys_path: String) -> Result<(), Box<dyn Error>> 
 
     // Moving key file
 
-    let from_key_path = PathBuf::from(format!("{}/public.asc", &keys_path));
+    let from_key_path = PathBuf::from(format!("{}/public.asc", keys_path));
 
-    let to_key_path = PathBuf::from(format!("{}/server.pub", &keys_path));
+    let to_key_path = PathBuf::from(format!("{}/server.pub", keys_path));
 
     let _is_key_renamed = fs::rename(&from_key_path, &to_key_path);
 
