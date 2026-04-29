@@ -1,8 +1,6 @@
 use std::{
-    error::Error,
     fs::{self, File},
-    io::Read,
-    path::{Path, PathBuf},
+    path::PathBuf,
 };
 
 use crate::config::CONFIG;
@@ -17,9 +15,12 @@ use rand::thread_rng;
 use reqwest::blocking::{multipart, Client, Response};
 use zip::ZipArchive;
 
-pub fn init() {
-    let write_path = CONFIG.get().keys.to_str().unwrap();
+enum GpgKeyType {
+    Pub,
+    Priv,
+}
 
+pub fn init() -> anyhow::Result<()> {
     let secret_key = keygen(
         KeyType::Ed25519,
         KeyType::Ed25519,
@@ -29,27 +30,15 @@ pub fn init() {
     )
     .expect("failed during keygen");
 
-    let mut priv_file = std::fs::File::create(format!("{}/user.priv", write_path))
-        .expect("failed to create 'example-key.priv'");
-    secret_key
-        .to_armored_writer(&mut priv_file, None.into())
-        .expect("failed to write to 'example-key.priv'");
+    let _is_pub_key_done = create_key(&secret_key, GpgKeyType::Pub);
+    let _is_priv_key_done = create_key(&secret_key, GpgKeyType::Priv);
 
-    let public_key = SignedPublicKey::from(secret_key.clone());
+    let server_key =
+        exchange_keys(get_key_path(GpgKeyType::Pub)).expect("Couldn't exchange keys with server");
 
-    let pub_file_path = format!("{}/user.pub", write_path);
+    let _is_server_key_saved = save_key(server_key)?;
 
-    let mut pub_file =
-        std::fs::File::create(&pub_file_path).expect("failed to create 'example-key.pub'");
-    public_key
-        .to_armored_writer(&mut pub_file, None.into())
-        .expect("failed to write to 'example-key.pub'");
-
-    let server_key = exchange_keys(pub_file_path.clone()).expect("Couldn't get server key");
-
-    let server_key_path = CONFIG.get().keys.to_string_lossy().into_owned();
-
-    let _saved_server_key = save_key(server_key, server_key_path).expect("Server key didn't save");
+    Ok(())
 }
 
 fn keygen(
@@ -100,66 +89,95 @@ fn keygen(
     Ok(signed)
 }
 
-fn exchange_keys(key: impl AsRef<str>) -> anyhow::Result<Response> {
-    let server = CONFIG.get().server.clone();
+fn exchange_keys(key: PathBuf) -> anyhow::Result<Response> {
+    let server_root = CONFIG.get().server.clone();
+    let server_route = format!("{:?}/keys/exchange", server_root);
 
-    let server = "http://localhost:5678";
-
-    let form = multipart::Form::new().file("publicKey", key.as_ref())?;
+    let form = multipart::Form::new().file("publicKey", key)?;
 
     let client = Client::new();
 
-    let res = client
-        .post(format!("{}/keys/exchange", &server))
-        .multipart(form)
-        .send()?;
+    let res = client.post(server_route).multipart(form).send()?;
 
     Ok(res)
 }
 
-fn save_key(mut res: Response, keys_path: impl AsRef<str>) -> anyhow::Result<()> {
+fn save_key(res: Response) -> anyhow::Result<()> {
     // /var/lib/relago
-    let data_dir = CONFIG
-        .get()
-        .data_dir
-        .clone()
-        .into_os_string()
-        .into_string()
-        .unwrap();
+    let root = CONFIG.get().data_dir.clone();
+    let keys = CONFIG.get().keys.clone();
+    let zip = PathBuf::from(format!("{:?}/res.zip", &keys));
 
-    let keys_path = keys_path.as_ref();
+    // Extraction zip
+    let _is_extracted = extract_zip(res, &zip, &keys);
 
-    // Extraction
+    // Moving id file
+    let _is_id_file_moved = move_id_file(&root, &keys);
 
-    let zip_file_path = PathBuf::from(format!("{}/res.zip", keys_path));
+    // Moving key file
+    let _is_key_file_moved = move_key_file(&keys);
 
-    let mut created_file = File::create(&zip_file_path)?;
+    // Deleting garbage
+    let _is_deleted = fs::remove_file(&zip);
+
+    Ok(())
+}
+
+fn extract_zip(mut res: Response, zip: &PathBuf, keys: &PathBuf) -> anyhow::Result<()> {
+    let mut created_file = File::create(zip)?;
 
     res.copy_to(&mut created_file)?;
 
-    let opened_file = File::open(&zip_file_path)?;
+    let opened_file = File::open(zip)?;
 
     let mut zip = ZipArchive::new(&opened_file)?;
 
-    let mut _extracted = ZipArchive::extract(&mut zip, &keys_path);
+    let mut _extracted = ZipArchive::extract(&mut zip, &keys);
 
-    // Moving id file
-    let from_id_path = PathBuf::from(format!("{}/idfile", keys_path));
+    Ok(())
+}
 
-    let to_id_path = PathBuf::from(format!("{}/user", &data_dir));
+fn move_id_file(root: &PathBuf, keys: &PathBuf) -> anyhow::Result<()> {
+    let from_id_path = PathBuf::from(format!("{:?}/idfile", keys));
+
+    let to_id_path = PathBuf::from(format!("{:?}/user", root));
 
     let _is_id_copied = fs::copy(from_id_path, to_id_path);
 
-    // Moving key file
+    Ok(())
+}
 
-    let from_key_path = PathBuf::from(format!("{}/public.asc", keys_path));
+fn move_key_file(keys: &PathBuf) -> anyhow::Result<()> {
+    let from = PathBuf::from(format!("{:?}/public.asc", keys));
 
-    let to_key_path = PathBuf::from(format!("{}/server.pub", keys_path));
+    let to = PathBuf::from(format!("{:?}/server.pub", keys));
 
-    let _is_key_renamed = fs::rename(&from_key_path, &to_key_path);
-
-    // Deleting garbage
-    let _is_deleted = fs::remove_file(&zip_file_path);
+    let _is_key_renamed = fs::rename(&from, &to);
 
     Ok(())
+}
+
+fn create_key(secret_key: &SignedSecretKey, key_type: GpgKeyType) -> anyhow::Result<()> {
+    match key_type {
+        GpgKeyType::Priv => {
+            let mut file = fs::File::create(get_key_path(GpgKeyType::Priv))?;
+            secret_key.to_armored_writer(&mut file, None.into())?;
+        }
+        GpgKeyType::Pub => {
+            let public_key = SignedPublicKey::from(secret_key.clone());
+            let mut pub_file = fs::File::create(get_key_path(GpgKeyType::Pub))?;
+            public_key.to_armored_writer(&mut pub_file, None.into())?;
+        }
+    }
+
+    Ok(())
+}
+
+fn get_key_path(key: GpgKeyType) -> PathBuf {
+    let keys_path = CONFIG.get().keys.clone();
+
+    PathBuf::from(match key {
+        GpgKeyType::Pub => format!("{:?}/user.pub", keys_path),
+        GpgKeyType::Priv => format!("{:?}/priv.pub", keys_path),
+    })
 }
