@@ -15,6 +15,7 @@ use rand::thread_rng;
 use reqwest::blocking::{multipart, Client, Response};
 use zip::ZipArchive;
 
+#[derive(Clone)]
 enum GpgKeyType {
     Pub,
     Priv,
@@ -30,8 +31,8 @@ pub fn init() -> anyhow::Result<()> {
     )
     .expect("failed during keygen");
 
-    let _is_pub_key_done = create_key(&secret_key, GpgKeyType::Pub);
-    let _is_priv_key_done = create_key(&secret_key, GpgKeyType::Priv);
+    let _is_pub_key_created = create_key(&secret_key, GpgKeyType::Pub);
+    let _is_priv_key_created = create_key(&secret_key, GpgKeyType::Priv);
 
     let server_key =
         exchange_keys(get_key_path(GpgKeyType::Pub)).expect("Couldn't exchange keys with server");
@@ -90,8 +91,7 @@ fn keygen(
 }
 
 fn exchange_keys(key: PathBuf) -> anyhow::Result<Response> {
-    let server_root = CONFIG.get().server.clone();
-    let server_route = format!("{:?}/keys/exchange", server_root);
+    let server_route = format!("{}/keys/exchange", CONFIG.get().server.clone());
 
     let form = multipart::Form::new().file("publicKey", key)?;
 
@@ -102,11 +102,29 @@ fn exchange_keys(key: PathBuf) -> anyhow::Result<Response> {
     Ok(res)
 }
 
+fn create_key(secret_key: &SignedSecretKey, key_type: GpgKeyType) -> anyhow::Result<()> {
+    let _is_keys_dir_created = fs::create_dir_all(CONFIG.get().keys.clone())?;
+
+    let mut file = fs::File::create(get_key_path(key_type.clone()))?;
+
+    match key_type {
+        GpgKeyType::Priv => {
+            secret_key.to_armored_writer(&mut file, None.into())?;
+        }
+        GpgKeyType::Pub => {
+            let public_key = SignedPublicKey::from(secret_key.clone());
+            public_key.to_armored_writer(&mut file, None.into())?;
+        }
+    }
+
+    Ok(())
+}
+
 fn save_key(res: Response) -> anyhow::Result<()> {
     // /var/lib/relago
     let root = CONFIG.get().data_dir.clone();
     let keys = CONFIG.get().keys.clone();
-    let zip = PathBuf::from(format!("{:?}/res.zip", &keys));
+    let zip = PathBuf::from(format!("{}/res.zip", &keys.display()));
 
     // Extraction zip
     let _is_extracted = extract_zip(res, &zip, &keys);
@@ -138,37 +156,21 @@ fn extract_zip(mut res: Response, zip: &PathBuf, keys: &PathBuf) -> anyhow::Resu
 }
 
 fn move_id_file(root: &PathBuf, keys: &PathBuf) -> anyhow::Result<()> {
-    let from_id_path = PathBuf::from(format!("{:?}/idfile", keys));
+    let from = PathBuf::from(format!("{}/idfile", keys.display()));
 
-    let to_id_path = PathBuf::from(format!("{:?}/user", root));
+    let to = PathBuf::from(format!("{}/user", root.display()));
 
-    let _is_id_copied = fs::copy(from_id_path, to_id_path);
+    let _is_id_copied = fs::copy(from, to);
 
     Ok(())
 }
 
 fn move_key_file(keys: &PathBuf) -> anyhow::Result<()> {
-    let from = PathBuf::from(format!("{:?}/public.asc", keys));
+    let from = PathBuf::from(format!("{}/public.asc", keys.display()));
 
-    let to = PathBuf::from(format!("{:?}/server.pub", keys));
+    let to = PathBuf::from(format!("{}/server.pub", keys.display()));
 
-    let _is_key_renamed = fs::rename(&from, &to);
-
-    Ok(())
-}
-
-fn create_key(secret_key: &SignedSecretKey, key_type: GpgKeyType) -> anyhow::Result<()> {
-    match key_type {
-        GpgKeyType::Priv => {
-            let mut file = fs::File::create(get_key_path(GpgKeyType::Priv))?;
-            secret_key.to_armored_writer(&mut file, None.into())?;
-        }
-        GpgKeyType::Pub => {
-            let public_key = SignedPublicKey::from(secret_key.clone());
-            let mut pub_file = fs::File::create(get_key_path(GpgKeyType::Pub))?;
-            public_key.to_armored_writer(&mut pub_file, None.into())?;
-        }
-    }
+    let _is_key_moved = fs::rename(&from, &to);
 
     Ok(())
 }
@@ -177,7 +179,7 @@ fn get_key_path(key: GpgKeyType) -> PathBuf {
     let keys_path = CONFIG.get().keys.clone();
 
     PathBuf::from(match key {
-        GpgKeyType::Pub => format!("{:?}/user.pub", keys_path),
-        GpgKeyType::Priv => format!("{:?}/priv.pub", keys_path),
+        GpgKeyType::Pub => format!("{}/key.pub", keys_path.display()),
+        GpgKeyType::Priv => format!("{}/key", keys_path.display()),
     })
 }
