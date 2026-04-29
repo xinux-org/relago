@@ -11,6 +11,7 @@ repository.workspace = true
 anyhow.workspace = true
 toml_edit = { version = "0.25.10+spec-1.1.0", features = ["serde"] }
 serde = { workspace = true }
+serde_json.workspace = true
 dbus = { workspace = true }
 dbus-crossroads = { workspace = true }
 syn = { version = "2.0", features = ["derive", "full"] }
@@ -22,3 +23,5 @@ clap = { version = "4.5.28", features = ["derive"] }
 confique = { version = "0.4.0", features = ["toml"] }
 pgp.workspace = true
 rand.workspace = true
+reqwest.workspace = true
+zip = "8.5.1"
