@@ -126,19 +126,10 @@ fn save_key(res: Response) -> anyhow::Result<()> {
     let keys = CONFIG.get().keys.clone();
     let zip = PathBuf::from(format!("{}/res.zip", &keys.display()));
 
-    // Extraction zip
-    let _is_extracted = extract_zip(res, &zip, &keys);
-
-    // Moving id file
-    let _is_id_file_moved = move_id_file(&root, &keys);
-
-    // Moving key file
-    let _is_key_file_moved = move_key_file(&keys);
-
-    // Deleting garbage
-    let _is_deleted = fs::remove_file(&zip);
-
-    Ok(())
+    extract_zip(res, &zip, &keys)
+        .and_then(|_| move_id_file(&root, &keys))
+        .and_then(|_| move_key_file(&keys))
+        .and_then(|_| Ok(fs::remove_file(&zip)?))
 }
 
 fn extract_zip(mut res: Response, zip: &PathBuf, keys: &PathBuf) -> anyhow::Result<()> {
