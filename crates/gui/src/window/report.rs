@@ -4,10 +4,10 @@ use futures_util::FutureExt;
 use relm4::ComponentSender;
 use report::create_report;
 use reqwest::blocking::multipart;
-use std::{error::Error, sync::Arc};
+use std::{sync::Arc};
 use utils::config::CONFIG;
 
-pub fn run(sender: ComponentSender<App>) {
+pub fn run(sender: ComponentSender<App>, context: Option<String>) {
     let tmp_dir = Arc::new(CONFIG.get().tmp_dir.to_string_lossy().into_owned());
 
     sender.command(|out, shutdown| {
@@ -72,7 +72,7 @@ pub fn run(sender: ComponentSender<App>) {
                 })
                 .unwrap();
 
-                let result = tokio::task::spawn_blocking(move || upload(path))
+                let result = tokio::task::spawn_blocking(move || upload(path, context))
                     .await
                     .unwrap();
 
@@ -96,13 +96,19 @@ pub fn run(sender: ComponentSender<App>) {
     });
 }
 
-pub fn upload(file_path: String) -> Result<(), Box<dyn Error + Send + Sync>> {
+pub fn upload(file_path: String, context: Option<String>) -> anyhow::Result<()> {
     let server = CONFIG.get().server.clone();
 
-    let form = multipart::Form::new().file("report", file_path)?;
+    let mut form = multipart::Form::new().file("report", file_path)?;
+
+    if let Some(context) = context {
+        form = form.text("context", context);
+    };
+
     reqwest::blocking::Client::new()
         .post(format!("{}/upload/report", &server))
         .multipart(form)
         .send()?;
+
     Ok(())
 }
