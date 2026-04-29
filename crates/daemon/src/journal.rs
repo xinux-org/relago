@@ -1,7 +1,7 @@
 //! Follow future journal log messages and print up to 100 of them.
 use std::sync::Arc;
 
-use anyhow::anyhow;
+use anyhow::Context;
 use gui::window::Modal;
 use systemd::journal::{self, JournalSeek};
 use tokio::sync::Mutex;
@@ -75,12 +75,12 @@ pub async fn run() -> anyhow::Result<()> {
 
     let mut journal = journal::OpenOptions::default()
         .open()
-        .map_err(|e| anyhow!("could not open journal: {e}"))?;
+        .context("could not open journal")?;
 
     // Seek to tail — only follow new entries from this point forward.
     journal
         .seek(JournalSeek::Tail)
-        .map_err(|e| anyhow!("journal seek failed: {e}"))?;
+        .context("journal seek failed")?;
 
     journal.previous()?;
 
@@ -92,7 +92,7 @@ pub async fn run() -> anyhow::Result<()> {
             Ok(0) => {
                 journal
                     .wait(None) // None = block indefinitely
-                    .map_err(|e| anyhow!("journal wait failed: {e}"))?;
+                    .context("journal wait failed")?;
             }
 
             Ok(_) => match registry.run(&mut journal) {

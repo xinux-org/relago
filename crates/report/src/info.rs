@@ -1,4 +1,5 @@
-use anyhow::{anyhow, Result};
+use anyhow::Context;
+use anyhow::Result;
 use ignore::WalkBuilder;
 use serde::Serialize;
 use std::collections::{BTreeMap, HashSet};
@@ -96,11 +97,11 @@ pub fn collect_journal_all(path: &Path) -> Result<()> {
 
     let mut reader = journal::OpenOptions::default()
         .open()
-        .map_err(|e| anyhow!("Could not open journal: {e}"))?;
+        .context("Could not open journal")?;
 
     reader
         .seek(JournalSeek::Head)
-        .map_err(|e| anyhow!("Could not seek to head of journal: {e}"))?;
+        .context("Could not seek to head of journal")?;
 
     let mut count: usize = 0;
 
@@ -119,7 +120,7 @@ pub fn collect_journal_all(path: &Path) -> Result<()> {
 
         count += 1;
 
-        if count % 1000 == 0 {
+        if count.is_multiple_of(1000) {
             eprint!("\rProcessed {} entries...", count);
         }
     }
@@ -141,12 +142,12 @@ pub fn collect_journal_recent(path: &Path, num_entries: usize) -> Result<()> {
 
     let mut reader = journal::OpenOptions::default()
         .open()
-        .map_err(|e| anyhow!("Could not open journal: {e}"))?;
+        .context("Could not open journal")?;
 
     // Seek to end
     reader
         .seek(JournalSeek::Tail)
-        .map_err(|e| anyhow!("Could not seek to tail: {e}"))?;
+        .context("Could not seek to tail")?;
 
     let mut entries: HashSet<JournalLog> = HashSet::new();
 

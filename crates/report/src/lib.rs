@@ -11,13 +11,16 @@ use utils::config::CONFIG;
 
 #[derive(Debug, Error)]
 pub enum ReportError {
-    #[error("File not found")]
-    Compression,
+    #[error("Compression failed: {0}")]
+    Compression(String),
 
-    #[error("Permission denied")]
-    PermissionDenied,
+    #[error("IO error: {0}")]
+    Io(#[from] std::io::Error),
 
-    #[error("Something wrong: {0}")]
+    #[error("Serialization error: {0}")]
+    Serialization(#[from] serde_json::Error),
+
+    #[error("System error: {0}")]
     System(String),
 
     #[error("PathBuf error")]
@@ -34,12 +37,12 @@ pub fn run(
     recent_entries: Option<usize>,
     public_key_path: Option<&str>,
 ) -> anyhow::Result<()> {
-    let _ = create_report(
+    create_report(
         output_dir,
         nixos_config_path,
         recent_entries,
         public_key_path,
-    );
+    )?;
     Ok(())
 }
 
@@ -53,30 +56,33 @@ pub fn create_report(
     let report_dir = PathBuf::from(&output_dir).join(format!("report_{}", timestamp));
 
     println!("Creating report directory: {}", report_dir.display());
-    let _ = fs::create_dir_all(&report_dir).map_err(|x| ReportError::System(x.to_string()));
+    fs::create_dir_all(&report_dir)?;
 
     // 1. Collect and save system information
     println!("Collecting system information...");
-    let system_info = info::collect_system_info().expect("System info failed");
+    let system_info =
+        info::collect_system_info().map_err(|e| ReportError::System(e.to_string()))?;
     let system_info_path = report_dir.join("system_info.json");
 
-    let file = File::create(&system_info_path).expect("File create failed");
+    let file = File::create(&system_info_path)?;
 
-    serde_json::to_writer_pretty(file, &system_info).expect("serialization failed");
+    serde_json::to_writer_pretty(file, &system_info)?;
     println!("System info saved: {}", system_info_path.display());
 
     // 2. Collect journal entries
     let journal_path = report_dir.join("journal_report.json");
     if let Some(num) = recent_entries {
-        let _ = info::collect_journal_recent(&journal_path, num);
+        info::collect_journal_recent(&journal_path, num)
+            .map_err(|e| ReportError::System(e.to_string()))?;
     } else {
-        let _ = info::collect_journal_all(&journal_path);
+        info::collect_journal_all(&journal_path).map_err(|e| ReportError::System(e.to_string()))?;
     }
 
     // Compress .json then remove it
     println!("Compressing journal file...");
-    cmp::compress(&journal_path, &report_dir).expect("Compression failed");
-    fs::remove_file(&journal_path).expect("Remove failed");
+    cmp::compress(&journal_path, &report_dir)
+        .map_err(|e| ReportError::Compression(e.to_string()))?;
+    fs::remove_file(&journal_path)?;
 
     // 3. Copy NixOS configuration if provided
     if let Some(config_path) = nixos_config_path {
@@ -88,20 +94,23 @@ pub fn create_report(
         } else {
             println!("Copying NixOS configuration from: {}", src.display());
             let dest = report_dir.join("nixos-config");
-            let _recursed_dir = info::copy_dir_recursive(&src, &dest);
+            info::copy_dir_recursive(&src, &dest)
+                .map_err(|e| ReportError::System(e.to_string()))?;
             println!("NixOS config copied: {}", dest.display());
         }
     }
     let key_path = public_key_path.map(|p| shellexpand::tilde(p).to_string());
 
-    if system_info.system_name == Some("XinuxOS".to_string()) {
+    if system_info.system_name.is_some_and(|name| name == "XinuxOS") {
         let src = CONFIG.get().nix_config.clone();
         let dest = report_dir.join(CONFIG.get().nix_config.clone());
-        let _ = info::copy_dir_recursive(&src, &dest);
+        info::copy_dir_recursive(&src, &dest).map_err(|e| ReportError::System(e.to_string()))?;
     }
 
     // TODO: delete original file after compressed
-    let _ = cmp::compress_zip(&report_dir, &output_dir);
+    cmp::compress_zip(&report_dir, output_dir)
+        .map_err(|e| ReportError::Compression(e.to_string()))?;
+
     fs::remove_dir_all(&report_dir).ok();
     let zip_path = report_dir.with_extension("zip");
 
