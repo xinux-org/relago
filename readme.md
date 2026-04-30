@@ -22,7 +22,7 @@ If the user clicks "Send Report" in the GUI, everything is compressed into a ZIP
 
 ```bash
 # clone the repository
-git clone https://github.com/xinux-org/relago
+git clone https://git.oss.uzinfocom.uz/xinux-org/relago
 cd relago
 
 # build in release mode (requires GTK4, libadwaita, systemd dev libraries)
@@ -90,11 +90,11 @@ cargo run -- reporter -u firefox.service -e firefox -m "Segmentation fault"
 
 ## Testing crash detection
 
-To manually trigger a crash for testing, use the [crash](https://github.com/xinux-org/crash) project.
+To manually trigger a crash for testing, use the [crash](https://git.oss.uzinfocom.uz/xinux-org/crash) project.
 
 ```bash
 # install crash tool
-git clone https://github.com/xinux-org/crash
+git clone https://git.oss.uzinfocom.uz/xinux-org/crash
 cd crash
 
 # it is used to update the flake.lock file
