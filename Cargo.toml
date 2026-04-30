@@ -53,3 +53,6 @@ zip_archive = "1.2.2"
 # lto = true
 # strip = true
 # opt-level = "z"
+
+[profile.test]
+debug = true
