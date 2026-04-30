@@ -4,7 +4,7 @@ on: [push, pull_request]
 
 jobs:
   test-flake:
-    runs-on: testing
+    runs-on: Testing
 
     steps:
       - name: Check out the repository
@@ -19,9 +19,8 @@ jobs:
       # - name: Flake check x86_64-darwin
       #   run: nix flake check --system x86_64-darwin --show-trace
 
-
   test-project:
-    runs-on: testing
+    runs-on: Testing
 
     steps:
       - name: Check out the repository
