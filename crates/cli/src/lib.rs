@@ -36,7 +36,7 @@ pub fn run() -> anyhow::Result<()> {
         .subcommand(
             Command::new("exec")
                 .about("Run daemon")
-                .arg(Arg::new("exec").action(ArgAction::Append)),
+                .arg(Arg::new("exec").required(true).action(ArgAction::Append)),
         )
         .subcommand(Command::new("daemon").about("Run daemon").arg(arg!([NAME])))
         .subcommand(Command::new("gui").about("Run notification-report"))
