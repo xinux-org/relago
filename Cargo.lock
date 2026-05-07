@@ -685,7 +685,6 @@ dependencies = [
  "relm4",
  "report",
  "struct_iterable",
- "subprocess",
  "tokio",
  "tracing",
  "tracing-subscriber",
