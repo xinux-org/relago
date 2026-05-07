@@ -4,8 +4,7 @@ use clap::{arg, command, Arg, ArgAction, Args, Command, FromArgMatches};
 use daemon::journal;
 use gui::start_listener;
 use report;
-use std::{env, io::BufRead, process};
-use subprocess::Exec;
+use std::process;
 use utils::{
     config::{Config, ConfigLayer, CONFIG},
     setup_key,
@@ -187,24 +186,13 @@ pub fn run() -> anyhow::Result<()> {
 }
 
 fn cmd_exec(cmd: &str) -> anyhow::Result<()> {
-    let cm = Exec::shell(cmd);
+    let output = process::Command::new(cmd)
+        .output()
+        .context("Failed to execute command")?;
 
-    let capture = cm
-        .clone()
-        .capture()
-        .context("Failed to capture command output")?;
-
-    if !capture.success() {
-        let mut collected_output = String::new();
-
-        let v = cm.stream_stderr()?;
-        let reader = std::io::BufReader::new(v);
-        for line in reader.lines() {
-            let l = line.context("Failed to read stderr line")?;
-            collected_output.push_str(&l);
-        }
-
-        // let _ = NixErr::process_nix_error(&collected_output);
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        eprintln!("{}", stderr);
     }
 
     Ok(())
