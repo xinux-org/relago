@@ -2,6 +2,7 @@ pub mod messages;
 pub mod model;
 pub mod report;
 
+use futures_util::StreamExt;
 pub use model::Modal;
 
 use adw::prelude::*;
@@ -9,9 +10,12 @@ use relm4::*;
 
 use messages::{CmdOut, Input, Output};
 use model::{App, Widgets};
+use zbus::Connection;
+
+use crate::window::messages::CmdCrashOut;
 
 impl Component for App {
-    type Init = Modal;
+    type Init = ();
     type Input = Input;
     type Output = Output;
     type CommandOutput = CmdOut;
@@ -26,7 +30,7 @@ impl Component for App {
     }
 
     fn init(
-        error: Self::Init,
+        _: Self::Init,
         root: Self::Root,
         sender: ComponentSender<Self>,
     ) -> ComponentParts<Self> {
@@ -36,35 +40,6 @@ impl Component for App {
             .margin_start(4)
             .margin_end(4)
             .build();
-
-        for (i, (key, val)) in [
-            ("Unit", error.unit.as_str()),
-            ("Executable", error.exe.as_str()),
-            ("Message", error.message.as_str()),
-        ]
-        .into_iter()
-        .enumerate()
-        {
-            let k = gtk::Label::builder()
-                .label(key)
-                .xalign(0.0)
-                .width_chars(12)
-                .build();
-            k.add_css_class("dim-label");
-            k.add_css_class("caption");
-
-            let v = gtk::Label::builder()
-                .label(val)
-                .xalign(0.0)
-                .hexpand(true)
-                .ellipsize(gtk::pango::EllipsizeMode::Middle)
-                .selectable(true)
-                .build();
-            v.add_css_class("monospace");
-
-            grid.attach(&k, 0, i as i32, 1, 1);
-            grid.attach(&v, 1, i as i32, 1, 1);
-        }
 
         let scroll = gtk::ScrolledWindow::builder()
             .hexpand(true)
@@ -86,8 +61,7 @@ impl Component for App {
                     set_orientation: gtk::Orientation::Vertical,
                     set_spacing: 0,
 
-                    gtk::Label {
-                        set_label: &error.message,
+                    append: title = &gtk::Label {
                         set_xalign: 0.0,
                         set_margin_top: 12,
                         set_margin_bottom: 8,
@@ -194,6 +168,8 @@ impl Component for App {
 
         root.set_content(Some(&toolbar_view));
 
+        Self::start_listener(sender);
+
         ComponentParts {
             model: App::default(),
             widgets: Widgets {
@@ -204,13 +180,18 @@ impl Component for App {
                 label_pct,
                 scroll,
                 context_box,
+                title,
+                grid,
             },
         }
     }
 
     fn update(&mut self, message: Self::Input, sender: ComponentSender<Self>, root: &Self::Root) {
         match message {
-            Input::Dismiss => root.close(),
+            Input::Dismiss => {
+                self.modal = None;
+                root.set_visible(false);
+            }
             Input::Report(ctx) => {
                 self.computing = true;
                 report::run(sender, ctx);
@@ -222,11 +203,17 @@ impl Component for App {
         &mut self,
         message: Self::CommandOutput,
         _sender: ComponentSender<Self>,
-        _root: &Self::Root,
+        root: &Self::Root,
     ) {
         match &message {
-            CmdOut::Finished { .. } | CmdOut::Error(_) => self.computing = false,
-            _ => {}
+            CmdOut::CrashCmd(cmd_crash_out) => match &cmd_crash_out {
+                CmdCrashOut::Finished { .. } | CmdCrashOut::Error(_) => self.computing = false,
+                CmdCrashOut::Progress { .. } => {}
+            },
+            CmdOut::CrashDetected(modal) => {
+                self.modal = Some(modal.clone());
+                root.set_visible(true);
+            }
         }
         self.task = Some(message);
     }
@@ -235,41 +222,112 @@ impl Component for App {
         widgets.button.set_sensitive(!self.computing);
         widgets.button_close.set_sensitive(true);
 
-        if let Some(ref task) = self.task {
+        if let Some(task) = &self.task {
             match task {
-                CmdOut::Progress { fraction, message } => {
-                    widgets.scroll.set_visible(false);
-                    widgets.button.set_visible(false);
-                    widgets.progress.set_visible(true);
-                    widgets.context_box.set_visible(false);
-                    widgets.progress.set_fraction(*fraction);
-                    widgets.label.set_label(message);
-                    widgets
-                        .label_pct
-                        .set_label(&format!("{:.0}%", fraction * 100.0));
-                    widgets.button_close.set_label("Cancel");
+                CmdOut::CrashDetected(modal) => {
+                    widgets.title.set_label(&modal.message);
+
+                    for (i, (key, val)) in [
+                        ("Unit", modal.unit.as_str()),
+                        ("Executable", modal.exe.as_str()),
+                        ("Message", modal.message.as_str()),
+                    ]
+                    .into_iter()
+                    .enumerate()
+                    {
+                        let k = gtk::Label::builder()
+                            .label(key)
+                            .xalign(0.0)
+                            .width_chars(12)
+                            .build();
+                        k.add_css_class("dim-label");
+                        k.add_css_class("caption");
+
+                        let v = gtk::Label::builder()
+                            .label(val)
+                            .xalign(0.0)
+                            .hexpand(true)
+                            .ellipsize(gtk::pango::EllipsizeMode::Middle)
+                            .selectable(true)
+                            .build();
+                        v.add_css_class("monospace");
+
+                        widgets.grid.attach(&k, 0, i as i32, 1, 1);
+                        widgets.grid.attach(&v, 1, i as i32, 1, 1);
+                    }
                 }
-                CmdOut::Finished { bytes } => {
-                    widgets.scroll.set_visible(false);
-                    widgets.progress.set_fraction(1.0);
-                    widgets.context_box.set_visible(false);
-                    widgets.label.set_label("Sent successfully");
-                    widgets
-                        .label_pct
-                        .set_label(&format!("{:.1} KB", *bytes as f64 / 1024.0));
-                    widgets.button.set_visible(false);
-                    widgets.button_close.set_label("Close");
-                }
-                CmdOut::Error(e) => {
-                    widgets.context_box.set_visible(true);
-                    widgets.scroll.set_visible(true);
-                    widgets.progress.set_visible(false);
-                    widgets.label.set_label(&format!("Error: {e}"));
-                    widgets.button.set_visible(true);
-                    widgets.button.set_label("Retry");
-                    widgets.button_close.set_label("Close");
-                }
-            }
+                CmdOut::CrashCmd(cmd_crash_out) => match cmd_crash_out {
+                    CmdCrashOut::Progress { fraction, message } => {
+                        widgets.scroll.set_visible(false);
+                        widgets.button.set_visible(false);
+                        widgets.progress.set_visible(true);
+                        widgets.context_box.set_visible(false);
+                        widgets.progress.set_fraction(*fraction);
+                        widgets.label.set_label(message);
+                        widgets
+                            .label_pct
+                            .set_label(&format!("{:.0}%", fraction * 100.0));
+                        widgets.button_close.set_label("Cancel");
+                    }
+                    CmdCrashOut::Finished { bytes } => {
+                        widgets.scroll.set_visible(false);
+                        widgets.progress.set_fraction(1.0);
+                        widgets.context_box.set_visible(false);
+                        widgets.label.set_label("Sent successfully");
+                        widgets
+                            .label_pct
+                            .set_label(&format!("{:.1} KB", *bytes as f64 / 1024.0));
+                        widgets.button.set_visible(false);
+                        widgets.button_close.set_label("Close");
+                    }
+                    CmdCrashOut::Error(e) => {
+                        widgets.context_box.set_visible(true);
+                        widgets.scroll.set_visible(true);
+                        widgets.progress.set_visible(false);
+                        widgets.label.set_label(&format!("Error: {e}"));
+                        widgets.button.set_visible(true);
+                        widgets.button.set_label("Retry");
+                        widgets.button_close.set_label("Close");
+                    }
+                },
+            };
         }
+    }
+}
+
+impl App {
+    fn start_listener(sender: ComponentSender<Self>) {
+        sender.command(|sender, shutdown| {
+            shutdown
+                .register(async move {
+                    let conn = Connection::system().await.unwrap();
+                    let proxy = crate::DaemonServiceProxy::new(&conn).await.unwrap();
+
+                    let mut stream = proxy.receive_crash_detected().await.unwrap();
+
+                    println!("Agent is idling");
+
+                    while let Some(signal) = stream.next().await {
+                        match signal.args() {
+                            Ok(args) => {
+                                let modal_data = args.modal;
+
+                                println!("Signal received! Crash in unit: {}", modal_data.unit);
+
+                                notify_rust::Notification::new()
+                                    .summary("Crash detected")
+                                    .body(&modal_data.message)
+                                    .icon("dialog-error")
+                                    .show()
+                                    .unwrap();
+
+                                sender.emit(CmdOut::CrashDetected(modal_data));
+                            }
+                            Err(e) => eprintln!("Failed to parse signal arguments: {}", e),
+                        }
+                    }
+                })
+                .drop_on_shutdown()
+        });
     }
 }
