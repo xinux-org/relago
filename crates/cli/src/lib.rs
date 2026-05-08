@@ -176,7 +176,7 @@ pub fn run() -> anyhow::Result<()> {
             Config::save_config(CONFIG_FILE, ConfigLayer::from_arg_matches(sub_matches)?)?
         }
         Some(("setup-key", _sub_matches)) => {
-            setup_key::init();
+            setup_key::init()?;
         }
         _ => {
             println!("`None`")
