@@ -14,6 +14,7 @@ pub struct Modal {
 pub struct App {
     pub computing: bool,
     pub task: Option<CmdOut>,
+    pub modal: Option<Modal>
 }
 
 pub struct Widgets {
@@ -24,4 +25,6 @@ pub struct Widgets {
     pub label_pct: gtk::Label,
     pub scroll: gtk::ScrolledWindow,
     pub context_box: gtk::Box,
+    pub title: gtk::Label,
+    pub grid: gtk::Grid
 }

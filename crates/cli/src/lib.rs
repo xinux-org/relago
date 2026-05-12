@@ -2,9 +2,9 @@ use anyhow::Context;
 use clap::{arg, command, Arg, ArgAction, Args, Command, FromArgMatches};
 
 use daemon::journal;
-use gui::start_listener;
-use report;
-use std::process;
+use gui::start_gui;
+use std::{env, io::BufRead, process};
+use subprocess::Exec;
 use utils::{
     config::{Config, ConfigLayer, CONFIG},
     setup_key,
@@ -153,29 +153,13 @@ pub fn run() -> anyhow::Result<()> {
             });
         }
         Some(("gui", _sub_matches)) => {
-            let runtime = tokio::runtime::Runtime::new()?;
-
-            runtime.block_on(async {
-                println!("GUI Agent started. Listening for crash signals...");
-
-                match start_listener().await {
-                    Ok(_conn) => {
-                        // CRITICAL: This keeps the block_on from returning.
-                        // Without this, the program would exit immediately.
-                        std::future::pending::<()>().await;
-                    }
-                    Err(e) => {
-                        eprintln!("Failed to start D-Bus listener: {}", e);
-                        std::process::exit(1);
-                    }
-                }
-            });
+            start_gui();
         }
         Some(("configure", sub_matches)) => {
             Config::save_config(CONFIG_FILE, ConfigLayer::from_arg_matches(sub_matches)?)?
         }
         Some(("setup-key", _sub_matches)) => {
-            setup_key::init();
+            setup_key::init()?;
         }
         _ => {
             println!("`None`")

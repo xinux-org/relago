@@ -1,16 +1,12 @@
 use std::{
-    fs::{self, File},
-    path::PathBuf,
+    fs,
+    io::Cursor,
+    path::{Path, PathBuf},
 };
 
 use crate::config::CONFIG;
-use pgp::{
-    composed::{
-        EncryptionCaps, KeyType, SecretKeyParamsBuilder, SignedPublicKey, SignedSecretKey,
-        SubkeyParamsBuilder, SubkeyParamsBuilderError,
-    },
-    crypto::ecc_curve::ECCCurve,
-};
+use anyhow::{Context, Ok};
+use pgp::{composed::*, crypto::ecc_curve::ECCCurve};
 use rand::thread_rng;
 use reqwest::blocking::{multipart, Client, Response};
 use zip::ZipArchive;
@@ -21,6 +17,12 @@ enum GpgKeyType {
     Priv,
 }
 
+enum SubkeyType {
+    Auth,
+    Sign,
+    Encrypt,
+}
+
 pub fn init() -> anyhow::Result<()> {
     let secret_key = keygen(
         KeyType::Ed25519,
@@ -29,17 +31,15 @@ pub fn init() -> anyhow::Result<()> {
         KeyType::Ed25519,
         "",
     )
-    .expect("failed during keygen");
+    .context("failed during keygen")?;
 
-    let _is_pub_key_created = create_key(&secret_key, GpgKeyType::Pub);
-    let _is_priv_key_created = create_key(&secret_key, GpgKeyType::Priv);
+    create_key(&secret_key, GpgKeyType::Pub)?;
+    create_key(&secret_key, GpgKeyType::Priv)?;
 
-    let server_key =
-        exchange_keys(get_key_path(GpgKeyType::Pub)).expect("Couldn't exchange keys with server");
+    let server_key = exchange_keys(get_key_path(GpgKeyType::Pub))
+        .context("Couldn't exchange keys with server")?;
 
-    let _is_server_key_saved = save_key(server_key)?;
-
-    Ok(())
+    save_key(server_key).context("Couldn't save key")
 }
 
 fn keygen(
@@ -48,46 +48,56 @@ fn keygen(
     encryption_key_type: KeyType,
     auth_key_type: KeyType,
     uid: &str,
-) -> Result<SignedSecretKey, SubkeyParamsBuilderError> {
-    let mut signkey = SubkeyParamsBuilder::default();
-    signkey
-        .key_type(signing_key_type)
-        .can_sign(true)
-        .can_encrypt(EncryptionCaps::None)
-        .can_authenticate(false);
-    let mut encryptkey = SubkeyParamsBuilder::default();
-    encryptkey
-        .key_type(encryption_key_type)
-        .can_sign(false)
-        .can_encrypt(EncryptionCaps::All)
-        .can_authenticate(false);
-    let mut authkey = SubkeyParamsBuilder::default();
-    authkey
-        .key_type(auth_key_type)
-        .can_sign(false)
-        .can_encrypt(EncryptionCaps::None)
-        .can_authenticate(true);
+) -> anyhow::Result<SignedSecretKey> {
+    let signkey = build_subkey(signing_key_type, SubkeyType::Sign)?;
+    let encryptkey = build_subkey(encryption_key_type, SubkeyType::Encrypt)?;
+    let authkey = build_subkey(auth_key_type, SubkeyType::Auth)?;
 
-    let mut key_params = SecretKeyParamsBuilder::default();
-    key_params
+    let mut key_params_builder = SecretKeyParamsBuilder::default();
+    key_params_builder
         .key_type(primary_key_type)
         .can_certify(true)
         .can_sign(false)
         .can_encrypt(EncryptionCaps::None)
         .primary_user_id(uid.into())
-        .subkeys(vec![
-            signkey.build()?,
-            encryptkey.build()?,
-            authkey.build()?,
-        ]);
+        .subkeys(vec![signkey, encryptkey, authkey]);
 
-    let secret_key_params = key_params.build().expect("Build secret_key_params");
+    let secret_key_params = key_params_builder
+        .build()
+        .context("Build secret_key_params")?;
 
-    let signed = secret_key_params
+    secret_key_params
         .generate(thread_rng())
-        .expect("Generate plain key");
+        .context("Generate plain key")
+}
 
-    Ok(signed)
+fn build_subkey(
+    key_type: KeyType,
+    subkey_type: SubkeyType,
+) -> Result<SubkeyParams, SubkeyParamsBuilderError> {
+    let mut key = SubkeyParamsBuilder::default();
+
+    key.key_type(key_type);
+
+    match subkey_type {
+        SubkeyType::Auth => {
+            key.can_sign(false);
+            key.can_encrypt(EncryptionCaps::None);
+            key.can_authenticate(true);
+        }
+        SubkeyType::Sign => {
+            key.can_sign(true);
+            key.can_encrypt(EncryptionCaps::None);
+            key.can_authenticate(false);
+        }
+        SubkeyType::Encrypt => {
+            key.can_sign(false);
+            key.can_encrypt(EncryptionCaps::All);
+            key.can_authenticate(false);
+        }
+    }
+
+    key.build()
 }
 
 fn exchange_keys(key: PathBuf) -> anyhow::Result<Response> {
@@ -99,11 +109,11 @@ fn exchange_keys(key: PathBuf) -> anyhow::Result<Response> {
 
     let res = client.post(server_route).multipart(form).send()?;
 
-    Ok(res)
+    res.error_for_status().map_err(anyhow::Error::from)
 }
 
 fn create_key(secret_key: &SignedSecretKey, key_type: GpgKeyType) -> anyhow::Result<()> {
-    let _is_keys_dir_created = fs::create_dir_all(CONFIG.get().keys.clone())?;
+    fs::create_dir_all(CONFIG.get().keys.clone())?;
 
     let mut file = fs::File::create(get_key_path(key_type.clone()))?;
 
@@ -121,49 +131,35 @@ fn create_key(secret_key: &SignedSecretKey, key_type: GpgKeyType) -> anyhow::Res
 }
 
 fn save_key(res: Response) -> anyhow::Result<()> {
-    // /var/lib/relago
     let root = CONFIG.get().data_dir.clone();
     let keys = CONFIG.get().keys.clone();
-    let zip = PathBuf::from(format!("{}/res.zip", &keys.display()));
 
-    extract_zip(res, &zip, &keys)
-        .and_then(|_| move_id_file(&root, &keys))
-        .and_then(|_| move_key_file(&keys))
-        .and_then(|_| Ok(fs::remove_file(&zip)?))
+    extract_zip(res, &keys)?;
+    move_id_file(&root, &keys)?;
+    move_key_file(&keys)?;
+
+    fs::remove_file(&keys).map_err(anyhow::Error::from)
 }
 
-fn extract_zip(mut res: Response, zip: &PathBuf, keys: &PathBuf) -> anyhow::Result<()> {
-    let mut created_file = File::create(zip)?;
+fn extract_zip(res: Response, keys: &PathBuf) -> anyhow::Result<()> {
+    let cursor = Cursor::new(res.bytes()?);
+    let mut zip = ZipArchive::new(cursor)?;
 
-    res.copy_to(&mut created_file)?;
-
-    let opened_file = File::open(zip)?;
-
-    let mut zip = ZipArchive::new(&opened_file)?;
-
-    let mut _extracted = ZipArchive::extract(&mut zip, &keys);
-
-    Ok(())
+    ZipArchive::extract(&mut zip, keys).map_err(anyhow::Error::from)
 }
 
-fn move_id_file(root: &PathBuf, keys: &PathBuf) -> anyhow::Result<()> {
+fn move_id_file(root: &Path, keys: &Path) -> anyhow::Result<()> {
     let from = PathBuf::from(format!("{}/idfile", keys.display()));
-
     let to = PathBuf::from(format!("{}/user", root.display()));
 
-    let _is_id_copied = fs::copy(from, to);
-
-    Ok(())
+    fs::copy(from, to).map_err(anyhow::Error::from).map(|_| ())
 }
 
-fn move_key_file(keys: &PathBuf) -> anyhow::Result<()> {
+fn move_key_file(keys: &Path) -> anyhow::Result<()> {
     let from = PathBuf::from(format!("{}/public.asc", keys.display()));
-
     let to = PathBuf::from(format!("{}/server.pub", keys.display()));
 
-    let _is_key_moved = fs::rename(&from, &to);
-
-    Ok(())
+    fs::rename(&from, &to).map_err(anyhow::Error::from)
 }
 
 fn get_key_path(key: GpgKeyType) -> PathBuf {
