@@ -18,7 +18,7 @@ pub fn run() -> anyhow::Result<()> {
             CONFIG.set(move || config.clone());
         }
         Err(e) => {
-            println!("An error occurred: {}", e);
+            println!("An error occurred: {e}");
             process::exit(1)
         }
     }
@@ -110,20 +110,20 @@ pub fn run() -> anyhow::Result<()> {
             let r = sub_matches
                 .get_many::<String>("exec")
                 .unwrap_or_default()
-                .map(|v| v.as_str())
+                .map(std::string::String::as_str)
                 .collect::<Vec<_>>();
 
-            cmd_exec(r[0])?
+            cmd_exec(r[0])?;
         }
         Some(("report", sub_matches)) => {
             let rep: String = sub_matches
                 .get_one::<String>("output")
-                .unwrap_or(&tmp_dir.into_os_string().into_string().unwrap())
+                .unwrap_or(&tmp_dir.into_os_string().into_string().unwrap_or_default()) // FIXME: We can design better
                 .to_owned();
 
             let nixos_config = sub_matches
                 .get_one::<String>("nixos-config")
-                .map(|s| s.as_str());
+                .map(std::string::String::as_str);
 
             // Check if `--recent` argument added
             let recent_entries = sub_matches
@@ -132,10 +132,10 @@ pub fn run() -> anyhow::Result<()> {
 
             let encrypt_key = sub_matches
                 .get_one::<String>("encrypt-key")
-                .map(|s| s.as_str());
+                .map(std::string::String::as_str);
 
             // report::create_report(rep, nixos_config, recent_entries)?;
-            report::run(rep.as_str(), nixos_config, recent_entries, encrypt_key)?
+            report::run(rep.as_str(), nixos_config, recent_entries, encrypt_key)?;
         }
         Some(("daemon", _sub_matches)) => {
             println!("Relago daemon application is started without fuckery!!!");
@@ -143,11 +143,11 @@ pub fn run() -> anyhow::Result<()> {
 
             runtime.block_on(async {
                 match journal::run().await {
-                    Ok(_) => {
+                    Ok(()) => {
                         println!("Started");
                     }
                     Err(e) => {
-                        eprintln!("Daemon error: {}", e);
+                        eprintln!("Daemon error: {e}");
                     }
                 }
             });
@@ -156,13 +156,13 @@ pub fn run() -> anyhow::Result<()> {
             start_gui();
         }
         Some(("configure", sub_matches)) => {
-            Config::save_config(CONFIG_FILE, ConfigLayer::from_arg_matches(sub_matches)?)?
+            Config::save_config(CONFIG_FILE, ConfigLayer::from_arg_matches(sub_matches)?)?;
         }
         Some(("setup-key", _sub_matches)) => {
             setup_key::init()?;
         }
         _ => {
-            println!("`None`")
+            println!("`None`");
         }
     }
 

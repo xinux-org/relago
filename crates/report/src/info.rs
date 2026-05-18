@@ -57,7 +57,7 @@ pub fn collect_system_info() -> Result<SystemInfo> {
         .collect();
 
     let networks = Networks::new_with_refreshed_list();
-    let network_info: Vec<String> = networks.iter().map(|(name, _data)| name.clone()).collect();
+    let network_info: Vec<String> = networks.keys().map(|x| x.clone()).collect();
 
     sys.refresh_cpu_usage();
     let cpu_vendor = sys
@@ -112,7 +112,7 @@ pub fn collect_journal_all(path: &Path) -> Result<()> {
             // Because default Journal.timestamp() uses EPOCH standard in SystemTime struct.
             // Though we're sending it via API, we decided to use u64 version to not to load client application
             timestamp: reader.timestamp_usec()?.to_string(),
-            entry: entry,
+            entry,
         };
 
         serde_json::to_writer(&mut writer, &writable)?;
@@ -121,7 +121,7 @@ pub fn collect_journal_all(path: &Path) -> Result<()> {
         count += 1;
 
         if count.is_multiple_of(1000) {
-            eprint!("\rProcessed {} entries...", count);
+            eprint!("\rProcessed {count} entries...");
         }
     }
 
@@ -168,7 +168,7 @@ pub fn collect_journal_recent(path: &Path, num_entries: usize) -> Result<()> {
 
             entries.insert(writable.clone());
             println!("{:?}", &writable);
-        };
+        }
     }
 
     serde_json::to_writer(&mut writer, &entries)?;
@@ -191,7 +191,7 @@ pub fn copy_dir_recursive(src: &Path, dest: &Path) -> Result<()> {
         let relative = src_path.strip_prefix(src).unwrap_or(src_path);
         let dest_path = dest.join(relative);
 
-        if entry.file_type().map(|ft| ft.is_dir()).unwrap_or(false) {
+        if entry.file_type().is_some_and(|ft| ft.is_dir())  {
             fs::create_dir_all(&dest_path)?;
         } else {
             if let Some(parent) = dest_path.parent() {

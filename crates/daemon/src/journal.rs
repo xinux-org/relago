@@ -109,11 +109,11 @@ pub async fn run() -> anyhow::Result<()> {
                 }
 
                 Some(Crash::ServiceFailure(r)) => {
-                    println!("Service failed: {:?}", r);
+                    println!("Service failed: {r:?}");
                 }
 
                 Some(Crash::Oom(r)) => {
-                    println!("Out of memory: {:?}", r);
+                    println!("Out of memory: {r:?}");
                 }
 
                 None => {

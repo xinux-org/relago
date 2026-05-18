@@ -6,7 +6,13 @@ use std::{
 
 use crate::config::CONFIG;
 use anyhow::{Context, Ok};
-use pgp::{composed::*, crypto::ecc_curve::ECCCurve};
+use pgp::{
+    composed::{
+        EncryptionCaps, KeyType, SecretKeyParamsBuilder, SignedPublicKey, SignedSecretKey,
+        SubkeyParams, SubkeyParamsBuilder, SubkeyParamsBuilderError,
+    },
+    crypto::ecc_curve::ECCCurve,
+};
 use rand::thread_rng;
 use reqwest::blocking::{multipart, Client, Response};
 use zip::ZipArchive;
@@ -33,10 +39,10 @@ pub fn init() -> anyhow::Result<()> {
     )
     .context("failed during keygen")?;
 
-    create_key(&secret_key, GpgKeyType::Pub)?;
-    create_key(&secret_key, GpgKeyType::Priv)?;
+    create_key(&secret_key, &GpgKeyType::Pub)?;
+    create_key(&secret_key, &GpgKeyType::Priv)?;
 
-    let server_key = exchange_keys(get_key_path(GpgKeyType::Pub))
+    let server_key = exchange_keys(get_key_path(&GpgKeyType::Pub))
         .context("Couldn't exchange keys with server")?;
 
     save_key(server_key).context("Couldn't save key")
@@ -112,10 +118,10 @@ fn exchange_keys(key: PathBuf) -> anyhow::Result<Response> {
     res.error_for_status().map_err(anyhow::Error::from)
 }
 
-fn create_key(secret_key: &SignedSecretKey, key_type: GpgKeyType) -> anyhow::Result<()> {
+fn create_key(secret_key: &SignedSecretKey, key_type: &GpgKeyType) -> anyhow::Result<()> {
     fs::create_dir_all(CONFIG.get().keys.clone())?;
 
-    let mut file = fs::File::create(get_key_path(key_type.clone()))?;
+    let mut file = fs::File::create(get_key_path(&key_type))?;
 
     match key_type {
         GpgKeyType::Priv => {
@@ -162,7 +168,7 @@ fn move_key_file(keys: &Path) -> anyhow::Result<()> {
     fs::rename(&from, &to).map_err(anyhow::Error::from)
 }
 
-fn get_key_path(key: GpgKeyType) -> PathBuf {
+fn get_key_path(key: &GpgKeyType) -> PathBuf {
     let keys_path = CONFIG.get().keys.clone();
 
     PathBuf::from(match key {
