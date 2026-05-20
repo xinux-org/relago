@@ -34,7 +34,7 @@ pub fn run(sender: ComponentSender<App>, context: Option<String>) {
                 let rep_file = match rep_file {
                     Ok(r) => r,
                     Err(e) => {
-                        let _ = out.send(CmdOut::Error(format!("Report task failed: {e}")));
+                        out.emit(CmdCrashOut::Error(format!("Report task failed: {e}")).into());
                         return;
                     }
                 };
@@ -84,9 +84,14 @@ pub fn run(sender: ComponentSender<App>, context: Option<String>) {
                     .into(),
                 );
 
-                let result = tokio::task::spawn_blocking(move || upload(path, context))
-                    .await
-                    .unwrap();
+                let result = match tokio::task::spawn_blocking(move || upload(path, context)).await
+                {
+                    Ok(res) => res,
+                    Err(e) => {
+                        out.emit(CmdCrashOut::Error(format!("Upload task failed: {e}")).into());
+                        return;
+                    }
+                };
 
                 out.emit(
                     CmdCrashOut::Progress {

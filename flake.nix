@@ -31,6 +31,7 @@
         flake = {
           nixosModules.relago = import ./module.nix self;
           nixosModules.default = import ./module.nix self;
+          hydraJobs.x86_64-linux.relago = self.packages.x86_64-linux.relago;
         };
 
         perSystem =

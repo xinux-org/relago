@@ -3,8 +3,7 @@ use clap::{arg, command, Arg, ArgAction, Args, Command, FromArgMatches};
 
 use daemon::journal;
 use gui::start_gui;
-use std::{env, io::BufRead, process};
-use subprocess::Exec;
+use std::process;
 use utils::{
     config::{Config, ConfigLayer, CONFIG},
     setup_key,
@@ -23,7 +22,7 @@ pub fn run() -> anyhow::Result<()> {
         }
     }
 
-    let tmp_dir = CONFIG.get().tmp_dir.clone();
+    let tmp_dir = CONFIG.get().tmp_dir.to_string_lossy().into_owned();
 
     tracing_subscriber::fmt()
         .with_env_filter(
@@ -118,7 +117,7 @@ pub fn run() -> anyhow::Result<()> {
         Some(("report", sub_matches)) => {
             let rep: String = sub_matches
                 .get_one::<String>("output")
-                .unwrap_or(&tmp_dir.into_os_string().into_string().unwrap())
+                .unwrap_or(&tmp_dir)
                 .to_owned();
 
             let nixos_config = sub_matches

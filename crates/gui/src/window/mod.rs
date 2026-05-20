@@ -300,10 +300,29 @@ impl App {
         sender.command(|sender, shutdown| {
             shutdown
                 .register(async move {
-                    let conn = Connection::system().await.unwrap();
-                    let proxy = crate::DaemonServiceProxy::new(&conn).await.unwrap();
+                    let conn = match Connection::system().await {
+                        Ok(c) => c,
+                        Err(e) => {
+                            eprintln!("Failed to connect to D-Bus: {e}");
+                            return;
+                        }
+                    };
 
-                    let mut stream = proxy.receive_crash_detected().await.unwrap();
+                    let proxy = match crate::DaemonServiceProxy::new(&conn).await {
+                        Ok(p) => p,
+                        Err(e) => {
+                            eprintln!("Failed to create D-Bus proxy: {e}");
+                            return;
+                        }
+                    };
+
+                    let mut stream = match proxy.receive_crash_detected().await {
+                        Ok(s) => s,
+                        Err(e) => {
+                            eprintln!("Failed to subscribe to crash signals: {e}");
+                            return;
+                        }
+                    };
 
                     println!("Agent is idling");
 
@@ -314,12 +333,14 @@ impl App {
 
                                 println!("Signal received! Crash in unit: {}", modal_data.unit);
 
-                                notify_rust::Notification::new()
+                                if let Err(e) = notify_rust::Notification::new()
                                     .summary("Crash detected")
                                     .body(&modal_data.message)
                                     .icon("dialog-error")
                                     .show()
-                                    .unwrap();
+                                {
+                                    eprintln!("Failed to show notification: {e}");
+                                }
 
                                 sender.emit(CmdOut::CrashDetected(modal_data));
                             }
