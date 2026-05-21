@@ -113,7 +113,8 @@ pub fn run() -> anyhow::Result<()> {
                 .map(std::string::String::as_str)
                 .collect::<Vec<_>>();
 
-            cmd_exec(r[0])?;
+            let cmd = r.first().ok_or_else(|| anyhow::anyhow!("no exec argument provided"))?;
+            cmd_exec(cmd)?;
         }
         Some(("report", sub_matches)) => {
             let rep: String = sub_matches
