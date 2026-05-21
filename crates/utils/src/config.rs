@@ -13,10 +13,10 @@ pub struct Config {
     #[config(default = 4)]
     #[config(layer_attr(arg(long)))]
     pub parallel_compression: u32,
-    #[config(default = "tmp")]
+    #[config(default = "/var/lib/relago/tmp")]
     #[config(layer_attr(arg(long)))]
     pub tmp_dir: PathBuf,
-    #[config(default = "data")]
+    #[config(default = "/var/lib/relago/data")]
     #[config(layer_attr(arg(long)))]
     pub data_dir: PathBuf,
     #[config(default = "/etc/nixos/xinux-config")]

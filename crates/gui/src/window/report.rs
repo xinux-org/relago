@@ -2,7 +2,7 @@ use super::messages::CmdCrashOut;
 use super::model::App;
 use futures_util::FutureExt;
 use relm4::ComponentSender;
-use report::create_report;
+use report::{ReportBuilder, JournalMode};
 use reqwest::blocking::multipart;
 use utils::config::CONFIG;
 
@@ -20,14 +20,15 @@ pub fn run(sender: ComponentSender<App>, context: Option<String>) {
 
                 let keys = format!("{}/key.pub", CONFIG.get().keys.display());
                 let nix_config = CONFIG.get().nix_config.to_string_lossy().into_owned();
+                let tmp_dir = CONFIG.get().tmp_dir.to_string_lossy().into_owned();
 
                 let rep_file = tokio::task::spawn_blocking(move || {
-                    create_report(
-                        CONFIG.get().tmp_dir.clone().to_str().unwrap(),
-                        Some(CONFIG.get().nix_config.clone().to_str().unwrap()),
-                        None,
-                        Some(&keys),
-                    )
+                    ReportBuilder::new(&tmp_dir)
+                        .system_info()
+                        .journal(JournalMode::All)
+                        .nixos_config(&nix_config)
+                        .encrypt(&keys)
+                        .build()
                 })
                 .await;
 

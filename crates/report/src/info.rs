@@ -57,7 +57,7 @@ pub fn collect_system_info() -> Result<SystemInfo> {
         .collect();
 
     let networks = Networks::new_with_refreshed_list();
-    let network_info: Vec<String> = networks.iter().map(|(name, _data)| name.clone()).collect();
+    let network_info: Vec<String> = networks.keys().map(|name| name.clone()).collect();
 
     sys.refresh_cpu_usage();
     let cpu_vendor = sys
@@ -112,7 +112,7 @@ pub fn collect_journal_all(path: &Path) -> Result<()> {
             // Because default Journal.timestamp() uses EPOCH standard in SystemTime struct.
             // Though we're sending it via API, we decided to use u64 version to not to load client application
             timestamp: reader.timestamp_usec()?.to_string(),
-            entry: entry,
+            entry,
         };
 
         serde_json::to_writer(&mut writer, &writable)?;
@@ -152,10 +152,6 @@ pub fn collect_journal_recent(path: &Path, num_entries: usize) -> Result<()> {
     let mut entries: HashSet<JournalLog> = HashSet::new();
 
     for _count in 0..num_entries {
-        if reader.previous()? == 0 {
-            break;
-        }
-
         if let Some(entry) = reader.previous_entry()? {
             let writable: JournalLog = JournalLog {
                 // NOTE:
@@ -163,12 +159,14 @@ pub fn collect_journal_recent(path: &Path, num_entries: usize) -> Result<()> {
                 // Because default Journal.timestamp() uses EPOCH standard in SystemTime struct.
                 // Though we're sending it via API, we decided to use u64 version to not to load client application
                 timestamp: reader.timestamp_usec()?.to_string(),
-                entry: entry,
+                entry,
             };
 
             entries.insert(writable.clone());
             println!("{:?}", &writable);
-        };
+        } else {
+            break;
+        }
     }
 
     serde_json::to_writer(&mut writer, &entries)?;

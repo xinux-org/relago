@@ -115,26 +115,31 @@ pub fn run() -> anyhow::Result<()> {
             cmd_exec(r[0])?
         }
         Some(("report", sub_matches)) => {
-            let rep: String = sub_matches
+            let output_dir = sub_matches
                 .get_one::<String>("output")
                 .unwrap_or(&tmp_dir)
                 .to_owned();
 
-            let nixos_config = sub_matches
-                .get_one::<String>("nixos-config")
-                .map(|s| s.as_str());
+            let mut builder = report::ReportBuilder::new(&output_dir)
+                .system_info();
 
-            // Check if `--recent` argument added
-            let recent_entries = sub_matches
+            match sub_matches
                 .get_one::<String>("recent")
-                .and_then(|s| s.parse::<usize>().ok());
+                .and_then(|s| s.parse::<usize>().ok())
+            {
+                Some(n) => builder = builder.journal(report::JournalMode::Recent(n)),
+                None => builder = builder.journal(report::JournalMode::All),
+            }
 
-            let encrypt_key = sub_matches
-                .get_one::<String>("encrypt-key")
-                .map(|s| s.as_str());
+            if let Some(path) = sub_matches.get_one::<String>("nixos-config") {
+                builder = builder.nixos_config(path);
+            }
 
-            // report::create_report(rep, nixos_config, recent_entries)?;
-            report::run(rep.as_str(), nixos_config, recent_entries, encrypt_key)?
+            if let Some(key) = sub_matches.get_one::<String>("encrypt-key") {
+                builder = builder.encrypt(key);
+            }
+
+            builder.build()?;
         }
         Some(("daemon", _sub_matches)) => {
             println!("Relago daemon application is started without fuckery!!!");
