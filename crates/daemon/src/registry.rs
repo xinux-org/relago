@@ -10,13 +10,19 @@ pub struct PluginRegistry {
     plugins: Vec<PluginFn>,
 }
 
-impl PluginRegistry {
-    #[must_use]
-    pub fn new() -> Self {
+impl Default for PluginRegistry {
+    fn default() -> Self {
         Self {
             filters: Vec::new(),
             plugins: Vec::new(),
         }
+    }
+}
+
+impl PluginRegistry {
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
     }
 
     pub fn register<R>(
