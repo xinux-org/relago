@@ -121,7 +121,7 @@ fn exchange_keys(key: PathBuf) -> anyhow::Result<Response> {
 fn create_key(secret_key: &SignedSecretKey, key_type: &GpgKeyType) -> anyhow::Result<()> {
     fs::create_dir_all(CONFIG.get().keys.clone())?;
 
-    let mut file = fs::File::create(get_key_path(&key_type))?;
+    let mut file = fs::File::create(get_key_path(key_type))?;
 
     match key_type {
         GpgKeyType::Priv => {
