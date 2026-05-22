@@ -10,9 +10,31 @@ use relm4::*;
 
 use messages::{CmdOut, Input, Output};
 use model::{App, Widgets};
+use std::fmt::{Debug, Display, Formatter};
 use zbus::Connection;
 
 use crate::window::messages::CmdCrashOut;
+
+// pub type Result<T> = std::result::Result<T, Error>;
+
+#[non_exhaustive]
+pub enum Error {
+    AppError,
+}
+
+impl Display for Error {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Error::AppError => write!(f, "Failed while starting main function!"),
+        }
+    }
+}
+
+impl Debug for Error {
+    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
+        write!(f, "{}", self)
+    }
+}
 
 impl Component for App {
     type Init = ();
@@ -296,33 +318,15 @@ impl Component for App {
 }
 
 impl App {
-    fn start_listener(sender: ComponentSender<Self>) {
+    fn start_listener(sender: ComponentSender<Self>) -> () {
         sender.command(|sender, shutdown| {
             shutdown
                 .register(async move {
-                    let conn = match Connection::system().await {
-                        Ok(c) => c,
-                        Err(e) => {
-                            eprintln!("Failed to connect to D-Bus: {e}");
-                            return;
-                        }
-                    };
+                    let conn = Connection::system().await?;
 
-                    let proxy = match crate::DaemonServiceProxy::new(&conn).await {
-                        Ok(p) => p,
-                        Err(e) => {
-                            eprintln!("Failed to create D-Bus proxy: {e}");
-                            return;
-                        }
-                    };
+                    let proxy = crate::DaemonServiceProxy::new(&conn).await?;
 
-                    let mut stream = match proxy.receive_crash_detected().await {
-                        Ok(s) => s,
-                        Err(e) => {
-                            eprintln!("Failed to subscribe to crash signals: {e}");
-                            return;
-                        }
-                    };
+                    let mut stream = proxy.receive_crash_detected().await?;
 
                     println!("Agent is idling");
 
@@ -338,17 +342,22 @@ impl App {
                                     .body(&modal_data.message)
                                     .icon("dialog-error")
                                     .show()
-                                {
-                                    eprintln!("Failed to show notification: {e}");
-                                }
+                                    {
+                                        eprintln!("Failed to show notification: {e}");
+                                    };
+
 
                                 sender.emit(CmdOut::CrashDetected(modal_data));
                             }
                             Err(e) => eprintln!("Failed to parse signal arguments: {}", e),
                         }
                     }
+                    Ok::<(), zbus::Error>(())
                 })
                 .drop_on_shutdown()
+
+            // Ok(())
         });
+
     }
 }

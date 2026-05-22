@@ -100,7 +100,7 @@ pub async fn run() -> anyhow::Result<()> {
                     let modal_data = Modal {
                         unit: r.unit.as_deref().unwrap_or("unknown").to_string(),
                         exe: r.exe.clone(),
-                        message: format!("Process crashed with a coredump."),
+                        message: "Process crashed with a coredump.".to_owned(),
                     };
 
                     emitter.crash_detected(modal_data).await?;
@@ -109,11 +109,11 @@ pub async fn run() -> anyhow::Result<()> {
                 }
 
                 Some(Crash::ServiceFailure(r)) => {
-                    println!("Service failed: {:?}", r);
+                    println!("Service failed: {r:?}");
                 }
 
                 Some(Crash::Oom(r)) => {
-                    println!("Out of memory: {:?}", r);
+                    println!("Out of memory: {r:?}");
                 }
 
                 None => {

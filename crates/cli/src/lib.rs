@@ -17,7 +17,7 @@ pub fn run() -> anyhow::Result<()> {
             CONFIG.set(move || config.clone());
         }
         Err(e) => {
-            println!("An error occurred: {}", e);
+            println!("An error occurred: {e}");
             process::exit(1)
         }
     }
@@ -109,10 +109,11 @@ pub fn run() -> anyhow::Result<()> {
             let r = sub_matches
                 .get_many::<String>("exec")
                 .unwrap_or_default()
-                .map(|v| v.as_str())
+                .map(std::string::String::as_str)
                 .collect::<Vec<_>>();
 
-            cmd_exec(r[0])?
+            let cmd = r.first().ok_or_else(|| anyhow::anyhow!("no exec argument provided"))?;
+            cmd_exec(cmd)?;
         }
         Some(("report", sub_matches)) => {
             let output_dir = sub_matches
@@ -147,11 +148,11 @@ pub fn run() -> anyhow::Result<()> {
 
             runtime.block_on(async {
                 match journal::run().await {
-                    Ok(_) => {
+                    Ok(()) => {
                         println!("Started");
                     }
                     Err(e) => {
-                        eprintln!("Daemon error: {}", e);
+                        eprintln!("Daemon error: {e}");
                     }
                 }
             });
@@ -160,13 +161,13 @@ pub fn run() -> anyhow::Result<()> {
             start_gui();
         }
         Some(("configure", sub_matches)) => {
-            Config::save_config(CONFIG_FILE, ConfigLayer::from_arg_matches(sub_matches)?)?
+            Config::save_config(CONFIG_FILE, ConfigLayer::from_arg_matches(sub_matches)?)?;
         }
         Some(("setup-key", _sub_matches)) => {
             setup_key::init()?;
         }
         _ => {
-            println!("`None`")
+            println!("`None`");
         }
     }
 

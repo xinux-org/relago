@@ -10,12 +10,19 @@ pub struct PluginRegistry {
     plugins: Vec<PluginFn>,
 }
 
-impl PluginRegistry {
-    pub fn new() -> Self {
+impl Default for PluginRegistry {
+    fn default() -> Self {
         Self {
             filters: Vec::new(),
             plugins: Vec::new(),
         }
+    }
+}
+
+impl PluginRegistry {
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
     }
 
     pub fn register<R>(
@@ -45,11 +52,11 @@ impl PluginRegistry {
             }
 
             for &(field, value) in group {
-                println!("journal fields: {:?}, {:?}", field, value);
+                println!("journal fields: {field:?}, {value:?}");
 
                 journal
                     .match_add(field, value)
-                    .with_context(|| format!("match_add({}={}) failed", field, value))?;
+                    .with_context(|| format!("match_add({field}={value}) failed"))?;
             }
 
             first_group = false;

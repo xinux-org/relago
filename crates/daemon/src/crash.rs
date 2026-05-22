@@ -1,5 +1,5 @@
 
-use crash_event::{CrashEvent};
+use crash_event::CrashEvent;
 
 use utils::journal_ext::JournalExt;
 #[derive(Debug, CrashEvent)]

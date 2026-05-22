@@ -11,10 +11,11 @@ pub fn compress(path: impl AsRef<Path>, dest: impl AsRef<Path>) -> anyhow::Resul
     let path = path.as_ref();
     let dest = dest.as_ref();
 
-    let filename = path
-        .file_name()
-        .map(|f| format!("{}.zlib", f.to_string_lossy()))
-        .unwrap_or_else(|| "compressed.zlib".to_string());
+    let filename = path.file_name().map_or_else(
+        || "compressed.zlib".to_string(),
+        |f| format!("{}.zlib", f.to_string_lossy()),
+    );
+
     let output_path = dest.join(&filename);
 
     let input_file = File::open(path).context("Failed to open input file")?;
@@ -44,5 +45,5 @@ pub fn compress_zip(origin: impl AsRef<Path>, dest: impl AsRef<Path>) -> anyhow:
 
     archiver
         .archive()
-        .map_err(|err| anyhow!("Cannot archive the directory! {}", err))
+        .map_err(|err| anyhow!("Cannot archive the directory! {err}"))
 }
