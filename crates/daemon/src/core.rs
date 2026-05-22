@@ -1,10 +1,10 @@
 use dbus_crossroads as crossroads;
-use utils::notify as Notify;
+use utils::notify as notify;
 
 pub fn run() -> anyhow::Result<()> {
     let mut cr: crossroads::Crossroads = crossroads::Crossroads::new();
 
-    let token = Notify::register_org_freedesktop_xinux_relago(&mut cr);
+    let token = notify::register_org_freedesktop_xinux_relago(&mut cr);
     cr.insert("/", &[token], ());
 
     let conn = dbus::blocking::Connection::new_session()?;

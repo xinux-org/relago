@@ -19,7 +19,7 @@ impl arg::AppendAll for OrgFreedesktopXinuxRelagoNixError {
 
 impl arg::ReadAll for OrgFreedesktopXinuxRelagoNixError {
     fn read(i: &mut arg::Iter) -> Result<Self, arg::TypeMismatchError> {
-        Ok(OrgFreedesktopXinuxRelagoNixError {
+        Ok(Self {
             log_file: i.read()?,
         })
     }

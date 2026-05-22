@@ -10,9 +10,31 @@ use relm4::*;
 
 use messages::{CmdOut, Input, Output};
 use model::{App, Widgets};
+use std::fmt::{Debug, Display, Formatter};
 use zbus::Connection;
 
 use crate::window::messages::CmdCrashOut;
+
+// pub type Result<T> = std::result::Result<T, Error>;
+
+#[non_exhaustive]
+pub enum Error {
+    AppError,
+}
+
+impl Display for Error {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Error::AppError => write!(f, "Failed while starting main function!"),
+        }
+    }
+}
+
+impl Debug for Error {
+    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
+        write!(f, "{}", self)
+    }
+}
 
 impl Component for App {
     type Init = ();
@@ -296,14 +318,14 @@ impl Component for App {
 }
 
 impl App {
-    fn start_listener(sender: ComponentSender<Self>) {
+    fn start_listener(sender: ComponentSender<Self>) -> () {
         sender.command(|sender, shutdown| {
             shutdown
                 .register(async move {
-                    let conn = Connection::system().await.unwrap();
-                    let proxy = crate::DaemonServiceProxy::new(&conn).await.unwrap();
+                    let conn = Connection::system().await?;
+                    let proxy = crate::DaemonServiceProxy::new(&conn).await?;
 
-                    let mut stream = proxy.receive_crash_detected().await.unwrap();
+                    let mut stream = proxy.receive_crash_detected().await?;
 
                     println!("Agent is idling");
 
@@ -318,16 +340,20 @@ impl App {
                                     .summary("Crash detected")
                                     .body(&modal_data.message)
                                     .icon("dialog-error")
-                                    .show()
-                                    .unwrap();
+                                    .show();
+                                    
 
                                 sender.emit(CmdOut::CrashDetected(modal_data));
                             }
                             Err(e) => eprintln!("Failed to parse signal arguments: {}", e),
                         }
                     }
+                    Ok::<(), zbus::Error>(())
                 })
                 .drop_on_shutdown()
+
+            // Ok(())
         });
+        
     }
 }

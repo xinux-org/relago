@@ -53,7 +53,7 @@ pub fn create_report(
     public_key_path: Option<&str>,
 ) -> Result<Report, ReportError> {
     let timestamp = chrono::Local::now().format("%Y-%m-%d_%H-%M-%S");
-    let report_dir = PathBuf::from(&output_dir).join(format!("report_{}", timestamp));
+    let report_dir = PathBuf::from(&output_dir).join(format!("report_{timestamp}"));
 
     println!("Creating report directory: {}", report_dir.display());
     fs::create_dir_all(&report_dir)?;
@@ -89,19 +89,21 @@ pub fn create_report(
         let config_path = shellexpand::tilde(config_path).to_string();
         let src = PathBuf::from(&config_path);
 
-        if !src.exists() {
-            eprintln!("Warning: NixOS config path does not exist: {}", config_path);
-        } else {
-            println!("Copying NixOS configuration from: {}", src.display());
+        if src.exists() {
             let dest = report_dir.join("nixos-config");
             info::copy_dir_recursive(&src, &dest)
                 .map_err(|e| ReportError::System(e.to_string()))?;
             println!("NixOS config copied: {}", dest.display());
+        } else {
+            eprintln!("Warning: NixOS config path does not exist: {config_path}");
         }
     }
     let key_path = public_key_path.map(|p| shellexpand::tilde(p).to_string());
 
-    if system_info.system_name.is_some_and(|name| name == "XinuxOS") {
+    if system_info
+        .system_name
+        .is_some_and(|name| name == "XinuxOS")
+    {
         let src = CONFIG.get().nix_config.clone();
         let dest = report_dir.join(CONFIG.get().nix_config.clone());
         info::copy_dir_recursive(&src, &dest).map_err(|e| ReportError::System(e.to_string()))?;
@@ -114,9 +116,12 @@ pub fn create_report(
     fs::remove_dir_all(&report_dir).ok();
     let zip_path = report_dir.with_extension("zip");
 
-    // FIXME: research for better solution
-    match key_path {
-        Some(key_path) => match enc::encrypt_file(&zip_path, &key_path) {
+    key_path.map_or_else(
+        || {
+            fs::remove_file(&zip_path).ok();
+            Err(ReportError::PathBufErr)
+        },
+        |key_path| match enc::encrypt_file(&zip_path, &key_path) {
             Ok(encrypted_path) => {
                 fs::remove_file(&zip_path).ok();
                 Ok(Report {
@@ -124,15 +129,11 @@ pub fn create_report(
                 })
             }
             Err(e) => {
-                eprintln!("Encryption failed: {}", e);
+                eprintln!("Encryption failed: {e}");
                 fs::remove_file(&zip_path).ok();
 
                 Err(ReportError::PathBufErr)
             }
         },
-        None => {
-            fs::remove_file(&zip_path).ok();
-            Err(ReportError::PathBufErr)
-        }
-    }
+    )
 }

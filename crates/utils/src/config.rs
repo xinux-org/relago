@@ -44,8 +44,8 @@ macro_rules! set_document_field {
 }
 
 impl Config {
-    pub fn get_config(path: impl Into<PathBuf>) -> anyhow::Result<Config> {
-        <Config as confique::Config>::from_file(path).map_err(|e| anyhow::anyhow!(e))
+    pub fn get_config(path: impl Into<PathBuf>) -> anyhow::Result<Self> {
+        <Self as confique::Config>::from_file(path).map_err(|e| anyhow::anyhow!(e))
     }
 
     pub fn save_config(path: impl AsRef<Path>, config: ConfigLayer) -> anyhow::Result<()> {
