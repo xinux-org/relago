@@ -70,7 +70,7 @@ pub fn run(sender: ComponentSender<App>, context: Option<String>) {
                             }
                             .into(),
                         );
-
+                        println!("ZIP FILE: {zip_path}");
                         zip_path
                     }
                 };
@@ -120,9 +120,11 @@ pub fn upload(file_path: String, context: Option<String>) -> anyhow::Result<()> 
     let mut form = multipart::Form::new().file("report", file_path)?;
 
     if let Some(context) = context {
+        println!("CONTEXT HERE: {:?}", &context);
         form = form.text("context", context);
     };
-
+    println!("FILE FORM: {form:?}");
+    println!("SERVER PATH: {server:?}");
     reqwest::blocking::Client::new()
         .post(format!("{}/upload/report", &server))
         .multipart(form)
