@@ -144,7 +144,7 @@ fn save_key(res: Response) -> anyhow::Result<()> {
     move_id_file(&root, &keys)?;
     move_key_file(&keys)?;
 
-    fs::remove_file(&keys).map_err(anyhow::Error::from)
+    fs::remove_file(keys.join("idfile")).map_err(anyhow::Error::from)
 }
 
 fn extract_zip(res: Response, keys: &PathBuf) -> anyhow::Result<()> {

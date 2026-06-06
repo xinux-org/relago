@@ -323,6 +323,7 @@ impl App {
             shutdown
                 .register(async move {
                     let conn = Connection::system().await?;
+
                     let proxy = crate::DaemonServiceProxy::new(&conn).await?;
 
                     let mut stream = proxy.receive_crash_detected().await?;
@@ -336,12 +337,15 @@ impl App {
 
                                 println!("Signal received! Crash in unit: {}", modal_data.unit);
 
-                                notify_rust::Notification::new()
+                                if let Err(e) = notify_rust::Notification::new()
                                     .summary("Crash detected")
                                     .body(&modal_data.message)
                                     .icon("dialog-error")
-                                    .show();
-                                    
+                                    .show()
+                                    {
+                                        eprintln!("Failed to show notification: {e}");
+                                    };
+
 
                                 sender.emit(CmdOut::CrashDetected(modal_data));
                             }
@@ -354,6 +358,6 @@ impl App {
 
             // Ok(())
         });
-        
+
     }
 }

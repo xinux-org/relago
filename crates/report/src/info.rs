@@ -152,10 +152,6 @@ pub fn collect_journal_recent(path: &Path, num_entries: usize) -> Result<()> {
     let mut entries: HashSet<JournalLog> = HashSet::new();
 
     for _count in 0..num_entries {
-        if reader.previous()? == 0 {
-            break;
-        }
-
         if let Some(entry) = reader.previous_entry()? {
             let writable: JournalLog = JournalLog {
                 // NOTE:
@@ -168,6 +164,8 @@ pub fn collect_journal_recent(path: &Path, num_entries: usize) -> Result<()> {
 
             entries.insert(writable.clone());
             println!("{:?}", &writable);
+        } else {
+            break;
         }
     }
 

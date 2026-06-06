@@ -3,8 +3,7 @@ use clap::{arg, command, Arg, ArgAction, Args, Command, FromArgMatches};
 
 use daemon::journal;
 use gui::start_gui;
-use std::{env, io::BufRead, process};
-use subprocess::Exec;
+use std::process;
 use utils::{
     config::{Config, ConfigLayer, CONFIG},
     setup_key,
@@ -23,7 +22,7 @@ pub fn run() -> anyhow::Result<()> {
         }
     }
 
-    let tmp_dir = CONFIG.get().tmp_dir.clone();
+    let tmp_dir = CONFIG.get().tmp_dir.to_string_lossy().into_owned();
 
     tracing_subscriber::fmt()
         .with_env_filter(
@@ -36,7 +35,7 @@ pub fn run() -> anyhow::Result<()> {
         .subcommand(
             Command::new("exec")
                 .about("Run daemon")
-                .arg(Arg::new("exec").action(ArgAction::Append)),
+                .arg(Arg::new("exec").required(true).action(ArgAction::Append)),
         )
         .subcommand(Command::new("daemon").about("Run daemon").arg(arg!([NAME])))
         .subcommand(Command::new("gui").about("Run notification-report"))
@@ -117,26 +116,31 @@ pub fn run() -> anyhow::Result<()> {
             cmd_exec(cmd)?;
         }
         Some(("report", sub_matches)) => {
-            let rep: String = sub_matches
+            let output_dir = sub_matches
                 .get_one::<String>("output")
-                .unwrap_or(&tmp_dir.into_os_string().into_string().unwrap_or_default()) // FIXME: We can design better
+                .unwrap_or(&tmp_dir)
                 .to_owned();
 
-            let nixos_config = sub_matches
-                .get_one::<String>("nixos-config")
-                .map(std::string::String::as_str);
+            let mut builder = report::ReportBuilder::new(&output_dir)
+                .system_info();
 
-            // Check if `--recent` argument added
-            let recent_entries = sub_matches
+            match sub_matches
                 .get_one::<String>("recent")
-                .and_then(|s| s.parse::<usize>().ok());
+                .and_then(|s| s.parse::<usize>().ok())
+            {
+                Some(n) => builder = builder.journal(report::JournalMode::Recent(n)),
+                None => builder = builder.journal(report::JournalMode::All),
+            }
 
-            let encrypt_key = sub_matches
-                .get_one::<String>("encrypt-key")
-                .map(std::string::String::as_str);
+            if let Some(path) = sub_matches.get_one::<String>("nixos-config") {
+                builder = builder.nixos_config(path);
+            }
 
-            // report::create_report(rep, nixos_config, recent_entries)?;
-            report::run(rep.as_str(), nixos_config, recent_entries, encrypt_key)?;
+            if let Some(key) = sub_matches.get_one::<String>("encrypt-key") {
+                builder = builder.encrypt(key);
+            }
+
+            builder.build()?;
         }
         Some(("daemon", _sub_matches)) => {
             println!("Relago daemon application is started without fuckery!!!");
@@ -171,24 +175,13 @@ pub fn run() -> anyhow::Result<()> {
 }
 
 fn cmd_exec(cmd: &str) -> anyhow::Result<()> {
-    let cm = Exec::shell(cmd);
+    let output = process::Command::new(cmd)
+        .output()
+        .context("Failed to execute command")?;
 
-    let capture = cm
-        .clone()
-        .capture()
-        .context("Failed to capture command output")?;
-
-    if !capture.success() {
-        let mut collected_output = String::new();
-
-        let v = cm.stream_stderr()?;
-        let reader = std::io::BufReader::new(v);
-        for line in reader.lines() {
-            let l = line.context("Failed to read stderr line")?;
-            collected_output.push_str(&l);
-        }
-
-        // let _ = NixErr::process_nix_error(&collected_output);
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        eprintln!("{}", stderr);
     }
 
     Ok(())

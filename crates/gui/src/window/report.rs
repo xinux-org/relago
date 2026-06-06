@@ -2,7 +2,7 @@ use super::messages::CmdCrashOut;
 use super::model::App;
 use futures_util::FutureExt;
 use relm4::ComponentSender;
-use report::create_report;
+use report::{ReportBuilder, JournalMode};
 use reqwest::blocking::multipart;
 use utils::config::CONFIG;
 
@@ -19,19 +19,26 @@ pub fn run(sender: ComponentSender<App>, context: Option<String>) {
                 );
 
                 let keys = format!("{}/key.pub", CONFIG.get().keys.display());
+                let nix_config = CONFIG.get().nix_config.to_string_lossy().into_owned();
+                let tmp_dir = CONFIG.get().tmp_dir.to_string_lossy().into_owned();
 
                 let rep_file = tokio::task::spawn_blocking(move || {
-                    create_report(
-                        CONFIG.get().tmp_dir.clone().to_str().unwrap(),
-                        Some(CONFIG.get().nix_config.clone().to_str().unwrap()),
-                        None,
-                        // Some(CONFIG.get().public_key)
-                        // Some("~/keys/gpg-pub.asc")
-                        Some(&keys.clone()),
-                    )
+                    ReportBuilder::new(&tmp_dir)
+                        .system_info()
+                        .journal(JournalMode::All)
+                        .nixos_config(&nix_config)
+                        .encrypt(&keys)
+                        .build()
                 })
-                .await
-                .unwrap();
+                .await;
+
+                let rep_file = match rep_file {
+                    Ok(r) => r,
+                    Err(e) => {
+                        out.emit(CmdCrashOut::Error(format!("Report task failed: {e}")).into());
+                        return;
+                    }
+                };
 
                 let path = match rep_file {
                     Err(e) => {
@@ -63,7 +70,7 @@ pub fn run(sender: ComponentSender<App>, context: Option<String>) {
                             }
                             .into(),
                         );
-
+                        println!("ZIP FILE: {zip_path}");
                         zip_path
                     }
                 };
@@ -78,9 +85,14 @@ pub fn run(sender: ComponentSender<App>, context: Option<String>) {
                     .into(),
                 );
 
-                let result = tokio::task::spawn_blocking(move || upload(path, context))
-                    .await
-                    .unwrap();
+                let result = match tokio::task::spawn_blocking(move || upload(path, context)).await
+                {
+                    Ok(res) => res,
+                    Err(e) => {
+                        out.emit(CmdCrashOut::Error(format!("Upload task failed: {e}")).into());
+                        return;
+                    }
+                };
 
                 out.emit(
                     CmdCrashOut::Progress {
@@ -108,9 +120,11 @@ pub fn upload(file_path: String, context: Option<String>) -> anyhow::Result<()> 
     let mut form = multipart::Form::new().file("report", file_path)?;
 
     if let Some(context) = context {
+        println!("CONTEXT HERE: {:?}", &context);
         form = form.text("context", context);
     };
-
+    println!("FILE FORM: {form:?}");
+    println!("SERVER PATH: {server:?}");
     reqwest::blocking::Client::new()
         .post(format!("{}/upload/report", &server))
         .multipart(form)

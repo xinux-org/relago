@@ -7,7 +7,6 @@ use encrypt as enc;
 use std::fs::{self, File};
 use std::path::PathBuf;
 use thiserror::Error;
-use utils::config::CONFIG;
 
 #[derive(Debug, Error)]
 pub enum ReportError {
@@ -23,117 +22,137 @@ pub enum ReportError {
     #[error("System error: {0}")]
     System(String),
 
-    #[error("PathBuf error")]
-    PathBufErr,
+    #[error("Encryption failed: {0}")]
+    Encryption(String),
 }
 
 pub struct Report {
     pub file: PathBuf,
 }
 
-pub fn run(
-    output_dir: &str,
-    nixos_config_path: Option<&str>,
-    recent_entries: Option<usize>,
-    public_key_path: Option<&str>,
-) -> anyhow::Result<()> {
-    create_report(
-        output_dir,
-        nixos_config_path,
-        recent_entries,
-        public_key_path,
-    )?;
-    Ok(())
+pub enum JournalMode {
+    All,
+    Recent(usize),
 }
 
-pub fn create_report(
-    output_dir: &str,
-    nixos_config_path: Option<&str>,
-    recent_entries: Option<usize>,
-    public_key_path: Option<&str>,
-) -> Result<Report, ReportError> {
-    let timestamp = chrono::Local::now().format("%Y-%m-%d_%H-%M-%S");
-    let report_dir = PathBuf::from(&output_dir).join(format!("report_{timestamp}"));
+pub struct ReportBuilder {
+    output_dir: String,
+    system_info: bool,
+    journal: Option<JournalMode>,
+    nixos_config: Option<String>,
+    encrypt_key: Option<String>,
+    custom_data: Vec<(String, String)>,
+}
 
-    println!("Creating report directory: {}", report_dir.display());
-    fs::create_dir_all(&report_dir)?;
-
-    // 1. Collect and save system information
-    println!("Collecting system information...");
-    let system_info =
-        info::collect_system_info().map_err(|e| ReportError::System(e.to_string()))?;
-    let system_info_path = report_dir.join("system_info.json");
-
-    let file = File::create(&system_info_path)?;
-
-    serde_json::to_writer_pretty(file, &system_info)?;
-    println!("System info saved: {}", system_info_path.display());
-
-    // 2. Collect journal entries
-    let journal_path = report_dir.join("journal_report.json");
-    if let Some(num) = recent_entries {
-        info::collect_journal_recent(&journal_path, num)
-            .map_err(|e| ReportError::System(e.to_string()))?;
-    } else {
-        info::collect_journal_all(&journal_path).map_err(|e| ReportError::System(e.to_string()))?;
-    }
-
-    // Compress .json then remove it
-    println!("Compressing journal file...");
-    cmp::compress(&journal_path, &report_dir)
-        .map_err(|e| ReportError::Compression(e.to_string()))?;
-    fs::remove_file(&journal_path)?;
-
-    // 3. Copy NixOS configuration if provided
-    if let Some(config_path) = nixos_config_path {
-        let config_path = shellexpand::tilde(config_path).to_string();
-        let src = PathBuf::from(&config_path);
-
-        if src.exists() {
-            let dest = report_dir.join("nixos-config");
-            info::copy_dir_recursive(&src, &dest)
-                .map_err(|e| ReportError::System(e.to_string()))?;
-            println!("NixOS config copied: {}", dest.display());
-        } else {
-            eprintln!("Warning: NixOS config path does not exist: {config_path}");
+impl ReportBuilder {
+    pub fn new(output_dir: &str) -> Self {
+        Self {
+            output_dir: output_dir.to_string(),
+            system_info: false,
+            journal: None,
+            nixos_config: None,
+            encrypt_key: None,
+            custom_data: Vec::new(),
         }
     }
-    let key_path = public_key_path.map(|p| shellexpand::tilde(p).to_string());
 
-    if system_info
-        .system_name
-        .is_some_and(|name| name == "XinuxOS")
-    {
-        let src = CONFIG.get().nix_config.clone();
-        let dest = report_dir.join(CONFIG.get().nix_config.clone());
-        info::copy_dir_recursive(&src, &dest).map_err(|e| ReportError::System(e.to_string()))?;
+    pub fn system_info(mut self) -> Self {
+        self.system_info = true;
+        self
     }
 
-    // TODO: delete original file after compressed
-    cmp::compress_zip(&report_dir, output_dir)
-        .map_err(|e| ReportError::Compression(e.to_string()))?;
+    pub fn journal(mut self, mode: JournalMode) -> Self {
+        self.journal = Some(mode);
+        self
+    }
 
-    fs::remove_dir_all(&report_dir).ok();
-    let zip_path = report_dir.with_extension("zip");
+    pub fn nixos_config(mut self, path: &str) -> Self {
+        self.nixos_config = Some(path.to_string());
+        self
+    }
 
-    key_path.map_or_else(
-        || {
-            fs::remove_file(&zip_path).ok();
-            Err(ReportError::PathBufErr)
-        },
-        |key_path| match enc::encrypt_file(&zip_path, &key_path) {
-            Ok(encrypted_path) => {
-                fs::remove_file(&zip_path).ok();
-                Ok(Report {
-                    file: encrypted_path,
-                })
+    pub fn encrypt(mut self, key_path: &str) -> Self {
+        self.encrypt_key = Some(key_path.to_string());
+        self
+    }
+
+    pub fn custom(mut self, key: &str, value: &str) -> Self {
+        self.custom_data.push((key.to_string(), value.to_string()));
+        self
+    }
+
+    pub fn build(self) -> Result<Report, ReportError> {
+        let timestamp = chrono::Local::now().format("%Y-%m-%d_%H-%M-%S");
+        let report_dir = PathBuf::from(&self.output_dir).join(format!("report_{}", timestamp));
+
+        fs::create_dir_all(&report_dir)?;
+
+        if self.system_info {
+            println!("Collecting system information...");
+            let system_info =
+                info::collect_system_info().map_err(|e| ReportError::System(e.to_string()))?;
+            let file = File::create(report_dir.join("system_info.json"))?;
+            serde_json::to_writer_pretty(file, &system_info)?;
+        }
+
+        if let Some(mode) = &self.journal {
+            let journal_path = report_dir.join("journal_report.json");
+            match mode {
+                JournalMode::All => {
+                    info::collect_journal_all(&journal_path)
+                        .map_err(|e| ReportError::System(e.to_string()))?;
+                }
+                JournalMode::Recent(n) => {
+                    info::collect_journal_recent(&journal_path, *n)
+                        .map_err(|e| ReportError::System(e.to_string()))?;
+                }
             }
-            Err(e) => {
-                eprintln!("Encryption failed: {e}");
-                fs::remove_file(&zip_path).ok();
+            println!("Compressing journal file...");
+            cmp::compress(&journal_path, &report_dir)
+                .map_err(|e| ReportError::Compression(e.to_string()))?;
+            fs::remove_file(&journal_path)?;
+        }
 
-                Err(ReportError::PathBufErr)
+        if let Some(config_path) = &self.nixos_config {
+            let config_path = shellexpand::tilde(config_path).to_string();
+            let src = PathBuf::from(&config_path);
+            if src.exists() {
+                println!("Copying NixOS configuration from: {}", src.display());
+                let dest = report_dir.join("nixos-config");
+                info::copy_dir_recursive(&src, &dest)
+                    .map_err(|e| ReportError::System(e.to_string()))?;
             }
-        },
-    )
+        }
+
+        if !self.custom_data.is_empty() {
+            let custom: serde_json::Map<String, serde_json::Value> = self
+                .custom_data
+                .into_iter()
+                .map(|(k, v)| (k, serde_json::Value::String(v)))
+                .collect();
+            let file = File::create(report_dir.join("custom_data.json"))?;
+            serde_json::to_writer_pretty(file, &custom)?;
+        }
+
+        cmp::compress_zip(&report_dir, &self.output_dir)
+            .map_err(|e| ReportError::Compression(e.to_string()))?;
+        fs::remove_dir_all(&report_dir).ok();
+        let zip_path = report_dir.with_extension("zip");
+
+        match self.encrypt_key {
+            Some(key_path) => {
+                let key_path = shellexpand::tilde(&key_path).to_string();
+                match enc::encrypt_file(&zip_path, &key_path) {
+                    Ok(encrypted_path) => {
+                        fs::remove_file(&zip_path).ok();
+                        Ok(Report {
+                            file: encrypted_path,
+                        })
+                    }
+                    Err(e) => Err(ReportError::Encryption(e.to_string())),
+                }
+            }
+            None => Ok(Report { file: zip_path }),
+        }
+    }
 }
