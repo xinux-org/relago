@@ -14,6 +14,7 @@ use std::fmt::{Debug, Display, Formatter};
 use zbus::Connection;
 
 use crate::window::messages::CmdCrashOut;
+use crate::window::report::UploadError;
 
 // pub type Result<T> = std::result::Result<T, Error>;
 
@@ -216,7 +217,12 @@ impl Component for App {
             }
             Input::Report(ctx) => {
                 self.computing = true;
-                report::run(sender, ctx);
+                match &self.task {
+                    Some(CmdOut::CrashCmd(CmdCrashOut::UploadFailed(
+                        UploadError::MissingId { .. }
+                    ))) => report::run_setup_key(sender),
+                    _ => report::run(sender, ctx)
+                };
             }
         }
     }
@@ -229,7 +235,10 @@ impl Component for App {
     ) {
         match &message {
             CmdOut::CrashCmd(cmd_crash_out) => match &cmd_crash_out {
-                CmdCrashOut::Finished { .. } | CmdCrashOut::Error(_) => self.computing = false,
+                CmdCrashOut::Finished { .. }
+                | CmdCrashOut::Error(_)
+                | CmdCrashOut::UploadFailed(_)
+                | CmdCrashOut::SetupKeyDone => self.computing = false,
                 CmdCrashOut::Progress { .. } => {}
             },
             CmdOut::CrashDetected(modal) => {
@@ -309,6 +318,57 @@ impl Component for App {
                         widgets.label.set_label(&format!("Error: {e}"));
                         widgets.button.set_visible(true);
                         widgets.button.set_label("Retry");
+                        widgets.button_close.set_label("Close");
+                    }
+                    CmdCrashOut::UploadFailed(e) => {
+                        let (text, button_label, context_visible) = match e {
+                            UploadError::MissingId { .. } => (
+                                "Reporter not registered.".to_string(),
+                                Some("Register reporter"),
+                                false,
+                            ),
+                            UploadError::Io(io) => (
+                                format!("Local I/O error: {io}"),
+                                Some("Retry"),
+                                true,
+                            ),
+                            UploadError::Network(net) => (
+                                format!("Can't reach server: {net}"),
+                                Some("Retry"),
+                                true,
+                            ),
+                            UploadError::Client { status, body } => (
+                                format!("Server rejected the report (HTTP {status}): {body}"),
+                                None,
+                                false,
+                            ),
+                            UploadError::Server { status, .. } => (
+                                format!("Server error (HTTP {status}). Try again later."),
+                                Some("Retry"),
+                                true,
+                            ),
+                        };
+
+                        widgets.scroll.set_visible(true);
+                        widgets.context_box.set_visible(context_visible);
+                        widgets.progress.set_visible(false);
+                        widgets.label.set_label(&format!("Error: {text}"));
+                        if let Some(label) = button_label {
+                            widgets.button.set_visible(true);
+                            widgets.button.set_label(label);
+                        } else {
+                            widgets.button.set_visible(false);
+                        }
+                        widgets.button_close.set_label("Close");
+                    }
+                    CmdCrashOut::SetupKeyDone => {
+                        widgets.scroll.set_visible(true);
+                        widgets.context_box.set_visible(true);
+                        widgets.progress.set_visible(false);
+                        widgets.label
+                            .set_label("Reporter registered. Click Send Report to retry.");
+                        widgets.button.set_visible(true);
+                        widgets.button.set_label("Send Report");
                         widgets.button_close.set_label("Close");
                     }
                 },

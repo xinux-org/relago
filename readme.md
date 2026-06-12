@@ -119,7 +119,7 @@ parallel_compression = 4
 tmp_dir = "/tmp/relago"
 
 # data storage directory
-data_dir = "/var/lib/relago/data"
+data_dir = "/var/lib/relago"
 
 # path to nixos configuration
 nix_config = "/etc/nixos/xinux-config"

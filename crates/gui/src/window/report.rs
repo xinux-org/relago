@@ -5,11 +5,52 @@ use relm4::ComponentSender;
 use report::{ReportBuilder, JournalMode};
 use reqwest::blocking::multipart;
 use utils::config::CONFIG;
+use utils::setup_key;
+
+#[derive(thiserror::Error, Debug)]
+pub enum UploadError {
+    #[error("Failed to read reporter ID at {path}: {source}")]
+    MissingId {
+        path: String,
+        #[source]
+        source: std::io::Error,
+    },
+
+    #[error("I/O error: {0}")]
+    Io(#[from] std::io::Error),
+
+    #[error("Network error: {0}")]
+    Network(#[from] reqwest::Error),
+
+    #[error("Client error (HTTP {status}): {body}")]
+    Client { status: u16, body: String },
+
+    #[error("Server error (HTTP {status}): {body}")]
+    Server { status: u16, body: String },
+}
 
 pub fn run(sender: ComponentSender<App>, context: Option<String>) {
     sender.command(|out, shutdown| {
         shutdown
             .register(async move {
+                let uuid_path = CONFIG.get().data_dir.join("uuid");
+                let key_path = CONFIG.get().keys.join("key.pub");
+                for path in [&uuid_path, &key_path] {
+                    if !path.exists() {
+                        out.emit(
+                            CmdCrashOut::UploadFailed(UploadError::MissingId {
+                                path: path.display().to_string(),
+                                source: std::io::Error::new(
+                                    std::io::ErrorKind::NotFound,
+                                    "registration file missing",
+                                ),
+                            })
+                            .into(),
+                        );
+                        return;
+                    }
+                }
+
                 out.emit(
                     CmdCrashOut::Progress {
                         fraction: 0.05,
@@ -18,7 +59,7 @@ pub fn run(sender: ComponentSender<App>, context: Option<String>) {
                     .into(),
                 );
 
-                let keys = format!("{}/key.pub", CONFIG.get().keys.display());
+                let keys = format!("{}/server.pub", CONFIG.get().keys.display());
                 let nix_config = CONFIG.get().nix_config.to_string_lossy().into_owned();
                 let tmp_dir = CONFIG.get().tmp_dir.to_string_lossy().into_owned();
 
@@ -106,7 +147,7 @@ pub fn run(sender: ComponentSender<App>, context: Option<String>) {
 
                 match result {
                     Ok(_) => out.emit(CmdCrashOut::Finished { bytes: size }.into()),
-                    Err(e) => out.emit(CmdCrashOut::Error(format!("Upload failed: {e}")).into()),
+                    Err(e) => out.emit(CmdCrashOut::UploadFailed(e).into()),
                 }
             })
             .drop_on_shutdown()
@@ -114,21 +155,68 @@ pub fn run(sender: ComponentSender<App>, context: Option<String>) {
     });
 }
 
-pub fn upload(file_path: String, context: Option<String>) -> anyhow::Result<()> {
+pub fn run_setup_key(sender: ComponentSender<App>) {
+    sender.command(|out, shutdown| {
+        shutdown
+            .register(async move {
+                out.emit(
+                    CmdCrashOut::Progress {
+                        fraction: 0.1,
+                        message: "Registering reporter…".into(),
+                    }
+                    .into(),
+                );
+
+                let result = tokio::task::spawn_blocking(setup_key::init).await;
+
+                match result {
+                    Err(e) => out.emit(
+                        CmdCrashOut::Error(format!("Setup task failed: {e}")).into(),
+                    ),
+                    Ok(Err(e)) => out.emit(
+                        CmdCrashOut::Error(format!("Setup failed: {e}")).into(),
+                    ),
+                    Ok(Ok(())) => out.emit(CmdCrashOut::SetupKeyDone.into()),
+                }
+            })
+            .drop_on_shutdown()
+            .boxed()
+    });
+}
+
+pub fn upload(file_path: String, context: Option<String>) -> Result<(), UploadError> {
     let server = CONFIG.get().server.clone();
+    let uuid_path = CONFIG.get().data_dir.join("uuid");
+    let uuid = std::fs::read_to_string(&uuid_path)?
+        .trim()
+        .to_owned();
 
     let mut form = multipart::Form::new().file("report", file_path)?;
-
     if let Some(context) = context {
-        println!("CONTEXT HERE: {:?}", &context);
         form = form.text("context", context);
-    };
-    println!("FILE FORM: {form:?}");
-    println!("SERVER PATH: {server:?}");
-    reqwest::blocking::Client::new()
-        .post(format!("{}/upload/report", &server))
-        .multipart(form)
-        .send()?;
+    }
 
-    Ok(())
+    let url = format!("{}/upload/report", &server);
+
+    let res = reqwest::blocking::Client::new()
+        .post(&url)
+        .header("Reporter-ID", &uuid)
+        .multipart(form);
+    let res = res.send()?;
+    let status = res.status();
+    let body = res.text()?;
+
+    if status.is_success() {
+        Ok(())
+    } else if status.is_client_error() {
+        Err(UploadError::Client {
+            status: status.as_u16(),
+            body,
+        })
+    } else {
+        Err(UploadError::Server {
+            status: status.as_u16(),
+            body,
+        })
+    }
 }

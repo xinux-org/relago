@@ -1,4 +1,5 @@
 use crate::window::Modal;
+use crate::window::report::UploadError;
 
 #[derive(Debug)]
 pub enum Input {
@@ -23,6 +24,8 @@ pub enum CmdCrashOut {
     Progress { fraction: f64, message: String },
     Finished { bytes: u64 },
     Error(String),
+    UploadFailed(UploadError),
+    SetupKeyDone,
 }
 
 impl From<CmdCrashOut> for CmdOut {

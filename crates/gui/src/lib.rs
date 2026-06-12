@@ -1,5 +1,6 @@
 pub mod window;
 
+use relm4::{adw, gtk::gio};
 use window::Modal;
 use zbus::proxy;
 
@@ -18,7 +19,12 @@ pub trait DaemonService {
 }
 
 pub fn start_gui() {
-    relm4::RelmApp::new("uz.xinux.relago.Reporter")
+    let app = adw::Application::new(
+        Some("uz.xinux.relago.Reporter"),
+        gio::ApplicationFlags::empty(),
+    );
+
+    relm4::RelmApp::from_app(app)
         .visible_on_activate(false)
         .run::<App>(());
 }

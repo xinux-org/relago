@@ -156,7 +156,7 @@ fn extract_zip(res: Response, keys: &PathBuf) -> anyhow::Result<()> {
 
 fn move_id_file(root: &Path, keys: &Path) -> anyhow::Result<()> {
     let from = PathBuf::from(format!("{}/idfile", keys.display()));
-    let to = PathBuf::from(format!("{}/user", root.display()));
+    let to = PathBuf::from(format!("{}/uuid", root.display()));
 
     fs::copy(from, to).map_err(anyhow::Error::from).map(|_| ())
 }

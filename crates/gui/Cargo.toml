@@ -21,6 +21,7 @@ relm4.workspace = true
 relm4-components = "0.9.1"
 reqwest.workspace = true
 anyhow.workspace = true
+thiserror.workspace = true
 report = { path = "../report" }
 utils = { path = "../utils" }
 tokio = "1.50.0"
