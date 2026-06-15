@@ -212,8 +212,7 @@ impl Component for App {
     fn update(&mut self, message: Self::Input, sender: ComponentSender<Self>, root: &Self::Root) {
         match message {
             Input::Dismiss => {
-                self.modal = None;
-                root.set_visible(false);
+                main_application().quit();
             }
             Input::Report(ctx) => {
                 self.computing = true;
