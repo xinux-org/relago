@@ -2,12 +2,10 @@ pub mod compress;
 pub mod encrypt;
 pub mod info;
 
-use anyhow::Context;
 use compress as cmp;
 use encrypt as enc;
 use std::fs::{self, File};
-use std::io;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -44,7 +42,6 @@ pub struct ReportBuilder {
     nixos_config: Option<String>,
     encrypt_key: Option<String>,
     custom_data: Vec<(String, String)>,
-    log_file: Option<PathBuf>
 }
 
 impl ReportBuilder {
@@ -56,7 +53,6 @@ impl ReportBuilder {
             nixos_config: None,
             encrypt_key: None,
             custom_data: Vec::new(),
-            log_file: None
         }
     }
 
@@ -84,10 +80,7 @@ impl ReportBuilder {
         self.custom_data.push((key.to_string(), value.to_string()));
         self
     }
-    pub fn log_file(mut self, file: impl AsRef<Path>) -> Self {
-        self.log_file = Some(PathBuf::from(file.as_ref()));
-        self
-    }
+
     pub fn build(self) -> Result<Report, ReportError> {
         let timestamp = chrono::Local::now().format("%Y-%m-%d_%H-%M-%S");
         let report_dir = PathBuf::from(&self.output_dir).join(format!("report_{}", timestamp));
@@ -137,15 +130,8 @@ impl ReportBuilder {
                 .into_iter()
                 .map(|(k, v)| (k, serde_json::Value::String(v)))
                 .collect();
-            let file = File::create(report_dir.join("meta.json"))?;
+            let file = File::create(report_dir.join("custom_data.json"))?;
             serde_json::to_writer_pretty(file, &custom)?;
-        }
-
-        if self.log_file.is_some() {
-            let log = self.log_file
-            .ok_or_else(|| io::Error::new(io::ErrorKind::Other, "missing path"))
-            .and_then(fs::read_to_string)?;
-            report_dir.join(log);
         }
 
         cmp::compress_zip(&report_dir, &self.output_dir)
