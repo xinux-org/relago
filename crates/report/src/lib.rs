@@ -141,6 +141,7 @@ impl ReportBuilder {
             serde_json::to_writer_pretty(file, &custom)?;
         }
 
+        // TODO: do smt
         if self.log_file.is_some() {
             let log = self.log_file
             .ok_or_else(|| io::Error::new(io::ErrorKind::Other, "missing path"))
