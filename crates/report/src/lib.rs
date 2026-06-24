@@ -28,6 +28,12 @@ pub enum ReportError {
     Encryption(String),
 }
 
+pub enum ErrorPhase {
+    Installation,
+    Encryption,
+    Partition,
+}
+
 pub struct Report {
     pub file: PathBuf,
 }
@@ -43,8 +49,8 @@ pub struct ReportBuilder {
     journal: Option<JournalMode>,
     nixos_config: Option<String>,
     encrypt_key: Option<String>,
-    custom_data: Vec<(String, String)>,
-    log_file: Option<PathBuf>
+    meta_data: Vec<(String, ErrorPhase)>,
+    log_file: Option<PathBuf>,
 }
 
 impl ReportBuilder {
@@ -55,8 +61,8 @@ impl ReportBuilder {
             journal: None,
             nixos_config: None,
             encrypt_key: None,
-            custom_data: Vec::new(),
-            log_file: None
+            meta_data: Vec::new(),
+            log_file: None,
         }
     }
 
@@ -80,11 +86,11 @@ impl ReportBuilder {
         self
     }
 
-    pub fn custom(mut self, key: &str, value: &str) -> Self {
-        self.custom_data.push((key.to_string(), value.to_string()));
+    pub fn meta(mut self, key: &str, value: ErrorPhase) -> Self {
+        self.meta_data.push((key.to_string(), value));
         self
     }
-    pub fn log_file(mut self, file: impl AsRef<Path>) -> Self {
+    pub fn log(mut self, file: impl AsRef<Path>) -> Self {
         self.log_file = Some(PathBuf::from(file.as_ref()));
         self
     }
@@ -131,21 +137,28 @@ impl ReportBuilder {
             }
         }
 
-        if !self.custom_data.is_empty() {
-            let custom: serde_json::Map<String, serde_json::Value> = self
-                .custom_data
+        if !self.meta_data.is_empty() {
+            let meta: serde_json::Map<String, serde_json::Value> = self
+                .meta_data
                 .into_iter()
-                .map(|(k, v)| (k, serde_json::Value::String(v)))
+                .map(|(k, v)| (k, serde_json::Value::String({
+                    match v {
+                        ErrorPhase::Installation => "Installation".to_string(),
+                        ErrorPhase::Encryption => "Encryption".to_string(),
+                        ErrorPhase::Partition => "Partition".to_string(),
+                    }
+                })))
                 .collect();
             let file = File::create(report_dir.join("meta.json"))?;
-            serde_json::to_writer_pretty(file, &custom)?;
+            serde_json::to_writer_pretty(file, &meta)?;
         }
 
         // TODO: do smt
         if self.log_file.is_some() {
-            let log = self.log_file
-            .ok_or_else(|| io::Error::new(io::ErrorKind::Other, "missing path"))
-            .and_then(fs::read_to_string)?;
+            let log = self
+                .log_file
+                .ok_or_else(|| io::Error::new(io::ErrorKind::Other, "missing path"))
+                .and_then(fs::read_to_string)?;
             report_dir.join(log);
         }
 
