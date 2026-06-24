@@ -153,7 +153,6 @@ impl ReportBuilder {
             serde_json::to_writer_pretty(file, &meta)?;
         }
 
-        // TODO: do smt
         if self.log_file.is_some() {
             let log = self
                 .log_file
