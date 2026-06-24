@@ -28,12 +28,6 @@ pub enum ReportError {
     Encryption(String),
 }
 
-pub enum ErrorPhase {
-    Installation,
-    Encryption,
-    Partition,
-}
-
 pub struct Report {
     pub file: PathBuf,
 }
@@ -49,7 +43,7 @@ pub struct ReportBuilder {
     journal: Option<JournalMode>,
     nixos_config: Option<String>,
     encrypt_key: Option<String>,
-    meta_data: Vec<(String, ErrorPhase)>,
+    meta_data: Vec<(String, String)>,
     log_file: Option<PathBuf>,
 }
 
@@ -86,8 +80,8 @@ impl ReportBuilder {
         self
     }
 
-    pub fn meta(mut self, key: &str, value: ErrorPhase) -> Self {
-        self.meta_data.push((key.to_string(), value));
+    pub fn meta(mut self, key: &str, value: &str) -> Self {
+        self.meta_data.push((key.to_string(), value.to_string()));
         self
     }
     pub fn log(mut self, file: impl AsRef<Path>) -> Self {
@@ -141,13 +135,7 @@ impl ReportBuilder {
             let meta: serde_json::Map<String, serde_json::Value> = self
                 .meta_data
                 .into_iter()
-                .map(|(k, v)| (k, serde_json::Value::String({
-                    match v {
-                        ErrorPhase::Installation => "Installation".to_string(),
-                        ErrorPhase::Encryption => "Encryption".to_string(),
-                        ErrorPhase::Partition => "Partition".to_string(),
-                    }
-                })))
+                .map(|(k, v)| (k, serde_json::Value::String(v)))
                 .collect();
             let file = File::create(report_dir.join("meta.json"))?;
             serde_json::to_writer_pretty(file, &meta)?;
