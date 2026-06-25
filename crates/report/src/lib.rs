@@ -6,7 +6,6 @@ use anyhow::Context;
 use compress as cmp;
 use encrypt as enc;
 use std::fs::{self, File};
-use std::io;
 use std::path::{Path, PathBuf};
 use thiserror::Error;
 
@@ -141,12 +140,22 @@ impl ReportBuilder {
             serde_json::to_writer_pretty(file, &meta)?;
         }
 
-        if self.log_file.is_some() {
-            let log = self
-                .log_file
-                .ok_or_else(|| io::Error::new(io::ErrorKind::Other, "missing path"))
-                .and_then(fs::read_to_string)?;
-            report_dir.join(log);
+        if let Some(log_path) = &self.log_file {
+            if log_path.exists() {
+                let dest = report_dir.join(
+                    log_path
+                        .file_name()
+                        .unwrap_or_else(|| std::ffi::OsStr::new("report.log")),
+                );
+                fs::copy(log_path, &dest).map_err(|e| {
+                    ReportError::System(format!(
+                        "Failed to copy log file {}: {e}",
+                        log_path.display()
+                    ))
+                })?;
+            } else {
+                eprintln!("Log file not found, skipping: {}", log_path.display());
+            }
         }
 
         cmp::compress_zip(&report_dir, &self.output_dir)
