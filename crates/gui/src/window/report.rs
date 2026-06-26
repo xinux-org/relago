@@ -169,15 +169,12 @@ pub fn run_setup_key(sender: ComponentSender<App>) {
 
                 let result = tokio::task::spawn_blocking(setup_key::init).await;
 
-                match result {
-                    Err(e) => out.emit(
-                        CmdCrashOut::Error(format!("Setup task failed: {e}")).into(),
-                    ),
-                    Ok(Err(e)) => out.emit(
-                        CmdCrashOut::Error(format!("Setup failed: {e}")).into(),
-                    ),
-                    Ok(Ok(())) => out.emit(CmdCrashOut::SetupKeyDone.into()),
-                }
+                let output = match result {
+                    Err(e) => CmdCrashOut::Error(format!("Setup task failed: {e}")),
+                    Ok(Err(e)) => CmdCrashOut::Error(format!("Setup failed: {e}")),
+                    Ok(Ok(())) => CmdCrashOut::SetupKeyDone,
+                };
+                out.emit(output.into());
             })
             .drop_on_shutdown()
             .boxed()
