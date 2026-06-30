@@ -122,7 +122,7 @@ tmp_dir = "/tmp/relago"
 data_dir = "/var/lib/relago"
 
 # path to nixos configuration
-nix_config = "/etc/nixos/xinux-config"
+nix_config = "/etc/nixos"
 
 # report upload server URL
 server = "https://example.com"
@@ -203,7 +203,7 @@ cargo run -- report -r 10
 cargo run -- configure --tmp-dir /tmp/relago
 
 # Change the default NixOS configuration path
-cargo run -- configure --nix-config /etc/nixos/xinux-config
+cargo run -- configure --nix-config /etc/nixos
 
 # Update the upload server endpoint
 cargo run -- configure --server https://cocomelon.uz

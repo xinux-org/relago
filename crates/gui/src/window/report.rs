@@ -1,8 +1,8 @@
-use super::messages::CmdCrashOut;
-use super::model::App;
+use crate::window::App;
+use crate::window::CmdCrashOut;
 use futures_util::FutureExt;
 use relm4::ComponentSender;
-use report::{ReportBuilder, JournalMode};
+use report::{JournalMode, ReportBuilder};
 use reqwest::blocking::multipart;
 use utils::config::CONFIG;
 use utils::setup_key;
@@ -29,7 +29,7 @@ pub enum UploadError {
     Server { status: u16, body: String },
 }
 
-pub fn run(sender: ComponentSender<App>, context: Option<String>) {
+pub fn run(sender: &ComponentSender<App>, context: Option<String>) {
     sender.command(|out, shutdown| {
         shutdown
             .register(async move {
@@ -50,6 +50,7 @@ pub fn run(sender: ComponentSender<App>, context: Option<String>) {
                         return;
                     }
                 }
+                println!("CmdCrashOut::Progress run");
 
                 out.emit(
                     CmdCrashOut::Progress {
@@ -58,6 +59,7 @@ pub fn run(sender: ComponentSender<App>, context: Option<String>) {
                     }
                     .into(),
                 );
+                println!("CmdCrashOut::Progress fraction: 0.05, run");
 
                 let keys = format!("{}/server.pub", CONFIG.get().keys.display());
                 let nix_config = CONFIG.get().nix_config.to_string_lossy().into_owned();
@@ -89,6 +91,7 @@ pub fn run(sender: ComponentSender<App>, context: Option<String>) {
                         return;
                     }
                     Ok(f) => {
+                        println!("CmdCrashOut::Progress fraction: 0.3, run");
                         out.emit(
                             CmdCrashOut::Progress {
                                 fraction: 0.3,
@@ -100,24 +103,20 @@ pub fn run(sender: ComponentSender<App>, context: Option<String>) {
                         tokio::time::sleep(std::time::Duration::from_millis(300)).await;
 
                         let zip_path = f.file.display().to_string();
-
+                        let zip_file_name = zip_path.split('/').next_back().unwrap_or("report.zip");
                         out.emit(
                             CmdCrashOut::Progress {
                                 fraction: 0.55,
-                                message: format!(
-                                    "Compressed → {}",
-                                    zip_path.split('/').last().unwrap_or("report.zip")
-                                ),
+                                message: format!("Compressed → {zip_file_name}"),
                             }
                             .into(),
                         );
-                        println!("ZIP FILE: {zip_path}");
                         zip_path
                     }
                 };
 
-                let size = std::fs::metadata(&path).map(|m| m.len()).unwrap_or(0);
-
+                println!("CmdCrashOut::Progress Uploading, run");
+                let size = std::fs::metadata(&path).map_or(0, |m| m.len());
                 out.emit(
                     CmdCrashOut::Progress {
                         fraction: 0.65,
@@ -155,7 +154,7 @@ pub fn run(sender: ComponentSender<App>, context: Option<String>) {
     });
 }
 
-pub fn run_setup_key(sender: ComponentSender<App>) {
+pub fn run_setup_key(sender: &ComponentSender<App>) {
     sender.command(|out, shutdown| {
         shutdown
             .register(async move {
@@ -184,16 +183,14 @@ pub fn run_setup_key(sender: ComponentSender<App>) {
 pub fn upload(file_path: String, context: Option<String>) -> Result<(), UploadError> {
     let server = CONFIG.get().server.clone();
     let uuid_path = CONFIG.get().data_dir.join("uuid");
-    let uuid = std::fs::read_to_string(&uuid_path)?
-        .trim()
-        .to_owned();
+    let uuid = std::fs::read_to_string(&uuid_path)?.trim().to_owned();
 
     let mut form = multipart::Form::new().file("report", file_path)?;
     if let Some(context) = context {
         form = form.text("context", context);
     }
 
-    let url = format!("{}/upload/report", &server);
+    let url = format!("{}/reports/runtime", &server);
 
     let res = reqwest::blocking::Client::new()
         .post(&url)

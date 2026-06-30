@@ -251,8 +251,8 @@ in
 
       nix-config = mkOption {
         type = types.str;
-        default = "/etc/nixos/xinux-config";
-        example = "/etc/nixos/xinux-config";
+        default = "/etc/nixos";
+        example = "/etc/nixos";
         description = "Path of Nixos config";
       };
 

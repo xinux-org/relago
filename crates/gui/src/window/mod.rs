@@ -1,423 +1,487 @@
-pub mod messages;
-pub mod model;
 pub mod report;
 
-use futures_util::StreamExt;
-pub use model::Modal;
-
-use adw::prelude::*;
-use relm4::*;
-
-use messages::{CmdOut, Input, Output};
-use model::{App, Widgets};
-use std::fmt::{Debug, Display, Formatter};
-use zbus::Connection;
-
-use crate::window::messages::CmdCrashOut;
 use crate::window::report::UploadError;
+use relm4::{
+    adw::{self, prelude::*},
+    gtk::{self, glib},
+    main_application, Component, ComponentParts, ComponentSender,
+};
+use serde::{Deserialize, Serialize};
+use std::fmt::Debug;
+use zbus::zvariant::Type;
 
-// pub type Result<T> = std::result::Result<T, Error>;
-
-#[non_exhaustive]
-pub enum Error {
-    AppError,
+#[derive(Clone, Debug, Serialize, Deserialize, Type, Default)]
+pub struct Modal {
+    pub unit: String,
+    pub exe: String,
+    pub message: String,
 }
 
-impl Display for Error {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Error::AppError => write!(f, "Failed while starting main function!"),
-        }
+#[derive(Debug)]
+pub struct App {
+    pub computing: bool,
+    pub modal: Modal,
+    pub report_stack_page: ReportStack,
+    pub status_message: String,
+}
+
+// App state pages
+#[derive(Debug)]
+pub enum ReportStack {
+    Crash,
+    Progress,
+    Success,
+    Fail,
+    Register,
+    Welcome,
+}
+
+#[derive(Debug)]
+pub enum AppInput {
+    // Report with user provided context
+    Report(Option<String>),
+    Dismiss,
+    Retry,
+    Register,
+    CrashCmd(CmdCrashOut),
+}
+
+#[derive(Debug)]
+pub enum CmdOut {
+    CrashCmd(CmdCrashOut),
+}
+
+#[derive(Debug)]
+pub enum CmdCrashOut {
+    Progress { fraction: f64, message: String },
+    Finished { bytes: u64 },
+    Error(String),
+    UploadFailed(UploadError),
+    SetupKeyDone,
+}
+
+impl From<CmdCrashOut> for CmdOut {
+    fn from(val: CmdCrashOut) -> Self {
+        CmdOut::CrashCmd(val)
     }
 }
 
-impl Debug for Error {
-    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
-        write!(f, "{}", self)
-    }
+#[derive(Debug)]
+pub enum Output {
+    Clicked(u32),
 }
 
+#[relm4::component(pub)]
 impl Component for App {
-    type Init = ();
-    type Input = Input;
+    type Init = Modal;
+    type Input = AppInput;
     type Output = Output;
     type CommandOutput = CmdOut;
-    type Root = adw::ApplicationWindow;
-    type Widgets = Widgets;
 
-    fn init_root() -> Self::Root {
-        adw::ApplicationWindow::builder()
-            .title("Crash Reporter")
-            .default_width(480)
-            .build()
-    }
-
-    fn init(
-        _: Self::Init,
-        root: Self::Root,
-        sender: ComponentSender<Self>,
-    ) -> ComponentParts<Self> {
-        let grid = gtk::Grid::builder()
-            .row_spacing(8)
-            .column_spacing(16)
-            .margin_start(4)
-            .margin_end(4)
-            .build();
-
-        let scroll = gtk::ScrolledWindow::builder()
-            .hexpand(true)
-            .vexpand(false)
-            .propagate_natural_height(true)
-            .margin_start(16)
-            .margin_end(16)
-            .margin_bottom(12)
-            .child(&grid)
-            .build();
-        scroll.add_css_class("card");
-
-        relm4::view! {
-            toolbar_view = adw::ToolbarView {
+    view! {
+        #[root]
+        main_window = adw::ApplicationWindow {
+            set_visible: true,
+            set_title: Some("Crash Reporter"),
+            connect_close_request[sender] => move |_| {
+                sender.input(AppInput::Dismiss);
+                glib::Propagation::Stop
+            },
+            #[name(toolbar_view)]
+            adw::ToolbarView {
                 add_top_bar = &adw::HeaderBar {},
-
                 #[wrap(Some)]
                 set_content = &gtk::Box {
                     set_orientation: gtk::Orientation::Vertical,
-                    set_spacing: 0,
-
-                    append: title = &gtk::Label {
-                        set_xalign: 0.0,
-                        set_margin_top: 12,
-                        set_margin_bottom: 8,
-                        set_margin_start: 16,
-                        set_margin_end: 16,
-                        add_css_class: "title-4",
-                    },
-
-                    append: &scroll,
-
-                    append: context_box = &gtk::Box {
-                        set_orientation: gtk::Orientation::Vertical,
-                        set_margin_start: 16,
-                        set_margin_end: 16,
-                        set_margin_bottom: 8,
-                        set_spacing: 4,
-
-                        gtk::Label {
-                            set_label: "Additional context (optional)",
-                            set_xalign: 0.0,
-                            add_css_class: "caption",
-                            add_css_class: "dim-label",
-                        },
-
-                        gtk::Frame {
-                            set_hexpand: true,
-                            gtk::ScrolledWindow {
-                                set_hexpand: true,
-                                set_height_request: 80,
-                                add_css_class: "card",
-
-                                #[wrap(Some)]
-                                set_child: context_text_view = &gtk::TextView {
-                                    set_wrap_mode: gtk::WrapMode::Word,
-                                    set_top_margin: 8,
-                                    set_left_margin: 8,
-                                    set_right_margin: 8,
-                                    set_bottom_margin: 8,
-                                    set_accepts_tab: false,
+                    adw::PreferencesPage {
+                        set_width_request: 700,
+                        set_width_request: 500,
+                        adw::PreferencesGroup {
+                            #[name(report_stack)]
+                            gtk::Stack {
+                                set_transition_type: gtk::StackTransitionType::Crossfade,
+                                set_hhomogeneous: false,
+                                set_vhomogeneous: false,
+                                // donʻt translate
+                                add_named: (&welcome, Some("welcome")),
+                                add_named: (&crash, Some("crash")),
+                                add_named: (&progress_page, Some("progress")),
+                                add_named: (&success, Some("success")),
+                                add_named: (&fail, Some("fail")),
+                                add_named: (&register, Some("register")),
+                                #[watch]
+                                set_visible_child_name: match model.report_stack_page {
+                                // donʻt translate
+                                ReportStack::Welcome => "welcome",
+                                ReportStack::Crash => "crash",
+                                ReportStack::Progress => "progress",
+                                ReportStack::Success => "success",
+                                ReportStack::Fail => "fail",
+                                ReportStack::Register => "register",
                                 },
                             },
-                        }
-                    },
-
-                    append: progress = &gtk::ProgressBar {
-                        set_visible: false,
-                        set_margin_start: 16,
-                        set_margin_end: 16,
-                        set_margin_top: 8,
-                    },
-
-                    gtk::Box {
-                        set_orientation: gtk::Orientation::Horizontal,
-                        set_margin_start: 16,
-                        set_margin_end: 16,
-                        set_margin_top: 4,
-                        set_margin_bottom: 12,
-
-                        append: label = &gtk::Label {
-                            set_hexpand: true,
-                            set_xalign: 0.0,
-                            add_css_class: "caption",
-                            add_css_class: "dim-label",
-                        },
-
-                        append: label_pct = &gtk::Label {
-                            set_xalign: 1.0,
-                            add_css_class: "caption",
-                            add_css_class: "monospace",
                         },
                     },
-
-                    gtk::Box {
-                        set_orientation: gtk::Orientation::Horizontal,
-                        set_spacing: 8,
-                        set_homogeneous: true,
-                        set_margin_start: 16,
-                        set_margin_end: 16,
-                        set_margin_top: 8,
-                        set_margin_bottom: 16,
-
-                        append: button_close = &gtk::Button {
-                            set_label: "Close",
-                            add_css_class: "pill",
-                            connect_clicked => Input::Dismiss,
-                        },
-
-                        append: button = &gtk::Button {
-                            set_label: "Send Report",
-                            set_hexpand: true,
-                            add_css_class: "suggested-action",
-                            add_css_class: "pill",
-                            connect_clicked[sender, context_text_view] => move |_| {
-                                let buf = context_text_view.buffer();
-                                let text = buf.text(&buf.start_iter(), &buf.end_iter(), false);
-                                let ctx = if text.is_empty() { None } else { Some(text.to_string()) };
-                                sender.input(Input::Report(ctx));
-                            },
-                        },
-                    }
                 },
             }
-        }
-
-        root.set_content(Some(&toolbar_view));
-
-        Self::start_listener(sender);
-
-        ComponentParts {
-            model: App::default(),
-            widgets: Widgets {
-                button,
-                button_close,
-                progress,
-                label,
-                label_pct,
-                scroll,
-                context_box,
-                title,
-                grid,
+        },
+        welcome = &adw::StatusPage {
+            set_icon_name: Some("airplane-mode-symbolic"),
+            set_title: "Crash will be displayed here",
+            set_description: Some("make crash"),
+        },
+        crash = &adw::PreferencesGroup {
+            set_title: &model.modal.message,
+            set_width_request: 600,
+            #[name(unit)]
+            adw::ActionRow {
+                set_title: "Unit",
+                add_css_class: "property",
+                set_subtitle_selectable: true,
+                set_subtitle: model.modal.unit.as_str(),
             },
-        }
+            #[name(exe)]
+            adw::ActionRow {
+                set_title: "Exe",
+                add_css_class: "property",
+                set_subtitle_selectable: true,
+                set_subtitle: model.modal.exe.as_str(),
+            },
+            #[name(message)]
+            adw::ActionRow {
+                set_title: "Message",
+                add_css_class: "property",
+                set_subtitle_selectable: true,
+                set_subtitle: model.modal.message.as_str(),
+            },
+            add: context_box = &gtk::Box {
+                set_orientation: gtk::Orientation::Vertical,
+                set_spacing: 4,
+                gtk::Label {
+                    set_label: "Additional context (optional)",
+                    set_xalign: 0.0,
+                    add_css_class: "caption",
+                    add_css_class: "dim-label",
+                },
+            gtk::Frame {
+                set_hexpand: true,
+                gtk::ScrolledWindow {
+                    set_hexpand: true,
+                    set_height_request: 200,
+                    add_css_class: "card",
+                    #[wrap(Some)]
+                    set_child: context_text_view = &gtk::TextView {
+                        set_wrap_mode: gtk::WrapMode::Word,
+                        set_top_margin: 8,
+                        set_left_margin: 8,
+                        set_right_margin: 8,
+                        set_bottom_margin: 8,
+                        set_accepts_tab: false,
+                    },
+                },
+            },
+            gtk::Box {
+                set_orientation: gtk::Orientation::Horizontal,
+                set_halign: gtk::Align::BaselineFill,
+                append: button_close = &gtk::Button {
+                    set_label: "Close",
+                    add_css_class: "pill",
+                    connect_clicked => AppInput::Dismiss,
+                },
+                append: send_button = &gtk::Button {
+                    set_label: "Send Report",
+                    add_css_class: "suggested-action",
+                    add_css_class: "pill",
+                    connect_clicked[sender, context_text_view] => move |_| {
+                        let buf = context_text_view.buffer();
+                        let text = buf.text(&buf.start_iter(), &buf.end_iter(), false);
+                        let ctx = if text.is_empty() { None } else { Some(text.to_string()) };
+                        sender.input(AppInput::Report(ctx));
+                    },
+                },
+            },
+            },
+        },
+        progress_page = &gtk::Box {
+            set_orientation: gtk::Orientation::Vertical,
+            // todo add gtk::Stack
+            append: progress = &gtk::ProgressBar {
+                set_visible: true,
+                set_margin_start: 16,
+                set_margin_end: 16,
+                set_margin_top: 8,
+            },
+            gtk::Box {
+                set_orientation: gtk::Orientation::Horizontal,
+                set_margin_start: 16,
+                set_margin_end: 16,
+                set_margin_top: 4,
+                set_margin_bottom: 12,
+
+                append: label = &gtk::Label {
+                    set_hexpand: true,
+                    set_xalign: 0.0,
+                    add_css_class: "caption",
+                    add_css_class: "dim-label",
+                },
+                append: label_pct = &gtk::Label {
+                    set_xalign: 1.0,
+                    add_css_class: "caption",
+                    add_css_class: "monospace",
+                },
+            },
+
+        },
+        success = &adw::StatusPage {
+            add_css_class: "success",
+            set_icon_name: Some("object-select-symbolic"),
+            set_title: "Report sent successfully",
+            #[watch]
+            set_description: Some(model.status_message.as_str()),
+            #[wrap(Some)]
+            set_child = &gtk::Button {
+                set_halign: gtk::Align::Center,
+                set_label: "Close",
+                add_css_class: "pill",
+                connect_clicked => AppInput::Dismiss,
+            },
+        },
+        fail = &adw::StatusPage {
+            add_css_class: "error",
+            set_icon_name: Some("dialog-error-symbolic"),
+            set_title: "Couldn't send report",
+            #[watch]
+            set_description: Some(model.status_message.as_str()),
+            #[wrap(Some)]
+            set_child = &gtk::Box {
+                set_orientation: gtk::Orientation::Horizontal,
+                set_spacing: 8,
+                set_halign: gtk::Align::Center,
+                append = &gtk::Button {
+                    set_label: "Close",
+                    add_css_class: "pill",
+                    connect_clicked => AppInput::Dismiss,
+                },
+                append = &gtk::Button {
+                    set_label: "Retry",
+                    add_css_class: "suggested-action",
+                    add_css_class: "pill",
+                    connect_clicked => AppInput::Retry,
+                },
+            },
+        },
+        register = &adw::StatusPage {
+            set_icon_name: Some("dialog-password-symbolic"),
+            set_title: "Reporter not registered",
+            set_description: Some("This device must be registered before it can send crash reports."),
+            #[wrap(Some)]
+            set_child = &gtk::Box {
+                set_orientation: gtk::Orientation::Horizontal,
+                set_spacing: 8,
+                set_halign: gtk::Align::Center,
+                append = &gtk::Button {
+                    set_label: "Close",
+                    add_css_class: "pill",
+                    connect_clicked => AppInput::Dismiss,
+                },
+                append = &gtk::Button {
+                    set_label: "Register reporter",
+                    add_css_class: "suggested-action",
+                    add_css_class: "pill",
+                    connect_clicked => AppInput::Register,
+                },
+            },
+        },
     }
 
-    fn update(&mut self, message: Self::Input, sender: ComponentSender<Self>, root: &Self::Root) {
-        match message {
-            Input::Dismiss => {
-                self.modal = None;
-                root.set_visible(false);
-            }
-            Input::Report(ctx) => {
-                self.computing = true;
-                match &self.task {
-                    Some(CmdOut::CrashCmd(CmdCrashOut::UploadFailed(
-                        UploadError::MissingId { .. }
-                    ))) => report::run_setup_key(sender),
-                    _ => report::run(sender, ctx)
-                };
-            }
-        }
-    }
+    fn init(
+        init: Self::Init,
+        root: Self::Root,
+        sender: ComponentSender<Self>,
+    ) -> ComponentParts<Self> {
+        let model = Self {
+            computing: false,
+            modal: init,
+            report_stack_page: ReportStack::Crash,
+            status_message: String::new(),
+        };
+        let widgets = view_output!();
 
+        // report::run_setup_key(sender.clone());
+        ComponentParts { model, widgets }
+    }
     fn update_cmd(
         &mut self,
         message: Self::CommandOutput,
-        _sender: ComponentSender<Self>,
-        root: &Self::Root,
+        sender: ComponentSender<Self>,
+        _root: &Self::Root,
     ) {
-        match &message {
-            CmdOut::CrashCmd(cmd_crash_out) => match &cmd_crash_out {
-                CmdCrashOut::Finished { .. }
-                | CmdCrashOut::Error(_)
-                | CmdCrashOut::UploadFailed(_)
-                | CmdCrashOut::SetupKeyDone => self.computing = false,
-                CmdCrashOut::Progress { .. } => {}
-            },
-            CmdOut::CrashDetected(modal) => {
-                self.modal = Some(modal.clone());
-                root.set_visible(true);
+        // match &message {
+        //     CmdOut::CrashCmd(cmd_crash_out) => match &cmd_crash_out {
+        //         // TODO: refactor error page
+        //         CmdCrashOut::UploadFailed(why) => {}
+        //         CmdCrashOut::Error(why) => {
+        //             sender.input(AppInput::CrashCmd(CmdCrashOut::Error(why.to_owned())));
+        //         }
+        //         CmdCrashOut::SetupKeyDone => self.computing = false,
+        //         CmdCrashOut::Progress { fraction, message } => {
+        //             sender.input(AppInput::CrashCmd(CmdCrashOut::Progress {
+        //                 fraction: fraction.to_owned(),
+        //                 message: message.to_owned(),
+        //             }));
+        //         }
+        //         CmdCrashOut::Finished { bytes: size } => {
+        //             sender.input(AppInput::CrashCmd(CmdCrashOut::Finished {
+        //                 bytes: size.to_owned(),
+        //             }));
+        //         }
+        //     },
+        // }
+
+        match message {
+            CmdOut::CrashCmd(cmd_crash_out) => {
+                sender.input(AppInput::CrashCmd(cmd_crash_out));
             }
         }
-        self.task = Some(message);
     }
 
-    fn update_view(&self, widgets: &mut Self::Widgets, _sender: ComponentSender<Self>) {
-        widgets.button.set_sensitive(!self.computing);
+    // TODO: check ʼupdate_cmd_with_viewʼ instead of using two fn update_cmd and update_with_view
+
+    fn update_with_view(
+        &mut self,
+        widgets: &mut Self::Widgets,
+        message: Self::Input,
+        sender: ComponentSender<Self>,
+        _root: &Self::Root,
+    ) {
+        // widgets.send_button.set_sensitive(!self.computing);
+        // widgets.button_close.set_sensitive(true);
+        match message {
+            AppInput::Dismiss => main_application().quit(),
+            AppInput::Retry => {
+                self.computing = false;
+                self.status_message.clear();
+                self.report_stack_page = ReportStack::Crash;
+            }
+            AppInput::Register => {
+                self.computing = true;
+                self.report_stack_page = ReportStack::Progress;
+                widgets.label.set_label("Registering reporter…");
+                widgets.progress.set_fraction(0.0);
+                report::run_setup_key(&sender);
+            }
+            AppInput::Report(context) => {
+                println!("Clicked button report: {:?}", context);
+                self.report_stack_page = ReportStack::Progress;
+
+                self.computing = true;
+                report::run(&sender, context);
+            }
+            AppInput::CrashCmd(cmd_crash_out) => match cmd_crash_out {
+                CmdCrashOut::Progress { fraction, message } => {
+                    // widgets.send_button.set_visible(false);
+                    self.report_stack_page = ReportStack::Progress;
+
+                    widgets.progress.set_fraction(fraction);
+                    widgets.label.set_label(&message);
+                    widgets
+                        .label_pct
+                        .set_label(&format!("{:.0}%", fraction * 100.0));
+                    widgets.button_close.set_label("Cancel");
+                }
+                CmdCrashOut::Finished { bytes } => {
+                    self.report_stack_page = ReportStack::Success;
+
+                    self.computing = false;
+                    // widgets.progress.set_fraction(1.0);
+                    // widgets.label.set_label("Sent successfully");
+                    self.status_message = format!("Sent {:.1} KB. You can close this window.", bytes as f64 / 1024.0);
+                    // widgets.send_button.set_visible(false);
+                    // widgets.button_close.set_label("Close");
+                }
+                CmdCrashOut::Error(e) => {
+                    self.report_stack_page = ReportStack::Fail;
+                    self.computing = false;
+                    self.status_message = format!("Error: {e}");
+
+                    // widgets.send_button.set_visible(true);
+                    // widgets.send_button.set_label("Retry");
+                    // widgets.button_close.set_label("Close");
+                }
+                CmdCrashOut::UploadFailed(why) => {
+                    self.computing = false;
+                    // let (text, button_label, context_visible) =
+                    match why {
+                        UploadError::MissingId { .. } => {
+                            // Needs attention. Do this work?
+                            self.computing = false;
+                            self.status_message.clear();
+                            self.report_stack_page = ReportStack::Register;
+                            // (
+                            //     "Reporter not registered.".to_string(),
+                            //     Some("Register reporter"),
+                            //     false,
+                            // )
+                        }
+                        UploadError::Io(io) => {
+                            // (format!("Local I/O error: {io}"), Some("Retry"), true)
+                            self.status_message = format!("Local I/O error: {io}");
+                            self.report_stack_page = ReportStack::Fail;
+                        }
+                        UploadError::Network(net) => {
+                            // (format!("Can't reach server: {net}"), Some("Retry"), true)
+                            self.status_message = format!("Can't reach server: {net}");
+                            self.report_stack_page = ReportStack::Fail;
+                        }
+                        UploadError::Client { status, body } => {
+                            // format!("Server rejected the report (HTTP {status}): {body}"),
+                            // None,
+                            // false,
+                            self.status_message =
+                                format!("Server rejected the report (HTTP {status}): {body}");
+                            self.report_stack_page = ReportStack::Fail;
+                        }
+                        UploadError::Server { status, .. } => {
+                            // format!("Server error (HTTP {status}). Try again later."),
+                            // Some("Retry"),
+                            // true,
+                            self.status_message =
+                                format!("Server error (HTTP {status}). Try again later.");
+                            self.report_stack_page = ReportStack::Fail;
+                        }
+                    }
+
+                    // widgets.context_box.set_visible(context_visible);
+                    // widgets.progress.set_visible(false);
+                    // widgets.label.set_label(&format!("Error: {text}"));
+                    // if let Some(label) = button_label {
+                    //     widgets.send_button.set_visible(true);
+                    //     widgets.send_button.set_label(label);
+                    // } else {
+                    //     widgets.send_button.set_visible(false);
+                    // }
+                    // widgets.button_close.set_label("Close");
+                }
+                CmdCrashOut::SetupKeyDone => {
+                    self.computing = false;
+                    self.status_message.clear();
+                    self.report_stack_page = ReportStack::Crash;
+
+                    // widgets.context_box.set_visible(true);
+                    // widgets.progress.set_visible(false);
+                    // widgets
+                    //     .label
+                    //     .set_label("Reporter registered. Click Send Report to retry.");
+                    // widgets.send_button.set_visible(true);
+                    // widgets.send_button.set_label("Send Report");
+                    // widgets.button_close.set_label("Close");
+                }
+            },
+        }
+
+        widgets.send_button.set_sensitive(!self.computing);
         widgets.button_close.set_sensitive(true);
 
-        if let Some(task) = &self.task {
-            match task {
-                CmdOut::CrashDetected(modal) => {
-                    widgets.title.set_label(&modal.message);
-
-                    for (i, (key, val)) in [
-                        ("Unit", modal.unit.as_str()),
-                        ("Executable", modal.exe.as_str()),
-                        ("Message", modal.message.as_str()),
-                    ]
-                    .into_iter()
-                    .enumerate()
-                    {
-                        let k = gtk::Label::builder()
-                            .label(key)
-                            .xalign(0.0)
-                            .width_chars(12)
-                            .build();
-                        k.add_css_class("dim-label");
-                        k.add_css_class("caption");
-
-                        let v = gtk::Label::builder()
-                            .label(val)
-                            .xalign(0.0)
-                            .hexpand(true)
-                            .ellipsize(gtk::pango::EllipsizeMode::Middle)
-                            .selectable(true)
-                            .build();
-                        v.add_css_class("monospace");
-
-                        widgets.grid.attach(&k, 0, i as i32, 1, 1);
-                        widgets.grid.attach(&v, 1, i as i32, 1, 1);
-                    }
-                }
-                CmdOut::CrashCmd(cmd_crash_out) => match cmd_crash_out {
-                    CmdCrashOut::Progress { fraction, message } => {
-                        widgets.scroll.set_visible(false);
-                        widgets.button.set_visible(false);
-                        widgets.progress.set_visible(true);
-                        widgets.context_box.set_visible(false);
-                        widgets.progress.set_fraction(*fraction);
-                        widgets.label.set_label(message);
-                        widgets
-                            .label_pct
-                            .set_label(&format!("{:.0}%", fraction * 100.0));
-                        widgets.button_close.set_label("Cancel");
-                    }
-                    CmdCrashOut::Finished { bytes } => {
-                        widgets.scroll.set_visible(false);
-                        widgets.progress.set_fraction(1.0);
-                        widgets.context_box.set_visible(false);
-                        widgets.label.set_label("Sent successfully");
-                        widgets
-                            .label_pct
-                            .set_label(&format!("{:.1} KB", *bytes as f64 / 1024.0));
-                        widgets.button.set_visible(false);
-                        widgets.button_close.set_label("Close");
-                    }
-                    CmdCrashOut::Error(e) => {
-                        widgets.context_box.set_visible(true);
-                        widgets.scroll.set_visible(true);
-                        widgets.progress.set_visible(false);
-                        widgets.label.set_label(&format!("Error: {e}"));
-                        widgets.button.set_visible(true);
-                        widgets.button.set_label("Retry");
-                        widgets.button_close.set_label("Close");
-                    }
-                    CmdCrashOut::UploadFailed(e) => {
-                        let (text, button_label, context_visible) = match e {
-                            UploadError::MissingId { .. } => (
-                                "Reporter not registered.".to_string(),
-                                Some("Register reporter"),
-                                false,
-                            ),
-                            UploadError::Io(io) => (
-                                format!("Local I/O error: {io}"),
-                                Some("Retry"),
-                                true,
-                            ),
-                            UploadError::Network(net) => (
-                                format!("Can't reach server: {net}"),
-                                Some("Retry"),
-                                true,
-                            ),
-                            UploadError::Client { status, body } => (
-                                format!("Server rejected the report (HTTP {status}): {body}"),
-                                None,
-                                false,
-                            ),
-                            UploadError::Server { status, .. } => (
-                                format!("Server error (HTTP {status}). Try again later."),
-                                Some("Retry"),
-                                true,
-                            ),
-                        };
-
-                        widgets.scroll.set_visible(true);
-                        widgets.context_box.set_visible(context_visible);
-                        widgets.progress.set_visible(false);
-                        widgets.label.set_label(&format!("Error: {text}"));
-                        if let Some(label) = button_label {
-                            widgets.button.set_visible(true);
-                            widgets.button.set_label(label);
-                        } else {
-                            widgets.button.set_visible(false);
-                        }
-                        widgets.button_close.set_label("Close");
-                    }
-                    CmdCrashOut::SetupKeyDone => {
-                        widgets.scroll.set_visible(true);
-                        widgets.context_box.set_visible(true);
-                        widgets.progress.set_visible(false);
-                        widgets.label
-                            .set_label("Reporter registered. Click Send Report to retry.");
-                        widgets.button.set_visible(true);
-                        widgets.button.set_label("Send Report");
-                        widgets.button_close.set_label("Close");
-                    }
-                },
-            };
-        }
-    }
-}
-
-impl App {
-    fn start_listener(sender: ComponentSender<Self>) -> () {
-        sender.command(|sender, shutdown| {
-            shutdown
-                .register(async move {
-                    let conn = Connection::system().await?;
-
-                    let proxy = crate::DaemonServiceProxy::new(&conn).await?;
-
-                    let mut stream = proxy.receive_crash_detected().await?;
-
-                    println!("Agent is idling");
-
-                    while let Some(signal) = stream.next().await {
-                        match signal.args() {
-                            Ok(args) => {
-                                let modal_data = args.modal;
-
-                                println!("Signal received! Crash in unit: {}", modal_data.unit);
-
-                                if let Err(e) = notify_rust::Notification::new()
-                                    .summary("Crash detected")
-                                    .body(&modal_data.message)
-                                    .icon("dialog-error")
-                                    .show()
-                                    {
-                                        eprintln!("Failed to show notification: {e}");
-                                    };
-
-
-                                sender.emit(CmdOut::CrashDetected(modal_data));
-                            }
-                            Err(e) => eprintln!("Failed to parse signal arguments: {}", e),
-                        }
-                    }
-                    Ok::<(), zbus::Error>(())
-                })
-                .drop_on_shutdown()
-
-            // Ok(())
-        });
-
+        self.update_view(widgets, sender);
     }
 }
