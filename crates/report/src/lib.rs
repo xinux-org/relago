@@ -2,7 +2,6 @@ pub mod compress;
 pub mod encrypt;
 pub mod info;
 
-use anyhow::Context;
 use compress as cmp;
 use encrypt as enc;
 use std::fs::{self, File};

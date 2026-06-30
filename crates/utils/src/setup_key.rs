@@ -107,7 +107,7 @@ fn build_subkey(
 }
 
 fn exchange_keys(key: PathBuf) -> anyhow::Result<Response> {
-    let server_route = format!("{}/keys-new/exchange", CONFIG.get().server.clone());
+    let server_route = format!("{}/keys/exchange", CONFIG.get().server.clone());
 
     let form = multipart::Form::new().file("publicKey", key)?;
 
