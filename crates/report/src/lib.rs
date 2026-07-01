@@ -41,7 +41,7 @@ pub struct ReportBuilder {
     journal: Option<JournalMode>,
     nixos_config: Option<String>,
     encrypt_key: Option<String>,
-    // meta_data: Vec<(String, String)>,
+    meta_data: Vec<(String, String)>,
     log_files: Vec<PathBuf>,
 }
 
@@ -53,7 +53,7 @@ impl ReportBuilder {
             journal: None,
             nixos_config: None,
             encrypt_key: None,
-            // meta_data: Vec::new(),
+            meta_data: Vec::new(),
             log_files: Vec::new(),
         }
     }
@@ -78,10 +78,10 @@ impl ReportBuilder {
         self
     }
 
-    // pub fn meta(mut self, key: &str, value: &str) -> Self {
-    //     self.meta_data.push((key.to_string(), value.to_string()));
-    //     self
-    // }
+    pub fn meta(mut self, key: &str, value: &str) -> Self {
+        self.meta_data.push((key.to_string(), value.to_string()));
+        self
+    }
     pub fn log(mut self, file: impl AsRef<Path>) -> Self {
         self.log_files.push(PathBuf::from(file.as_ref()));
         self
@@ -129,15 +129,15 @@ impl ReportBuilder {
             }
         }
 
-        // if !self.meta_data.is_empty() {
-        //     let meta: serde_json::Map<String, serde_json::Value> = self
-        //         .meta_data
-        //         .into_iter()
-        //         .map(|(k, v)| (k, serde_json::Value::String(v)))
-        //         .collect();
-        //     let file = File::create(report_dir.join("meta.json"))?;
-        //     serde_json::to_writer_pretty(file, &meta)?;
-        // }
+        if !self.meta_data.is_empty() {
+            let meta: serde_json::Map<String, serde_json::Value> = self
+                .meta_data
+                .into_iter()
+                .map(|(k, v)| (k, serde_json::Value::String(v)))
+                .collect();
+            let file = File::create(report_dir.join("meta.json"))?;
+            serde_json::to_writer_pretty(file, &meta)?;
+        }
 
         for log_path in &self.log_files {
             if log_path.exists() {

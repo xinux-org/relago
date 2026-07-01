@@ -69,8 +69,14 @@ fn reporter(modal: &Modal) {
         .spawn();
 
     match spawn {
-        Ok(child) => drop(child),
-        Err(e) => eprintln!("failed to launch reporter GUI: {e}"),
+        Ok(mut child) => {
+            tokio::spawn(async move {
+                if let Err(e) = child.wait().await {
+                    eprintln!("Failed to wait on reporter GUI: {e}");
+                }
+            });
+        }
+        Err(e) => eprintln!("Failed to launch reporter GUI: {e}"),
     }
 }
 
