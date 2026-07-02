@@ -1,6 +1,10 @@
+mod locales;
 pub mod report;
 
+use crate::window::locales::{CACHE, LOCALES};
 use crate::window::report::UploadError;
+
+use fluent_zero::t;
 use relm4::{
     adw::{self, prelude::*},
     gtk::{self, glib},
@@ -82,7 +86,7 @@ impl Component for App {
         #[root]
         main_window = adw::ApplicationWindow {
             set_visible: true,
-            set_title: Some("Crash Reporter"),
+            set_title: Some(&t!("app-title")),
             connect_close_request[sender] => move |_| {
                 sender.input(AppInput::Dismiss);
                 glib::Propagation::Stop
@@ -127,29 +131,29 @@ impl Component for App {
         },
         welcome = &adw::StatusPage {
             set_icon_name: Some("airplane-mode-symbolic"),
-            set_title: "Crash will be displayed here",
-            set_description: Some("make crash"),
+            set_title: &t!("welcome-title"),
+            set_description: Some(&t!("welcome-description")),
         },
         crash = &adw::PreferencesGroup {
             set_title: &model.modal.message,
             set_width_request: 600,
             #[name(unit)]
             adw::ActionRow {
-                set_title: "Unit",
+                set_title: &t!("action-row-unit"),
                 add_css_class: "property",
                 set_subtitle_selectable: true,
                 set_subtitle: model.modal.unit.as_str(),
             },
             #[name(exe)]
             adw::ActionRow {
-                set_title: "Exe",
+                set_title: &t!("action-row-exe"),
                 add_css_class: "property",
                 set_subtitle_selectable: true,
                 set_subtitle: model.modal.exe.as_str(),
             },
             #[name(message)]
             adw::ActionRow {
-                set_title: "Message",
+                set_title: &t!("action-row-message"),
                 add_css_class: "property",
                 set_subtitle_selectable: true,
                 set_subtitle: model.modal.message.as_str(),
@@ -158,7 +162,7 @@ impl Component for App {
                 set_orientation: gtk::Orientation::Vertical,
                 set_spacing: 4,
                 gtk::Label {
-                    set_label: "Additional context (optional)",
+                    set_label: &t!("additional-context"),
                     set_xalign: 0.0,
                     add_css_class: "caption",
                     add_css_class: "dim-label",
@@ -184,12 +188,12 @@ impl Component for App {
                 set_orientation: gtk::Orientation::Horizontal,
                 set_halign: gtk::Align::BaselineFill,
                 append: button_close = &gtk::Button {
-                    set_label: "Close",
+                    set_label: &t!("close"),
                     add_css_class: "pill",
                     connect_clicked => AppInput::Dismiss,
                 },
                 append: send_button = &gtk::Button {
-                    set_label: "Send Report",
+                    set_label: &t!("send-report"),
                     add_css_class: "suggested-action",
                     add_css_class: "pill",
                     connect_clicked[sender, context_text_view] => move |_| {
@@ -235,13 +239,13 @@ impl Component for App {
         success = &adw::StatusPage {
             add_css_class: "success",
             set_icon_name: Some("object-select-symbolic"),
-            set_title: "Report sent successfully",
+            set_title: &t!("success-title"),
             #[watch]
             set_description: Some(model.status_message.as_str()),
             #[wrap(Some)]
             set_child = &gtk::Button {
                 set_halign: gtk::Align::Center,
-                set_label: "Close",
+                set_label: &t!("close"),
                 add_css_class: "pill",
                 connect_clicked => AppInput::Dismiss,
             },
@@ -249,7 +253,7 @@ impl Component for App {
         fail = &adw::StatusPage {
             add_css_class: "error",
             set_icon_name: Some("dialog-error-symbolic"),
-            set_title: "Couldn't send report",
+            set_title: &t!("fail-title"),
             #[watch]
             set_description: Some(model.status_message.as_str()),
             #[wrap(Some)]
@@ -258,12 +262,12 @@ impl Component for App {
                 set_spacing: 8,
                 set_halign: gtk::Align::Center,
                 append = &gtk::Button {
-                    set_label: "Close",
+                    set_label: &t!("close"),
                     add_css_class: "pill",
                     connect_clicked => AppInput::Dismiss,
                 },
                 append = &gtk::Button {
-                    set_label: "Retry",
+                    set_label: &t!("retry"),
                     add_css_class: "suggested-action",
                     add_css_class: "pill",
                     connect_clicked => AppInput::Retry,
@@ -272,20 +276,20 @@ impl Component for App {
         },
         register = &adw::StatusPage {
             set_icon_name: Some("dialog-password-symbolic"),
-            set_title: "Reporter not registered",
-            set_description: Some("This device must be registered before it can send crash reports."),
+            set_title: &t!("register-title"),
+            set_description: Some(&t!("register-description")),
             #[wrap(Some)]
             set_child = &gtk::Box {
                 set_orientation: gtk::Orientation::Horizontal,
                 set_spacing: 8,
                 set_halign: gtk::Align::Center,
                 append = &gtk::Button {
-                    set_label: "Close",
+                    set_label: &t!("close"),
                     add_css_class: "pill",
                     connect_clicked => AppInput::Dismiss,
                 },
                 append = &gtk::Button {
-                    set_label: "Register reporter",
+                    set_label: &t!("register"),
                     add_css_class: "suggested-action",
                     add_css_class: "pill",
                     connect_clicked => AppInput::Register,
@@ -366,7 +370,7 @@ impl Component for App {
             AppInput::Register => {
                 self.computing = true;
                 self.report_stack_page = ReportStack::Progress;
-                widgets.label.set_label("Registering reporter…");
+                widgets.label.set_label(&t!("progress-register"));
                 widgets.progress.set_fraction(0.0);
                 report::run_setup_key(&sender);
             }
@@ -387,7 +391,7 @@ impl Component for App {
                     widgets
                         .label_pct
                         .set_label(&format!("{:.0}%", fraction * 100.0));
-                    widgets.button_close.set_label("Cancel");
+                    widgets.button_close.set_label(&t!("cancel"));
                 }
                 CmdCrashOut::Finished { bytes } => {
                     self.report_stack_page = ReportStack::Success;
@@ -395,14 +399,17 @@ impl Component for App {
                     self.computing = false;
                     // widgets.progress.set_fraction(1.0);
                     // widgets.label.set_label("Sent successfully");
-                    self.status_message = format!("Sent {:.1} KB. You can close this window.", bytes as f64 / 1024.0);
+                    self.status_message = String::from(
+                        t!("progress-crash-finished", { "bytes" => format!("{:.1}", bytes / 1024) }),
+                    );
                     // widgets.send_button.set_visible(false);
                     // widgets.button_close.set_label("Close");
                 }
                 CmdCrashOut::Error(e) => {
                     self.report_stack_page = ReportStack::Fail;
                     self.computing = false;
-                    self.status_message = format!("Error: {e}");
+                    self.status_message =
+                        String::from(t!("progress-crash-error", { "error" => e }));
 
                     // widgets.send_button.set_visible(true);
                     // widgets.send_button.set_label("Retry");
@@ -425,28 +432,34 @@ impl Component for App {
                         }
                         UploadError::Io(io) => {
                             // (format!("Local I/O error: {io}"), Some("Retry"), true)
-                            self.status_message = format!("Local I/O error: {io}");
+                            self.status_message = String::from(
+                                t!("progress-crash-upload-io-error", { "error" => format!("{io}") }),
+                            );
                             self.report_stack_page = ReportStack::Fail;
                         }
                         UploadError::Network(net) => {
                             // (format!("Can't reach server: {net}"), Some("Retry"), true)
-                            self.status_message = format!("Can't reach server: {net}");
+                            self.status_message = String::from(
+                                t!("progress-crash-upload-network-error", { "error" => format!("{net}") }),
+                            );
                             self.report_stack_page = ReportStack::Fail;
                         }
                         UploadError::Client { status, body } => {
                             // format!("Server rejected the report (HTTP {status}): {body}"),
                             // None,
                             // false,
-                            self.status_message =
-                                format!("Server rejected the report (HTTP {status}): {body}");
+                            self.status_message = String::from(
+                                t!("progress-crash-upload-client-error", { "status" => format!("{status}"), "body" => format!("{body}") }),
+                            );
                             self.report_stack_page = ReportStack::Fail;
                         }
                         UploadError::Server { status, .. } => {
                             // format!("Server error (HTTP {status}). Try again later."),
                             // Some("Retry"),
                             // true,
-                            self.status_message =
-                                format!("Server error (HTTP {status}). Try again later.");
+                            self.status_message = String::from(
+                                t!("progress-crash-upload-server-error", { "status" => format!("{status}") }),
+                            );
                             self.report_stack_page = ReportStack::Fail;
                         }
                     }

@@ -1,6 +1,8 @@
 pub mod window;
+
 use crate::window::App;
 use crate::window::Modal;
+
 use futures_util::StreamExt;
 use notify_rust::Notification;
 use relm4::adw;
