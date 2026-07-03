@@ -1612,7 +1612,8 @@ dependencies = [
 [[package]]
 name = "fluent-zero"
 version = "0.1.4"
-source = "git+https://github.com/ezozbek36/fluent-zero.git#f7031fc1bd79f07a764a33946da63eb82aa700d6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "388ed472fe16b70106dc3b723fdbe6f32468e8c45ea949e8785365bca5fe57ac"
 dependencies = [
  "arc-swap",
  "fluent-bundle",
@@ -1624,7 +1625,8 @@ dependencies = [
 [[package]]
 name = "fluent-zero-build"
 version = "0.1.4"
-source = "git+https://github.com/ezozbek36/fluent-zero.git#f7031fc1bd79f07a764a33946da63eb82aa700d6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d5e9e4ba5cc5798e4718d83f70e9c2cd0698f3f8f8ed1da3d9c3606a1f4fc445"
 dependencies = [
  "fluent-syntax",
  "phf_codegen",

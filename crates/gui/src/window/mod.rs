@@ -1,7 +1,5 @@
-mod locales;
 pub mod report;
 
-use crate::window::locales::{CACHE, LOCALES};
 use crate::window::report::UploadError;
 
 use fluent_zero::t;

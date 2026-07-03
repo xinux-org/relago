@@ -1,5 +1,6 @@
 use crate::window::App;
 use crate::window::CmdCrashOut;
+use fluent_zero::t;
 use futures_util::FutureExt;
 use relm4::ComponentSender;
 use report::{JournalMode, ReportBuilder};
@@ -55,7 +56,7 @@ pub fn run(sender: &ComponentSender<App>, context: Option<String>) {
                 out.emit(
                     CmdCrashOut::Progress {
                         fraction: 0.05,
-                        message: "Reading journal entries…".into(),
+                        message: t!("progress-reading-journal").into(),
                     }
                     .into(),
                 );
@@ -95,7 +96,7 @@ pub fn run(sender: &ComponentSender<App>, context: Option<String>) {
                         out.emit(
                             CmdCrashOut::Progress {
                                 fraction: 0.3,
-                                message: "Report collected, compressing…".into(),
+                                message: t!("progress-compressing").into(),
                             }
                             .into(),
                         );
@@ -107,7 +108,7 @@ pub fn run(sender: &ComponentSender<App>, context: Option<String>) {
                         out.emit(
                             CmdCrashOut::Progress {
                                 fraction: 0.55,
-                                message: format!("Compressed → {zip_file_name}"),
+                                message: t!("progress-compressed", { "file" => zip_file_name }).into(),
                             }
                             .into(),
                         );
@@ -120,7 +121,7 @@ pub fn run(sender: &ComponentSender<App>, context: Option<String>) {
                 out.emit(
                     CmdCrashOut::Progress {
                         fraction: 0.65,
-                        message: format!("Uploading {:.1} KB…", size as f64 / 1024.0),
+                        message: t!("progress-uploading", { "kb" => format!("{:.1}", size as f64 / 1024.0) }).into(),
                     }
                     .into(),
                 );
@@ -137,7 +138,7 @@ pub fn run(sender: &ComponentSender<App>, context: Option<String>) {
                 out.emit(
                     CmdCrashOut::Progress {
                         fraction: 0.9,
-                        message: "Finalizing…".into(),
+                        message: t!("progress-finalizing").into(),
                     }
                     .into(),
                 );
@@ -161,7 +162,7 @@ pub fn run_setup_key(sender: &ComponentSender<App>) {
                 out.emit(
                     CmdCrashOut::Progress {
                         fraction: 0.1,
-                        message: "Registering reporter…".into(),
+                        message: t!("progress-register").into(),
                     }
                     .into(),
                 );
