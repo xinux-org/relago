@@ -206,11 +206,11 @@ cargo run -- configure --tmp-dir /tmp/relago
 cargo run -- configure --nix-config /etc/nixos
 
 # Update the upload server endpoint
-cargo run -- configure --server https://cocomelon.uz
+cargo run -- configure --server https://relago.support.xinux.uz
 
 # Set multiple values in one command
 cargo run -- configure \
   --tmp-dir /tmp/relago \
   --parallel-compression 4 \
-  --server https://cocomelon.uz
+  --server https://relago.support.xinux.uz
 ```

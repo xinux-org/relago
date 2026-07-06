@@ -258,8 +258,8 @@ in
 
       server = mkOption {
         type = types.str;
-        default = "https://cocomelon.uz";
-        example = "https://cocomelon.uz";
+        default = "https://relago.support.xinux.uz";
+        example = "https://relago.support.xinux.uz";
         description = "Relago-daemon server";
       };
 
