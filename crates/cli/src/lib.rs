@@ -2,7 +2,7 @@ use anyhow::Context;
 use clap::{arg, command, Arg, ArgAction, Args, Command, FromArgMatches};
 
 use daemon::journal;
-use gui::start_gui;
+use gui::start_listener;
 use std::process;
 use utils::{
     config::{Config, ConfigLayer, CONFIG},
@@ -112,7 +112,9 @@ pub fn run() -> anyhow::Result<()> {
                 .map(std::string::String::as_str)
                 .collect::<Vec<_>>();
 
-            let cmd = r.first().ok_or_else(|| anyhow::anyhow!("no exec argument provided"))?;
+            let cmd = r
+                .first()
+                .ok_or_else(|| anyhow::anyhow!("no exec argument provided"))?;
             cmd_exec(cmd)?;
         }
         Some(("report", sub_matches)) => {
@@ -121,8 +123,7 @@ pub fn run() -> anyhow::Result<()> {
                 .unwrap_or(&tmp_dir)
                 .to_owned();
 
-            let mut builder = report::ReportBuilder::new(&output_dir)
-                .system_info();
+            let mut builder = report::ReportBuilder::new(&output_dir).system_info();
 
             match sub_matches
                 .get_one::<String>("recent")
@@ -158,7 +159,39 @@ pub fn run() -> anyhow::Result<()> {
             });
         }
         Some(("gui", _sub_matches)) => {
-            start_gui();
+            let runtime = tokio::runtime::Runtime::new()?;
+            runtime.block_on(async {
+                println!("GUI Agent started. Listening for crash signals...");
+
+                match start_listener().await {
+                    Ok(_conn) => {
+                        // CRITICAL: This keeps the block_on from returning.
+                        // Without this, the program would exit immediately.
+                        std::future::pending::<()>().await;
+                    }
+                    Err(why) => {
+                        eprintln!("Failed to start D-Bus listener: {why:?}");
+                        std::process::exit(1);
+                    }
+                }
+            });
+        }
+        Some(("reporter", sub_matches)) => {
+            let modal = gui::window::Modal {
+                unit: sub_matches
+                    .get_one::<String>("unit")
+                    .cloned()
+                    .unwrap_or_else(|| "unknown".to_owned()),
+                exe: sub_matches
+                    .get_one::<String>("exe")
+                    .cloned()
+                    .unwrap_or_else(|| "unknown".to_owned()),
+                message: sub_matches
+                    .get_one::<String>("message")
+                    .cloned()
+                    .unwrap_or_else(|| "A crash was detected.".to_owned()),
+            };
+            gui::start_gui(modal);
         }
         Some(("configure", sub_matches)) => {
             Config::save_config(CONFIG_FILE, ConfigLayer::from_arg_matches(sub_matches)?)?;
@@ -167,7 +200,7 @@ pub fn run() -> anyhow::Result<()> {
             setup_key::init()?;
         }
         _ => {
-            println!("`None`");
+            println!("`No subcommand argument spesified`");
         }
     }
 

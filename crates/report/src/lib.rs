@@ -5,7 +5,7 @@ pub mod info;
 use compress as cmp;
 use encrypt as enc;
 use std::fs::{self, File};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -41,7 +41,8 @@ pub struct ReportBuilder {
     journal: Option<JournalMode>,
     nixos_config: Option<String>,
     encrypt_key: Option<String>,
-    custom_data: Vec<(String, String)>,
+    meta_data: Vec<(String, String)>,
+    log_files: Vec<PathBuf>,
 }
 
 impl ReportBuilder {
@@ -52,7 +53,8 @@ impl ReportBuilder {
             journal: None,
             nixos_config: None,
             encrypt_key: None,
-            custom_data: Vec::new(),
+            meta_data: Vec::new(),
+            log_files: Vec::new(),
         }
     }
 
@@ -76,11 +78,14 @@ impl ReportBuilder {
         self
     }
 
-    pub fn custom(mut self, key: &str, value: &str) -> Self {
-        self.custom_data.push((key.to_string(), value.to_string()));
+    pub fn meta(mut self, key: &str, value: &str) -> Self {
+        self.meta_data.push((key.to_string(), value.to_string()));
         self
     }
-
+    pub fn log(mut self, file: impl AsRef<Path>) -> Self {
+        self.log_files.push(PathBuf::from(file.as_ref()));
+        self
+    }
     pub fn build(self) -> Result<Report, ReportError> {
         let timestamp = chrono::Local::now().format("%Y-%m-%d_%H-%M-%S");
         let report_dir = PathBuf::from(&self.output_dir).join(format!("report_{}", timestamp));
@@ -124,14 +129,32 @@ impl ReportBuilder {
             }
         }
 
-        if !self.custom_data.is_empty() {
-            let custom: serde_json::Map<String, serde_json::Value> = self
-                .custom_data
+        if !self.meta_data.is_empty() {
+            let meta: serde_json::Map<String, serde_json::Value> = self
+                .meta_data
                 .into_iter()
                 .map(|(k, v)| (k, serde_json::Value::String(v)))
                 .collect();
-            let file = File::create(report_dir.join("custom_data.json"))?;
-            serde_json::to_writer_pretty(file, &custom)?;
+            let file = File::create(report_dir.join("meta.json"))?;
+            serde_json::to_writer_pretty(file, &meta)?;
+        }
+
+        for log_path in &self.log_files {
+            if log_path.exists() {
+                let dest = report_dir.join(
+                    log_path
+                        .file_name()
+                        .unwrap_or_else(|| std::ffi::OsStr::new("report.log")),
+                );
+                fs::copy(log_path, &dest).map_err(|e| {
+                    ReportError::System(format!(
+                        "Failed to copy log file {}: {e}",
+                        log_path.display()
+                    ))
+                })?;
+            } else {
+                eprintln!("Log file not found, skipping: {}", log_path.display());
+            }
         }
 
         cmp::compress_zip(&report_dir, &self.output_dir)

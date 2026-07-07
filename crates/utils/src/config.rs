@@ -19,10 +19,10 @@ pub struct Config {
     #[config(default = "/var/lib/relago/data")]
     #[config(layer_attr(arg(long)))]
     pub data_dir: PathBuf,
-    #[config(default = "/etc/nixos/xinux-config")]
+    #[config(default = "/etc/nixos")]
     #[config(layer_attr(arg(long)))]
     pub nix_config: PathBuf,
-    #[config(default = "https://cocomelon.uz")]
+    #[config(default = "https://relago.support.xinux.uz")]
     #[config(layer_attr(arg(long)))]
     pub server: String,
     #[config(default = "/var/lib/relago/keys")]
