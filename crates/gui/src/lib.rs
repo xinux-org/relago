@@ -1,6 +1,11 @@
+pub(crate) mod locales;
 pub mod window;
+
+use crate::locales::{try_detect_language, CACHE, LOCALES};
 use crate::window::App;
 use crate::window::Modal;
+
+use fluent_zero::{set_lang, t};
 use futures_util::StreamExt;
 use notify_rust::Notification;
 use relm4::adw;
@@ -33,7 +38,7 @@ pub async fn start_listener() -> anyhow::Result<()> {
                 println!("Signal received! Crash in unit: {}", modal_data.unit);
 
                 if let Err(e) = Notification::new()
-                    .summary("Crash detected")
+                    .summary(&t!("notification-crash-detected"))
                     .body(&modal_data.message)
                     .icon("dialog-error")
                     .show()
@@ -85,6 +90,10 @@ pub fn start_gui(modal: Modal) {
         Some("org.relago.Reporter"),
         gio::ApplicationFlags::NON_UNIQUE,
     );
+
+    if let Some(lang) = try_detect_language() {
+        set_lang(lang);
+    }
 
     relm4::RelmApp::from_app(app)
         .with_args(vec![])
