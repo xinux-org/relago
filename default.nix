@@ -59,7 +59,11 @@ let
     graphene
   ];
 
-  src = craneLib.cleanCargoSource ./.;
+  src = lib.cleanSourceWith {
+    src = ./.;
+    name = "source";
+    filter = path: type: (builtins.match ".*ftl$" path != null || craneLib.filterCargoSources path type);
+  };
 
   common = {
     # dbus = pkgs.dbus;

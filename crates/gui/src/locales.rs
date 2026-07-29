@@ -1,6 +1,8 @@
-use unic_langid::LanguageIdentifier;
+use unic_langid::{langid,LanguageIdentifier};
 
 include!(concat!(env!("OUT_DIR"), "/static_cache.rs"));
+
+pub static DEFAULT_LC: &LanguageIdentifier = &langid!("en-US");
 
 pub fn try_detect_language() -> Option<LanguageIdentifier> {
     let mut lang = std::env::var("LC_LANG");

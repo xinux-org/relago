@@ -1,7 +1,7 @@
 pub(crate) mod locales;
 pub mod window;
 
-use crate::locales::{try_detect_language, CACHE, LOCALES};
+use crate::locales::{try_detect_language, CACHE, DEFAULT_LC, LOCALES};
 use crate::window::App;
 use crate::window::Modal;
 
@@ -31,6 +31,9 @@ pub async fn start_listener() -> anyhow::Result<()> {
     let proxy = DaemonServiceProxy::new(&conn).await?;
     let mut stream = proxy.receive_crash_detected().await?;
     println!("Agent is idling");
+
+    set_lang(try_detect_language().unwrap_or_else(|| DEFAULT_LC.clone()));
+
     while let Some(signal) = stream.next().await {
         match signal.args() {
             Ok(args) => {
@@ -90,10 +93,6 @@ pub fn start_gui(modal: Modal) {
         Some("org.relago.Reporter"),
         gio::ApplicationFlags::NON_UNIQUE,
     );
-
-    if let Some(lang) = try_detect_language() {
-        set_lang(lang);
-    }
 
     relm4::RelmApp::from_app(app)
         .with_args(vec![])
