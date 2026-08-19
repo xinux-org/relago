@@ -1,35 +1,35 @@
-[package]
-name = "gui"
-authors.workspace = true
-edition.workspace = true
-version.workspace = true
-license.workspace = true
-homepage.workspace = true
-repository.workspace = true
+[build-dependencies]
+fluent-zero-build = "0.1.4"
 
-[lints]
-workspace = true
+[dependencies]
+relm4-components = "0.9.1"
+report = {path = "../report"}
+utils = {path = "../utils"}
+tokio = "1.50.0"
+notify-rust = "4.14.0"
+fluent-zero = "0.1.4"
+unic-langid = {version = "0.9.6", features = ["macros"]}
+anyhow.workspace = true
+futures-util.workspace = true
+relm4.workspace = true
+reqwest.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+zbus.workspace = true
 
 [lib]
 name = "gui"
 path = "src/lib.rs"
 
-[dependencies]
-serde.workspace = true
-serde_json.workspace = true
-relm4.workspace = true
-relm4-components = "0.9.1"
-reqwest.workspace = true
-anyhow.workspace = true
-thiserror.workspace = true
-report = { path = "../report" }
-utils = { path = "../utils" }
-tokio = "1.50.0"
-zbus.workspace = true
-futures-util.workspace = true
-notify-rust = "4.14.0"
-fluent-zero = "0.1.4"
-unic-langid = {version = "0.9.6", features = ["macros"] }
+[lints]
+workspace = true
 
-[build-dependencies]
-fluent-zero-build = "0.1.4"
+[package]
+name = "gui"
+authors.workspace = true
+edition.workspace = true
+homepage.workspace = true
+license.workspace = true
+repository.workspace = true
+version.workspace = true

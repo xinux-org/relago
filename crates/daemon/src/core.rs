@@ -1,5 +1,5 @@
 use dbus_crossroads as crossroads;
-use utils::notify as notify;
+use utils::notify;
 
 pub fn run() -> anyhow::Result<()> {
     let mut cr: crossroads::Crossroads = crossroads::Crossroads::new();

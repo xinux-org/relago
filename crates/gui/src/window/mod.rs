@@ -4,9 +4,10 @@ use crate::window::report::UploadError;
 
 use fluent_zero::t;
 use relm4::{
+    Component, ComponentParts, ComponentSender,
     adw::{self, prelude::*},
     gtk::{self, glib},
-    main_application, Component, ComponentParts, ComponentSender,
+    main_application,
 };
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;

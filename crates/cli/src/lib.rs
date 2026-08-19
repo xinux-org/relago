@@ -1,11 +1,11 @@
 use anyhow::Context;
-use clap::{arg, command, Arg, ArgAction, Args, Command, FromArgMatches};
+use clap::{Arg, ArgAction, Args, Command, FromArgMatches, arg, command};
 
 use daemon::journal;
 use gui::start_listener;
 use std::process;
 use utils::{
-    config::{Config, ConfigLayer, CONFIG},
+    config::{CONFIG, Config, ConfigLayer},
     setup_key,
 };
 

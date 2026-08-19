@@ -34,7 +34,11 @@ impl Display for Error {
                 )
             }
             Error::NumberConversion(e) => {
-                write!(f, "Error while parsing numbers from string, are you sure you typed normal number in configs?: {}", e)
+                write!(
+                    f,
+                    "Error while parsing numbers from string, are you sure you typed normal number in configs?: {}",
+                    e
+                )
             }
             Error::Deserialization(e) => {
                 write!(

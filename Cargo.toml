@@ -1,5 +1,4 @@
 [workspace]
-
 resolver = "2"
 default-members = ["crates/cli"]
 members = [
@@ -8,26 +7,12 @@ members = [
   "crates/report",
   "crates/utils",
   "crates/gui",
-  "crates/crash-event",
+  "crates/crash-event"
 ]
-
-
-[workspace.package]
-# Don't remove `name` regardless of warnings
-# Lots of nix things depend on this value alone
-name = "relago"
-version = "0.0.2"
-edition = "2021"
-
-license = "MIT OR Apache-2.0"
-description = "Automatic bug reporting app for xinux"
-homepage = "https://artifact.xinux.uz"
-repository = "https://github.com/xinux-org/relago"
-authors = ["Xinux Developers <support@oss.uzinfocom.uz>"]
 
 # Shared dependencies across crates
 [workspace.dependencies]
-serde = { version = "1", features = ["derive"] }
+serde = {version = "1", features = ["derive"]}
 serde_json = "1.0"
 thiserror = "1"
 anyhow = "1"
@@ -36,32 +21,23 @@ hex = "0.4"
 pgp = "0.19"
 rand = "0.8"
 tracing = "0.1"
-tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+tracing-subscriber = {version = "0.3", features = ["env-filter"]}
 nom = "8.0.0"
 dbus = "0.9.10"
 dbus-crossroads = "0.5.3"
-relm4 = { version = "0.9.1", features = ["macros", "libadwaita", "gnome_47"] }
+relm4 = {version = "0.9.1", features = ["macros", "libadwaita", "gnome_47"]}
 futures-util = "0.3.32"
 proc-macro2 = "1.0"
 quote = "1"
-zbus = { version = "5.14.0", features = ["bus-impl", "option-as-array"] }
-reqwest = { version = "0.13.2", features = ["multipart", "blocking", "stream"] }
+zbus = {version = "5.14.0", features = ["bus-impl", "option-as-array"]}
+reqwest = {version = "0.13.2", features = ["multipart", "blocking", "stream"]}
 zip_archive = "1.2.2"
-# codegen-units = 1
-# incremental = true
-# lto = true
-# strip = true
-# opt-level = "z"
-
-[workspace.lints.rust]
-unsafe_code = "deny"
 
 [workspace.lints.clippy]
 # Lint groups
-all = { level = "warn", priority = -2 }
-pedantic = { level = "warn", priority = -2 }
-nursery = { level = "warn", priority = -2 }
-
+all = {level = "warn", priority = -2}
+pedantic = {level = "warn", priority = -2}
+nursery = {level = "warn", priority = -2}
 # Error handling
 unwrap_used = "deny"
 expect_used = "warn"
@@ -70,11 +46,11 @@ result_large_err = "warn"
 option_if_let_else = "warn"
 # Panic-safety
 panic = "deny"
-todo = "warn"                     
-unimplemented = "warn"         
-unreachable = "warn"           
-indexing_slicing = "warn"       
-arithmetic_side_effects = "warn"  
+todo = "warn"
+unimplemented = "warn"
+unreachable = "warn"
+indexing_slicing = "warn"
+arithmetic_side_effects = "warn"
 as_conversions = "warn"
 cast_possible_truncation = "warn"
 cast_sign_loss = "warn"
@@ -83,3 +59,18 @@ lossy_float_literal = "warn"
 module_name_repetitions = "allow"
 missing_errors_doc = "allow"
 missing_panics_doc = "allow"
+
+[workspace.lints.rust]
+unsafe_code = "deny"
+
+[workspace.package]
+# Don't remove `name` regardless of warnings
+# Lots of nix things depend on this value alone
+name = "relago"
+version = "0.0.2"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+description = "Automatic bug reporting app for xinux"
+homepage = "https://artifact.xinux.uz"
+repository = "https://github.com/xinux-org/relago"
+authors = ["Xinux Developers <support@oss.uzinfocom.uz>"]

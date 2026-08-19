@@ -2,15 +2,19 @@
   description = "Relago — bug reporter for Xinux";
 
   inputs = {
-    # Too old to work with most libraries
-    # nixpkgs.url = "github:nixos/nixpkgs/nixos-25.11";
-
     # Perfect!
     nixpkgs.url = "github:nixos/nixpkgs?ref=nixos-unstable";
+
+    treefmt-nix.url = "github:numtide/treefmt-nix";
 
     # The flake-parts library
     flake-parts.url = "github:hercules-ci/flake-parts";
     crane.url = "github:ipetkov/crane";
+
+    git-hooks-nix = {
+      url = "github:cachix/git-hooks.nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs =
@@ -18,40 +22,47 @@
       self,
       nixpkgs,
       flake-utils,
+      treefmt-nix,
       ...
     }@inputs:
     inputs.flake-parts.lib.mkFlake { inherit inputs; } (
       { ... }:
-      {
+      let
         systems = [
           "x86_64-linux"
           "aarch64-linux"
           "aarch64-darwin"
         ];
-        # pkgs = nixpkgs.legacyPackages.${system};
+      in
+      {
+        inherit systems;
         flake = {
           nixosModules.relago = import ./module.nix self;
           nixosModules.default = import ./module.nix self;
           hydraJobs.x86_64-linux.relago = self.packages.x86_64-linux.relago;
         };
 
+        imports = [
+          inputs.treefmt-nix.flakeModule
+          inputs.git-hooks-nix.flakeModule
+        ];
+
         perSystem =
           {
             system,
+            config,
             ...
           }:
           let
             pkgs = nixpkgs.legacyPackages.${system};
             craneLib = inputs.crane.mkLib pkgs;
-            # slf = inputs.self;
           in
           rec {
-
-            # Nix script formatter
-            formatter = pkgs.nixfmt;
-
             # Development environment
-            devShells.default = import ./shell.nix { inherit self pkgs craneLib; };
+            devShells.default = import ./shell.nix {
+              inherit self pkgs craneLib;
+              shellHook = config.pre-commit.installationScript;
+            };
 
             # Output package
             # packages.default = pkgs.callPackage ./. {inherit pkgs;};
@@ -63,6 +74,14 @@
               };
             };
 
+            treefmt = import ./treefmt.nix;
+
+            pre-commit.settings.hooks.treefmt = {
+              enable = true;
+              package = config.treefmt.build.wrapper;
+            };
+
+            checks.pre-commit-check = config.pre-commit.settings.hooks;
           };
       }
     );

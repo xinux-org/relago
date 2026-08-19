@@ -1,34 +1,34 @@
-[package]
-name = "report"
-authors.workspace = true
-edition.workspace = true
-version.workspace = true
-license.workspace = true
-homepage.workspace = true
-repository.workspace = true
-
-[lints]
-workspace = true
-
 [dependencies]
-serde = { workspace = true }
-anyhow = { workspace = true }
-tracing-subscriber = { workspace = true }
-tracing = { workspace = true }
-serde_json.workspace = true
+serde = {workspace = true}
+anyhow = {workspace = true}
+tracing-subscriber = {workspace = true}
+tracing = {workspace = true}
 libsystemd-sys = "0.9.4"
 systemd = "0.10.1"
-dbus = { workspace = true }
-utils = { path = "../utils" }
+dbus = {workspace = true}
+utils = {path = "../utils"}
 # cli = { path = "../cli" }
-dbus-crossroads = { workspace = true }
-nom = { workspace = true }
+dbus-crossroads = {workspace = true}
+nom = {workspace = true}
 flate2 = "1.1.9"
 sysinfo = "0.38.4"
 chrono = "0.4"
 shellexpand = "3.1"
-zip_archive.workspace = true
 thiserror = {workspace = true}
 ignore = "0.4"
-pgp = { workspace = true }
-rand = { workspace = true }
+pgp = {workspace = true}
+rand = {workspace = true}
+serde_json.workspace = true
+zip_archive.workspace = true
+
+[lints]
+workspace = true
+
+[package]
+name = "report"
+authors.workspace = true
+edition.workspace = true
+homepage.workspace = true
+license.workspace = true
+repository.workspace = true
+version.workspace = true

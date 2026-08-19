@@ -2,9 +2,9 @@ use anyhow::{Context, Result};
 use pgp::composed::{Deserializable, MessageBuilder, SignedPublicKey};
 use pgp::crypto::sym::SymmetricKeyAlgorithm;
 use pgp::types::KeyDetails;
+use rand::thread_rng;
 use std::fs::{self, File};
 use std::io::{BufReader, Read};
-use rand::thread_rng;
 use std::path::Path;
 
 pub fn encrypt_file(

@@ -1,7 +1,7 @@
 pub(crate) mod locales;
 pub mod window;
 
-use crate::locales::{try_detect_language, CACHE, LOCALES};
+use crate::locales::{CACHE, LOCALES, try_detect_language};
 use crate::window::App;
 use crate::window::Modal;
 
@@ -10,8 +10,8 @@ use futures_util::StreamExt;
 use notify_rust::Notification;
 use relm4::adw;
 use relm4::gtk::gio;
-use zbus::proxy;
 use zbus::Connection;
+use zbus::proxy;
 
 #[proxy(
     interface = "org.relago.DaemonService",

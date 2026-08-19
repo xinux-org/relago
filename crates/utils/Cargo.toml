@@ -1,30 +1,30 @@
-[package]
-name = "utils"
-authors.workspace = true
-edition.workspace = true
-version.workspace = true
-license.workspace = true
-homepage.workspace = true
-repository.workspace = true
+[dependencies]
+toml_edit = {version = "0.25.10+spec-1.1.0", features = ["serde"]}
+serde = {workspace = true}
+dbus = {workspace = true}
+dbus-crossroads = {workspace = true}
+syn = {version = "2.0", features = ["derive", "full"]}
+state = {version = "0.6.0", features = ["tls"]}
+systemd = "0.10"
+clap = {version = "4.5.28", features = ["derive"]}
+confique = {version = "0.4.0", features = ["toml"]}
+zip = "8.5.1"
+anyhow.workspace = true
+pgp.workspace = true
+proc-macro2.workspace = true
+quote.workspace = true
+rand.workspace = true
+reqwest.workspace = true
+serde_json.workspace = true
 
 [lints]
 workspace = true
 
-[dependencies]
-anyhow.workspace = true
-toml_edit = { version = "0.25.10+spec-1.1.0", features = ["serde"] }
-serde = { workspace = true }
-serde_json.workspace = true
-dbus = { workspace = true }
-dbus-crossroads = { workspace = true }
-syn = { version = "2.0", features = ["derive", "full"] }
-quote.workspace = true
-proc-macro2.workspace = true
-state = {version = "0.6.0", features = [ "tls" ]}
-systemd = "0.10"
-clap = { version = "4.5.28", features = ["derive"] }
-confique = { version = "0.4.0", features = ["toml"] }
-pgp.workspace = true
-rand.workspace = true
-reqwest.workspace = true
-zip = "8.5.1"
+[package]
+name = "utils"
+authors.workspace = true
+edition.workspace = true
+homepage.workspace = true
+license.workspace = true
+repository.workspace = true
+version.workspace = true
