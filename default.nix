@@ -62,7 +62,8 @@ let
   src = lib.cleanSourceWith {
     src = ./.;
     name = "source";
-    filter = path: type: (builtins.match ".*ftl$" path != null || craneLib.filterCargoSources path type);
+    filter =
+      path: type: (builtins.match ".*ftl$" path != null || craneLib.filterCargoSources path type);
   };
 
   common = {

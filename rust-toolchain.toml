@@ -7,5 +7,5 @@ components = [
   "rust-analyzer",
   "rust-std",
   "clippy",
-  "miri",
+  "miri"
 ]

@@ -20,6 +20,7 @@ logfile
 # Direnv
 .direnv
 
+.pre-commit*
 
 tmp
 

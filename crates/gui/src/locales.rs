@@ -1,4 +1,4 @@
-use unic_langid::{langid,LanguageIdentifier};
+use unic_langid::{LanguageIdentifier, langid};
 
 include!(concat!(env!("OUT_DIR"), "/static_cache.rs"));
 

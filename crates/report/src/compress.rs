@@ -1,8 +1,8 @@
-use anyhow::{anyhow, Context};
-use flate2::write::ZlibEncoder;
+use anyhow::{Context, anyhow};
 use flate2::Compression;
+use flate2::write::ZlibEncoder;
 use std::fs::File;
-use std::io::{copy, BufReader};
+use std::io::{BufReader, copy};
 use std::path::{Path, PathBuf};
 use utils::config::CONFIG;
 use zip_archive::Archiver;

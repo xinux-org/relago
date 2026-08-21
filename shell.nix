@@ -2,6 +2,7 @@
   self,
   pkgs,
   craneLib,
+  shellHook,
   ...
 }:
 let
@@ -24,6 +25,7 @@ let
   );
 in
 craneLib.devShell {
+  inherit shellHook;
   name = "${manifest.name}-dev";
 
   # Compile time dependencies

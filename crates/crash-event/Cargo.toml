@@ -1,15 +1,12 @@
-[package]
-name    = "crash-event"
-version = "0.1.0"
-edition = "2021"
-
-# [lints]
-# workspace = true
+[dependencies]
+syn = {version = "2", features = ["full"]}
+proc-macro2.workspace = true
+quote.workspace = true
 
 [lib]
 proc-macro = true
 
-[dependencies]
-syn         = { version = "2", features = ["full"] }
-quote.workspace = true
-proc-macro2.workspace = true
+[package]
+name = "crash-event"
+version = "0.1.0"
+edition = "2021"
