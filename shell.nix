@@ -57,4 +57,5 @@ craneLib.devShell {
   # Set Environment Variables
   RUST_BACKTRACE = "full";
   RUST_SRC_PATH = "${pkgs.rust.packages.stable.rustPlatform.rustLibSrc}";
+  CARGO_PROFILE_TEST_BUILD_OVERRIDE_DEBUG=true;
 }
