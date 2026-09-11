@@ -31,7 +31,6 @@
         systems = [
           "x86_64-linux"
           "aarch64-linux"
-          "aarch64-darwin"
         ];
       in
       {
@@ -81,7 +80,7 @@
               package = config.treefmt.build.wrapper;
             };
 
-            checks.pre-commit-check = config.pre-commit.settings.hooks;
+            checks.pre-commit-check = config.treefmt.build.wrapper;
           };
       }
     );

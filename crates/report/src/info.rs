@@ -118,7 +118,7 @@ pub fn collect_journal_all(path: &Path) -> Result<()> {
         serde_json::to_writer(&mut writer, &writable)?;
         writeln!(writer)?;
 
-        count += 1;
+        count = count.saturating_add(1);
 
         if count.is_multiple_of(1000) {
             eprint!("\rProcessed {count} entries...");
@@ -126,7 +126,7 @@ pub fn collect_journal_all(path: &Path) -> Result<()> {
     }
 
     writer.flush()?;
-    println!("\nCollected {} journal entries", count);
+    println!("\nCollected {count} journal entries");
 
     Ok(())
 }

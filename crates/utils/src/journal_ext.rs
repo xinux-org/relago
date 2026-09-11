@@ -1,6 +1,6 @@
 use systemd::journal::Journal;
 
-/// Minimal interface the generated `detect()`` code calls.
+/// Minimal interface the generated `detect()` code calls.
 pub trait JournalExt {
     fn field(&mut self, name: &str) -> Option<String>;
 }

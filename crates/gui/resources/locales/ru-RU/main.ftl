@@ -37,3 +37,9 @@ progress-compressing = Отчет собран, сжатие…
 progress-compressed = Сжато → { $file }
 progress-uploading = Загрузка { $kb } КБ…
 progress-finalizing = Завершение…
+
+dont-send = Не Отправить
+show-details = Показать Подробности
+hide-details = Скрыть Подробности
+report-body = Отчеты
+report-metadata = Метаданные

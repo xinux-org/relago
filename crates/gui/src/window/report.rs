@@ -146,7 +146,7 @@ pub fn run(sender: &ComponentSender<App>, context: Option<String>) {
                 tokio::time::sleep(std::time::Duration::from_millis(200)).await;
 
                 match result {
-                    Ok(_) => out.emit(CmdCrashOut::Finished { bytes: size }.into()),
+                    Ok(()) => out.emit(CmdCrashOut::Finished { bytes: size }.into()),
                     Err(e) => out.emit(CmdCrashOut::UploadFailed(e).into()),
                 }
             })

@@ -1,7 +1,9 @@
 pub(crate) mod locales;
 pub mod window;
 
-use crate::locales::{CACHE, LOCALES, try_detect_language};
+use std::process::Command;
+
+use crate::locales::{CACHE, DEFAULT_LC, LOCALES, try_detect_language};
 use crate::window::App;
 use crate::window::Modal;
 
@@ -12,6 +14,11 @@ use relm4::adw;
 use relm4::gtk::gio;
 use zbus::Connection;
 use zbus::proxy;
+
+mod icon_names {
+    pub use shipped::*; // Include all shipped icons by default
+    include!(concat!(env!("OUT_DIR"), "/icon_names.rs"));
+}
 
 #[proxy(
     interface = "org.relago.DaemonService",
@@ -31,6 +38,9 @@ pub async fn start_listener() -> anyhow::Result<()> {
     let proxy = DaemonServiceProxy::new(&conn).await?;
     let mut stream = proxy.receive_crash_detected().await?;
     println!("Agent is idling");
+
+    set_lang(try_detect_language().unwrap_or_else(|| DEFAULT_LC.clone()));
+
     while let Some(signal) = stream.next().await {
         match signal.args() {
             Ok(args) => {
@@ -63,7 +73,7 @@ fn reporter(modal: &Modal) {
         }
     };
 
-    let spawn = tokio::process::Command::new(exe)
+    let reporter_spawn = tokio::process::Command::new(exe)
         .arg("reporter")
         .arg("-u")
         .arg(&modal.unit)
@@ -73,7 +83,7 @@ fn reporter(modal: &Modal) {
         .arg(&modal.message)
         .spawn();
 
-    match spawn {
+    match reporter_spawn {
         Ok(mut child) => {
             tokio::spawn(async move {
                 if let Err(e) = child.wait().await {
@@ -85,15 +95,24 @@ fn reporter(modal: &Modal) {
     }
 }
 
+pub fn get_log_tail(n: u32) -> anyhow::Result<String> {
+    let exe = std::env::current_exe()?;
+
+    let cmd = Command::new(exe)
+        .arg("report")
+        .arg("-r")
+        .arg(format!("{n}"))
+        .output()?;
+    String::from_utf8(cmd.stdout).map_err(anyhow::Error::new)
+}
+
 pub fn start_gui(modal: Modal) {
+    relm4_icons::initialize_icons(icon_names::GRESOURCE_BYTES, icon_names::RESOURCE_PREFIX);
+
     let app = adw::Application::new(
         Some("org.relago.Reporter"),
         gio::ApplicationFlags::NON_UNIQUE,
     );
-
-    if let Some(lang) = try_detect_language() {
-        set_lang(lang);
-    }
 
     relm4::RelmApp::from_app(app)
         .with_args(vec![])

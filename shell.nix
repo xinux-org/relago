@@ -37,6 +37,7 @@ craneLib.devShell {
       deadnix
       self.formatter.${pkgs.stdenv.hostPlatform.system}
       nixfmt-tree
+      nil
 
       # Rust
       rustc

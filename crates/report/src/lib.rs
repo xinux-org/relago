@@ -88,7 +88,7 @@ impl ReportBuilder {
     }
     pub fn build(self) -> Result<Report, ReportError> {
         let timestamp = chrono::Local::now().format("%Y-%m-%d_%H-%M-%S");
-        let report_dir = PathBuf::from(&self.output_dir).join(format!("report_{}", timestamp));
+        let report_dir = PathBuf::from(&self.output_dir).join(format!("report_{timestamp}"));
 
         fs::create_dir_all(&report_dir)?;
 

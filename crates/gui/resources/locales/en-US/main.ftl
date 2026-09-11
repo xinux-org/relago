@@ -37,3 +37,9 @@ progress-compressing = Report collected, compressing…
 progress-compressed = Compressed → { $file }
 progress-uploading = Uploading { $kb } KB…
 progress-finalizing = Finalizing…
+
+dont-send = Don't Send
+show-details = Show Details
+hide-details = Hide Details
+report-body = Reports
+report-metadata = Metadata

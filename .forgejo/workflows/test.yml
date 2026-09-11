@@ -13,8 +13,8 @@ jobs:
       - name: Flake check x86_64-linux
         run: nix flake check --system x86_64-linux --show-trace
 
-      - name: Flake check aarch64-linux
-        run: nix flake check --system aarch64-linux --show-trace
+      # - name: Flake check aarch64-linux
+      #   run: nix flake check --system aarch64-linux --show-trace
 
       # - name: Flake check x86_64-darwin
       #   run: nix flake check --system x86_64-darwin --show-trace

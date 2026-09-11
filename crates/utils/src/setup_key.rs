@@ -55,9 +55,9 @@ fn keygen(
     auth_key_type: KeyType,
     uid: &str,
 ) -> anyhow::Result<SignedSecretKey> {
-    let signkey = build_subkey(signing_key_type, SubkeyType::Sign)?;
-    let encryptkey = build_subkey(encryption_key_type, SubkeyType::Encrypt)?;
-    let authkey = build_subkey(auth_key_type, SubkeyType::Auth)?;
+    let signkey = build_subkey(signing_key_type, &SubkeyType::Sign)?;
+    let encryptkey = build_subkey(encryption_key_type, &SubkeyType::Encrypt)?;
+    let authkey = build_subkey(auth_key_type, &SubkeyType::Auth)?;
 
     let mut key_params_builder = SecretKeyParamsBuilder::default();
     key_params_builder
@@ -79,7 +79,7 @@ fn keygen(
 
 fn build_subkey(
     key_type: KeyType,
-    subkey_type: SubkeyType,
+    subkey_type: &SubkeyType,
 ) -> Result<SubkeyParams, SubkeyParamsBuilderError> {
     let mut key = SubkeyParamsBuilder::default();
 

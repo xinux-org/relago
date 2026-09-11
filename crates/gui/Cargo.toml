@@ -1,8 +1,10 @@
 [build-dependencies]
 fluent-zero-build = "0.1.4"
+relm4-icons-build = "0.11.0"
 
 [dependencies]
-relm4-components = "0.9.1"
+relm4-components = "0.11.0"
+relm4-icons = "0.11.0"
 report = {path = "../report"}
 utils = {path = "../utils"}
 tokio = "1.50.0"

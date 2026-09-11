@@ -37,3 +37,9 @@ progress-compressing = Hisobot yig'ildi, siqilmoqda…
 progress-compressed = Siqildi → { $file }
 progress-uploading = { $kb } KB yuklanmoqda…
 progress-finalizing = Yakunlanmoqda…
+
+dont-send = Yuborma
+show-details = Tafsilotlarni Koʻrsatish
+hide-details = Tafsilotlarni Yashirish
+report-body = Hisobotlar
+report-metadata = Meta maʻlumotlar
