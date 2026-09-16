@@ -1,9 +1,7 @@
 pub(crate) mod locales;
 pub mod window;
 
-use std::process::Command;
-
-use crate::locales::{CACHE, DEFAULT_LC, LOCALES, try_detect_language};
+use crate::locales::{CACHE, LOCALES, detect_language};
 use crate::window::App;
 use crate::window::Modal;
 
@@ -12,6 +10,7 @@ use futures_util::StreamExt;
 use notify_rust::Notification;
 use relm4::adw;
 use relm4::gtk::gio;
+use std::process::Command;
 use zbus::Connection;
 use zbus::proxy;
 
@@ -38,8 +37,6 @@ pub async fn start_listener() -> anyhow::Result<()> {
     let proxy = DaemonServiceProxy::new(&conn).await?;
     let mut stream = proxy.receive_crash_detected().await?;
     println!("Agent is idling");
-
-    set_lang(try_detect_language().unwrap_or_else(|| DEFAULT_LC.clone()));
 
     while let Some(signal) = stream.next().await {
         match signal.args() {
@@ -113,6 +110,9 @@ pub fn start_gui(modal: Modal) {
         Some("org.relago.Reporter"),
         gio::ApplicationFlags::NON_UNIQUE,
     );
+
+    let language = detect_language();
+    set_lang(language);
 
     relm4::RelmApp::from_app(app)
         .with_args(vec![])

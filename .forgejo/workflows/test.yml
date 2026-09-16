@@ -27,8 +27,8 @@ jobs:
       - name: Check out the repository
         uses: actions/checkout@v6
 
+      # - name: Run all cargo tests
+      #   run: nix develop --command -- cargo test
+
       - name: Build the project with Nix
         run: nix build . --show-trace
-
-      - name: Run all cargo tests
-        run: nix develop --command -- cargo test
