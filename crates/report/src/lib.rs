@@ -1,6 +1,7 @@
 pub mod compress;
 pub mod encrypt;
 pub mod info;
+pub mod setup_key;
 pub mod upload;
 
 use std::{

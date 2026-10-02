@@ -4,7 +4,6 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use crate::config::CONFIG;
 use anyhow::{Context, Ok};
 use pgp::{
     composed::{
@@ -15,6 +14,7 @@ use pgp::{
 };
 use rand::thread_rng;
 use reqwest::blocking::{Client, Response, multipart};
+use utils::config::CONFIG;
 use zip::ZipArchive;
 
 #[derive(Clone)]

@@ -3946,6 +3946,7 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "utils",
+ "zip 8.6.0",
  "zip_archive",
 ]
 
@@ -5312,14 +5313,12 @@ dependencies = [
  "proc-macro2",
  "quote",
  "rand 0.8.8",
- "reqwest",
  "serde",
  "serde_json",
  "state",
  "syn 2.0.119",
  "systemd",
  "toml_edit",
- "zip 8.6.0",
 ]
 
 [[package]]

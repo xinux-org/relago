@@ -2,10 +2,10 @@ use fluent_zero::t;
 use futures_util::FutureExt;
 use relm4::ComponentSender;
 use report::{
-    JournalMode, ReportBuilder,
+    JournalMode, ReportBuilder, setup_key,
     upload::{UploadError, upload},
 };
-use utils::{config::CONFIG, setup_key};
+use utils::config::CONFIG;
 
 use super::{App, CmdCrashOut};
 
