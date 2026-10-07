@@ -1,17 +1,15 @@
 pub mod report;
 
-use crate::{get_log_tail, window::report::UploadError};
+use std::fmt::Debug;
 
 use fluent_zero::t;
-use relm4::{
-    Component, ComponentParts, ComponentSender, RelmWidgetExt,
-    adw::{self, prelude::*},
-    gtk::{self, glib},
-    main_application,
-};
+use relm4::{adw::prelude::*, gtk::glib, main_application, prelude::*};
 use serde::{Deserialize, Serialize};
-use std::fmt::Debug;
 use zbus::zvariant::Type;
+
+use ::report::upload::UploadError;
+
+use crate::get_log_tail;
 
 #[derive(Clone, Debug, Serialize, Deserialize, Type, Default)]
 pub struct Modal {

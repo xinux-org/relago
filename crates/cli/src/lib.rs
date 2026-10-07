@@ -3,11 +3,9 @@ use clap::{Arg, ArgAction, Args, Command, FromArgMatches, arg, command};
 
 use daemon::journal;
 use gui::start_listener;
+use report::setup_key;
 use std::process;
-use utils::{
-    config::{CONFIG, Config, ConfigLayer},
-    setup_key,
-};
+use utils::config::{CONFIG, Config, ConfigLayer};
 
 const CONFIG_FILE: &str = "/var/lib/relago/config.toml";
 
