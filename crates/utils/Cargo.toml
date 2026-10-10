@@ -8,13 +8,11 @@ state = {version = "0.6.0", features = ["tls"]}
 systemd = "0.10"
 clap = {version = "4.5.28", features = ["derive"]}
 confique = {version = "0.4.0", features = ["toml"]}
-zip = "8.5.1"
 anyhow.workspace = true
 pgp.workspace = true
 proc-macro2.workspace = true
 quote.workspace = true
 rand.workspace = true
-reqwest.workspace = true
 serde_json.workspace = true
 
 [lints]

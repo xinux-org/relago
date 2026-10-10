@@ -1,11 +1,16 @@
 pub mod compress;
 pub mod encrypt;
 pub mod info;
+pub mod setup_key;
+pub mod upload;
+
+use std::{
+    fs::{self, File},
+    path::{Path, PathBuf},
+};
 
 use compress as cmp;
 use encrypt as enc;
-use std::fs::{self, File};
-use std::path::{Path, PathBuf};
 use thiserror::Error;
 
 #[derive(Debug, Error)]

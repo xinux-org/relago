@@ -1,34 +1,13 @@
-use crate::window::App;
-use crate::window::CmdCrashOut;
 use fluent_zero::t;
 use futures_util::FutureExt;
 use relm4::ComponentSender;
-use report::{JournalMode, ReportBuilder};
-use reqwest::blocking::multipart;
+use report::{
+    JournalMode, ReportBuilder, setup_key,
+    upload::{UploadError, upload},
+};
 use utils::config::CONFIG;
-use utils::setup_key;
 
-#[derive(thiserror::Error, Debug)]
-pub enum UploadError {
-    #[error("Failed to read reporter ID at {path}: {source}")]
-    MissingId {
-        path: String,
-        #[source]
-        source: std::io::Error,
-    },
-
-    #[error("I/O error: {0}")]
-    Io(#[from] std::io::Error),
-
-    #[error("Network error: {0}")]
-    Network(#[from] reqwest::Error),
-
-    #[error("Client error (HTTP {status}): {body}")]
-    Client { status: u16, body: String },
-
-    #[error("Server error (HTTP {status}): {body}")]
-    Server { status: u16, body: String },
-}
+use super::{App, CmdCrashOut};
 
 pub fn run(sender: &ComponentSender<App>, context: Option<String>) {
     sender.command(|out, shutdown| {
@@ -179,39 +158,4 @@ pub fn run_setup_key(sender: &ComponentSender<App>) {
             .drop_on_shutdown()
             .boxed()
     });
-}
-
-pub fn upload(file_path: String, context: Option<String>) -> Result<(), UploadError> {
-    let server = CONFIG.get().server.clone();
-    let uuid_path = CONFIG.get().data_dir.join("uuid");
-    let uuid = std::fs::read_to_string(&uuid_path)?.trim().to_owned();
-
-    let mut form = multipart::Form::new().file("report", file_path)?;
-    if let Some(context) = context {
-        form = form.text("context", context);
-    }
-
-    let url = format!("{}/reports/runtime", &server);
-
-    let res = reqwest::blocking::Client::new()
-        .post(&url)
-        .header("Reporter-ID", &uuid)
-        .multipart(form);
-    let res = res.send()?;
-    let status = res.status();
-    let body = res.text()?;
-
-    if status.is_success() {
-        Ok(())
-    } else if status.is_client_error() {
-        Err(UploadError::Client {
-            status: status.as_u16(),
-            body,
-        })
-    } else {
-        Err(UploadError::Server {
-            status: status.as_u16(),
-            body,
-        })
-    }
 }
