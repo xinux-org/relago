@@ -1,0 +1,79 @@
+@startuml 0001-daemon-architecture
+
+title Relago daemon architecture (RFC 0001 §4)
+
+skinparam componentStyle rectangle
+skinparam shadowing false
+skinparam defaultFontName sans-serif
+skinparam ArrowColor #555555
+skinparam package {
+  BackgroundColor #FAFAFA
+  BorderColor #888888
+}
+left to right direction
+
+database "systemd journal" as journal
+folder "pstore, sysfs,\nstatvfs, profiles" as fs
+cloud "Report server\n/v2 API" as server
+component "polkit" as polkit
+
+package "relago daemon\n(system service, user relago, group systemd-journal)" as daemon {
+  component "JournalSource\nsingle reader,\ncursor persisted" as source
+
+  package "Detectors (RFC 0002)" {
+    component "Collectors" as collectors
+    component "Assemblers" as assemblers
+    component "Probes\non start / timer" as probes
+  }
+
+  component "Suppression\nwindows" as suppression
+  component "Correlation window\n5 s, Correlators" as correlation
+  component "Fingerprinter\n+ Severity" as fingerprint
+  database "Problem store\nJSON, /var/lib/relago\n(ADR 0002, ADR 0009)" as store
+  component "NotifyPolicy" as policy
+
+  package "Reporting" {
+    component "ReportBuilder\nmicro / full (ADR 0007)" as builder
+    component "Encrypt\nOpenPGP" as encrypt
+    component "Uploader" as uploader
+  }
+
+  component "D-Bus server\nuz.xinux.relago.Daemon1\n(system bus)" as dbus #EEF3FB
+}
+
+package "Relago app\n(user session, unprivileged; ADR 0008)" as app {
+  component "Background mode\nnotifications:\nReport…, Ignore, Details" as background
+  component "Windows\nProblems, Sent reports,\nSettings" as windows
+  component "Logs view" as logs
+}
+
+journal --> source : entries
+source --> collectors : Entry
+source --> assemblers : Entry
+fs --> probes
+collectors --> suppression : RawEvent
+assemblers --> suppression : RawEvent
+probes --> suppression : RawEvent
+suppression --> correlation
+correlation --> fingerprint : ProblemEvent
+fingerprint --> store : problem,\noccurrence
+source ..> store : journal cursor
+store --> policy
+policy --> dbus : ProblemAdded
+
+dbus --> background : signals
+background --> dbus : methods
+windows --> dbus : methods
+dbus --> store : filtered by\ncaller uid (ADR 0003)
+dbus --> builder : Submit(id)
+dbus ..> polkit : system-scope\nactions
+
+builder --> store : reads problem,\nwrites sent copy
+journal --> builder : scoped query
+builder --> encrypt
+encrypt --> uploader
+uploader --> server : HTTPS
+server ..> uploader : known, want_full,\nresolution
+
+journal --> logs : read as the user\n(sd-journal)
+@enduml
