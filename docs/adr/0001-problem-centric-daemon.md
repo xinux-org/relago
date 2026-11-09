@@ -3,7 +3,7 @@
 - **Status:** Accepted
 - **Date:** 2026-10-10
 - **Deciders:** Relago maintainers
-- **Related:**
+- **Related:** [RFC 0001](../rfc/0001-daemon-redesign.md); [RFC 0002](../rfc/0002-detectors.md) (detectors)
 
 ## Context
 
@@ -13,7 +13,7 @@ The codebase review traced most of the serious bugs to this design:
 
 - **Wrong or missing detection:** detection keys on field presence, and only coredumps reach the user.
 - **Lost crashes:** crashes that happen while no GUI is running are lost.
-- **Permissions:** privileged work runs as the desktop user, so it either fails with permission errors or exposes keys and reports
+- **Permissions:** privileged work runs as the desktop user, so it either fails with permission errors or exposes keys and reports.
 - **Report size and privacy:** reports are huge and privacy-invasive.
 
 Fixing these one at a time would keep the flawed flow: journal entry → signal → window → full report.
@@ -41,7 +41,7 @@ We will redesign the daemon around a **persistent problem store**:
 ## Consequences
 
 - New crates: `relago-proto`, `relago-collect`. `daemon` stops depending on `gui`.
-- The D-Bus interface changes from `uz.xinux.relago.DaemonService` to `uz.xinux.relago.Daemon1`. The old interface stays until Phase 6.
+- The D-Bus interface changes from `org.relago.DaemonService` to `uz.xinux.relago.Daemon1`. The old interface stays until Phase 6.
 - The `relago` system user needs `systemd-journal` group membership; the desktop user no longer needs access to `/var/lib/relago`.
 - NixOS VM tests become part of `nix flake check`.
 - **Signal that this was wrong:** users still see repeated windows for the same problem, the fingerprinting or policy design needs revisiting.
