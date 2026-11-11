@@ -1,0 +1,53 @@
+@startuml 0001-crate-layout
+
+title Relago crate layout (RFC 0001 §4.1)
+
+skinparam componentStyle rectangle
+skinparam shadowing false
+skinparam defaultFontName sans-serif
+skinparam ArrowColor #555555
+
+component "relago (cli)\nsubcommands, config loading" as cli #F2F2F2
+component "relago-daemon\njournal source, store, policy,\nreport orchestration, uploader,\nD-Bus server" as daemon
+component "relago-app (was gui)\nproblems, logs, reporting,\nnotifications; D-Bus client only" as app
+component "relago-collect (new)\ndetectors" as collect
+component "relago-report\nmicro / full reports,\nencryption" as report
+component "relago-journal (new)\nEntry, reader, scrubber,\nNDJSON export" as journal
+component "relago-proto (new)\nProblem types,\nD-Bus interface + proxy" as proto
+component "utils" as utils
+
+package "external" {
+  component "zbus" as zbus
+  component "serde" as serde
+  component "relm4" as relm4
+}
+
+daemon --> proto
+daemon --> journal
+daemon --> collect
+daemon --> report
+daemon --> utils
+collect --> proto
+collect --> journal
+report --> proto
+report --> journal : scrubber
+app --> proto
+app --> journal
+app --> relm4
+proto --> zbus
+proto --> serde
+
+note right of cli
+  Depends on every crate above.
+  Arrows omitted for readability.
+end note
+
+note bottom of app
+  No dependency on report,
+  reqwest or pgp.
+end note
+
+note bottom of daemon
+  No dependency on GTK.
+end note
+@enduml
