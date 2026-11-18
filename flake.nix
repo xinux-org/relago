@@ -133,7 +133,6 @@
             # '';
 
             # Set Environment Variables
-            RUST_BACKTRACE = 1;
             RUST_SRC_PATH = "${pkgs.rust.packages.stable.rustPlatform.rustLibSrc}";
             RUST_MIN_STACK = 16777216;
 
