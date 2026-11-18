@@ -13,7 +13,7 @@ use pgp::{
     crypto::ecc_curve::ECCCurve,
 };
 use rand::thread_rng;
-use reqwest::blocking::{Client, Response, multipart};
+use reqwest::blocking::{multipart, Client, Response};
 use utils::config::CONFIG;
 use zip::ZipArchive;
 

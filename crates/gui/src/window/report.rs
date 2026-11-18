@@ -2,8 +2,9 @@ use fluent_zero::t;
 use futures_util::FutureExt;
 use relm4::ComponentSender;
 use report::{
-    JournalMode, ReportBuilder, setup_key,
-    upload::{UploadError, upload},
+    setup_key,
+    upload::{upload, UploadError},
+    JournalMode, ReportBuilder,
 };
 use utils::config::CONFIG;
 

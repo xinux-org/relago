@@ -1,11 +1,11 @@
 use anyhow::Context;
-use clap::{Arg, ArgAction, Args, Command, FromArgMatches, arg, command};
+use clap::{arg, command, Arg, ArgAction, Args, Command, FromArgMatches};
 
 use daemon::journal;
 use gui::start_listener;
 use report::setup_key;
 use std::process;
-use utils::config::{CONFIG, Config, ConfigLayer};
+use utils::config::{Config, ConfigLayer, CONFIG};
 
 const CONFIG_FILE: &str = "/var/lib/relago/config.toml";
 
