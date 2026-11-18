@@ -2,13 +2,16 @@ use fluent_zero::t;
 use futures_util::FutureExt;
 use relm4::ComponentSender;
 use report::{
-    JournalMode, ReportBuilder, setup_key,
-    upload::{UploadError, upload},
+    setup_key,
+    upload::{upload, UploadError},
+    JournalMode, ReportBuilder,
 };
 use utils::config::CONFIG;
 
 use super::{App, CmdCrashOut};
 
+// FIXME: divide into multiple functions
+#[allow(clippy::too_many_lines)]
 pub fn run(sender: &ComponentSender<App>, context: Option<String>) {
     sender.command(|out, shutdown| {
         shutdown

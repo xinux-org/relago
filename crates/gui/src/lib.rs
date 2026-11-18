@@ -1,7 +1,7 @@
 pub(crate) mod locales;
 pub mod window;
 
-use crate::locales::{CACHE, LOCALES, detect_language};
+use crate::locales::{detect_language, CACHE, LOCALES};
 use crate::window::App;
 use crate::window::Modal;
 
@@ -11,10 +11,11 @@ use notify_rust::Notification;
 use relm4::adw;
 use relm4::gtk::gio;
 use std::process::Command;
-use zbus::Connection;
 use zbus::proxy;
+use zbus::Connection;
 
 mod icon_names {
+    #![allow(unused)]
     pub use shipped::*; // Include all shipped icons by default
     include!(concat!(env!("OUT_DIR"), "/icon_names.rs"));
 }

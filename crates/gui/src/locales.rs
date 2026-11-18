@@ -1,4 +1,5 @@
-use unic_langid::{LanguageIdentifier, langid};
+#![allow(warnings, clippy::unwrap_used)]
+use unic_langid::{langid, LanguageIdentifier};
 
 include!(concat!(env!("OUT_DIR"), "/static_cache.rs"));
 

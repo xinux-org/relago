@@ -1,4 +1,4 @@
-use reqwest::blocking::{Client, multipart};
+use reqwest::blocking::{multipart, Client};
 use utils::config::CONFIG;
 
 #[derive(thiserror::Error, Debug)]
