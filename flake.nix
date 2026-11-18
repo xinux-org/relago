@@ -193,6 +193,13 @@
                 env.RUSTDOCFLAGS = "--deny warnings";
               }
             );
+
+            relago-test = craneLib.cargoTest (
+              common
+              // {
+                inherit cargoArtifacts;
+              }
+            );
           };
 
           treefmt = import ./treefmt.nix;
