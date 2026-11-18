@@ -15,6 +15,7 @@ use zbus::proxy;
 use zbus::Connection;
 
 mod icon_names {
+    #![allow(unused)]
     pub use shipped::*; // Include all shipped icons by default
     include!(concat!(env!("OUT_DIR"), "/icon_names.rs"));
 }

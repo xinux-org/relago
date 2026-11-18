@@ -1,5 +1,5 @@
 use anyhow::Context;
-use clap::{arg, command, Arg, ArgAction, Args, Command, FromArgMatches};
+use clap::{arg, command, Arg, ArgAction, ArgMatches, Args, Command, FromArgMatches};
 
 use daemon::journal;
 use gui::start_listener;
@@ -29,7 +29,15 @@ pub fn run() -> anyhow::Result<()> {
         )
         .init();
 
-    let matches = command!() // requires `cargo` feature
+    let matches = build_cli_command().get_matches();
+
+    handle_matches(&matches, tmp_dir)?;
+
+    Ok(())
+}
+
+fn build_cli_command() -> Command {
+    command!() // requires `cargo` feature
         .subcommand(
             Command::new("exec")
                 .about("Run daemon")
@@ -100,8 +108,9 @@ pub fn run() -> anyhow::Result<()> {
                 ),
         )
         .subcommand(Command::new("setup-key").about("Setup GPG keys"))
-        .get_matches();
+}
 
+fn handle_matches(matches: &ArgMatches, tmp_dir: String) -> anyhow::Result<()> {
     match matches.subcommand() {
         Some(("exec", sub_matches)) => {
             let r = sub_matches
@@ -114,12 +123,13 @@ pub fn run() -> anyhow::Result<()> {
                 .first()
                 .ok_or_else(|| anyhow::anyhow!("no exec argument provided"))?;
             cmd_exec(cmd)?;
+            Ok(())
         }
         Some(("report", sub_matches)) => {
             let output_dir = sub_matches
                 .get_one::<String>("output")
-                .unwrap_or(&tmp_dir)
-                .to_owned();
+                .cloned()
+                .unwrap_or(tmp_dir);
 
             let mut builder = report::ReportBuilder::new(&output_dir).system_info();
 
@@ -140,6 +150,7 @@ pub fn run() -> anyhow::Result<()> {
             }
 
             builder.build()?;
+            Ok(())
         }
         Some(("daemon", _sub_matches)) => {
             println!("Relago daemon application is started without fuckery!!!");
@@ -155,6 +166,7 @@ pub fn run() -> anyhow::Result<()> {
                     }
                 }
             });
+            Ok(())
         }
         Some(("gui", _sub_matches)) => {
             let runtime = tokio::runtime::Runtime::new()?;
@@ -173,6 +185,7 @@ pub fn run() -> anyhow::Result<()> {
                     }
                 }
             });
+            Ok(())
         }
         Some(("reporter", sub_matches)) => {
             let modal = gui::window::Modal {
@@ -190,19 +203,21 @@ pub fn run() -> anyhow::Result<()> {
                     .unwrap_or_else(|| "A crash was detected.".to_owned()),
             };
             gui::start_gui(modal);
+            Ok(())
         }
         Some(("configure", sub_matches)) => {
             Config::save_config(CONFIG_FILE, ConfigLayer::from_arg_matches(sub_matches)?)?;
+            Ok(())
         }
         Some(("setup-key", _sub_matches)) => {
             setup_key::init()?;
+            Ok(())
         }
         _ => {
             println!("`No subcommand argument spesified`");
+            Ok(())
         }
     }
-
-    Ok(())
 }
 
 fn cmd_exec(cmd: &str) -> anyhow::Result<()> {
@@ -212,7 +227,7 @@ fn cmd_exec(cmd: &str) -> anyhow::Result<()> {
 
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
-        eprintln!("{}", stderr);
+        eprintln!("{stderr}");
     }
 
     Ok(())

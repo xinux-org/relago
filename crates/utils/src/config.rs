@@ -34,6 +34,7 @@ pub type ConfigLayer = <Config as confique::Config>::Layer;
 
 macro_rules! set_document_field {
     ($document:expr, $config:expr, $field:ident) => {
+        #[allow(clippy::indexing_slicing)]
         if let Some(value) = $config.$field {
             $document[stringify!($field)] = toml_edit::value(serde::Serialize::serialize(
                 &value,

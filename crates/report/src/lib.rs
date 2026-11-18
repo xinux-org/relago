@@ -51,6 +51,7 @@ pub struct ReportBuilder {
 }
 
 impl ReportBuilder {
+    #[must_use]
     pub fn new(output_dir: &str) -> Self {
         Self {
             output_dir: output_dir.to_string(),
@@ -63,34 +64,42 @@ impl ReportBuilder {
         }
     }
 
-    pub fn system_info(mut self) -> Self {
+    #[must_use]
+    pub const fn system_info(mut self) -> Self {
         self.system_info = true;
         self
     }
 
-    pub fn journal(mut self, mode: JournalMode) -> Self {
+    #[must_use]
+    pub const fn journal(mut self, mode: JournalMode) -> Self {
         self.journal = Some(mode);
         self
     }
 
+    #[must_use]
     pub fn nixos_config(mut self, path: &str) -> Self {
         self.nixos_config = Some(path.to_string());
         self
     }
 
+    #[must_use]
     pub fn encrypt(mut self, key_path: &str) -> Self {
         self.encrypt_key = Some(key_path.to_string());
         self
     }
 
+    #[must_use]
     pub fn meta(mut self, key: &str, value: &str) -> Self {
         self.meta_data.push((key.to_string(), value.to_string()));
         self
     }
+
+    #[must_use]
     pub fn log(mut self, file: impl AsRef<Path>) -> Self {
         self.log_files.push(PathBuf::from(file.as_ref()));
         self
     }
+
     pub fn build(self) -> Result<Report, ReportError> {
         let timestamp = chrono::Local::now().format("%Y-%m-%d_%H-%M-%S");
         let report_dir = PathBuf::from(&self.output_dir).join(format!("report_{timestamp}"));

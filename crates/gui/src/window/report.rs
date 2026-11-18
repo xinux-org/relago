@@ -10,6 +10,8 @@ use utils::config::CONFIG;
 
 use super::{App, CmdCrashOut};
 
+// FIXME: divide into multiple functions
+#[allow(clippy::too_many_lines)]
 pub fn run(sender: &ComponentSender<App>, context: Option<String>) {
     sender.command(|out, shutdown| {
         shutdown

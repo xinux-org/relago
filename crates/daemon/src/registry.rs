@@ -5,18 +5,10 @@ use crate::crash::Crash;
 
 type PluginFn = Box<dyn Fn(&mut Journal) -> Option<Crash> + Send + Sync>;
 
+#[derive(Default)]
 pub struct PluginRegistry {
     filters: Vec<Vec<(&'static str, &'static str)>>,
     plugins: Vec<PluginFn>,
-}
-
-impl Default for PluginRegistry {
-    fn default() -> Self {
-        Self {
-            filters: Vec::new(),
-            plugins: Vec::new(),
-        }
-    }
 }
 
 impl PluginRegistry {

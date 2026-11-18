@@ -42,6 +42,8 @@ enum ReportRes {
     Done,
 }
 
+// FIXME: use send for journal
+#[allow(clippy::future_not_send)]
 pub async fn run() -> anyhow::Result<()> {
     let mut registry = PluginRegistry::new();
     registry
