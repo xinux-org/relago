@@ -770,6 +770,27 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0c9ea0ac24bc397ab3c98583a3c9ba74fa56b09a4449bbe172b9b1ddb016027a"
 
 [[package]]
+name = "collect"
+version = "0.0.2"
+dependencies = [
+ "anyhow",
+ "dbus",
+ "dbus-crossroads",
+ "hex",
+ "libsystemd-sys",
+ "nom",
+ "proc-macro2",
+ "quote",
+ "serde",
+ "serde_json",
+ "systemd",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
+ "zbus",
+]
+
+[[package]]
 name = "colorchoice"
 version = "1.0.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"

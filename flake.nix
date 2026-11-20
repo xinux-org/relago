@@ -138,6 +138,11 @@
 
             WEBKIT_DISABLE_DMABUF_RENDERER = 0;
 
+            # Message ID check (RFC 0002 4.3): the collect tests compare
+            # our collect::ids module with the systemd shipped in this nixpkgs,
+            # and fail instead of skipping if the header is missing.
+            SD_MESSAGES_H = "${pkgs.systemd.dev}/include/systemd/sd-messages.h";
+
             # # Compiler LD variables
             NIX_LDFLAGS = "-L${(getLibFolder pkgs.libiconv)} -L${(getLibFolder pkgs.pkg-config)} -L${(getLibFolder pkgs.dbus.dev)}";
             LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath (

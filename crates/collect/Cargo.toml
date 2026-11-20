@@ -1,0 +1,28 @@
+[dependencies]
+serde = {workspace = true}
+anyhow = {workspace = true}
+tracing-subscriber = {workspace = true}
+tracing = {workspace = true}
+serde_json = {workspace = true}
+libsystemd-sys = "0.9.4"
+systemd = "0.10.1"
+dbus = {workspace = true}
+dbus-crossroads = {workspace = true}
+nom = {workspace = true}
+tokio = "1.51.0"
+hex = {version = "0.4", default-features = false}
+proc-macro2.workspace = true
+quote.workspace = true
+zbus.workspace = true
+
+[lints]
+workspace = true
+
+[package]
+name = "collect"
+authors.workspace = true
+edition.workspace = true
+homepage.workspace = true
+license.workspace = true
+repository.workspace = true
+version.workspace = true
